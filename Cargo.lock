@@ -2498,6 +2498,7 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-base-fee",
+ "pallet-collective",
  "pallet-dynamic-fee",
  "pallet-ethereum",
  "pallet-evm",
@@ -2654,6 +2655,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "276ec31bcb4a9ee45f58bec6f9ec700ae4cf4f4f8f2fa7e06cb406bd5ffdd770"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "integration-tests"
+version = "0.0.2"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-assets",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "substrate-wasm-builder",
 ]
 
 [[package]]
@@ -4153,6 +4172,7 @@ name = "pallet-assets"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate#90dd23e78851605180f3dc3bfcf43e2800354f79"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -4220,6 +4240,23 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-runtime",
+]
+
+[[package]]
+name = "pallet-collective"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate#90dd23e78851605180f3dc3bfcf43e2800354f79"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -4469,12 +4506,14 @@ name = "pallet-treasury"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate#90dd23e78851605180f3dc3bfcf43e2800354f79"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-runtime",
  "sp-std",
 ]
