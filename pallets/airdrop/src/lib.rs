@@ -85,7 +85,9 @@ pub mod pallet {
 	use frame_system::{ensure_signed, pallet_prelude::*};
 	use sp_std::prelude::*;
 
-	use frame_support::traits::{Currency, ExistenceRequirement, Hooks, ReservableCurrency};
+	use frame_support::traits::{
+		Currency, ExistenceRequirement, Hooks, LockableCurrency, ReservableCurrency,
+	};
 	use frame_system::offchain::CreateSignedTransaction;
 	use types::IconVerifiable;
 
@@ -102,7 +104,10 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		type Currency: Currency<types::AccountIdOf<Self>>
-			+ ReservableCurrency<types::AccountIdOf<Self>>;
+			+ ReservableCurrency<types::AccountIdOf<Self>>
+			+ LockableCurrency<types::AccountIdOf<Self>>;
+
+		type VestingModule: pallet_vesting::Config;
 
 		/// The overarching dispatch call type.
 		// type Call: From<Call<Self>>;

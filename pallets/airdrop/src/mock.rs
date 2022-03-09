@@ -26,6 +26,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		AirdropModule: pallet_airdrop::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -65,6 +66,7 @@ parameter_types! {
 	pub const MaxLocks: u32 = 50;
 	pub const FetchIconEndpoint: &'static str = "http://35.175.202.72:5000/claimDetails?address=";
 	pub const CreditorAccount: frame_support::PalletId = frame_support::PalletId(*b"t-aidrop");
+	pub const VestingMinTransfer: Balance = 1_u128;
 }
 
 impl pallet_airdrop::Config for Test {
@@ -74,6 +76,7 @@ impl pallet_airdrop::Config for Test {
 	type FetchIconEndpoint = FetchIconEndpoint;
 	type AuthorityId = crate::airdrop_crypto::AuthId;
 	type Creditor = CreditorAccount;
+	type VestingModule = Test;
 }
 
 type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
@@ -115,6 +118,15 @@ impl pallet_balances::Config for Test {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
+}
+
+impl pallet_vesting::Config for Test {
+	type Event = Event;
+	type Currency = <Test as pallet_airdrop::Config>::Currency;
+	type BlockNumberToBalance = ();
+	type MinVestedTransfer = VestingMinTransfer;
+	type WeightInfo = ();
+	const MAX_VESTING_SCHEDULES: u32 = u32::MAX;
 }
 
 /// Implement AppCrypto with airdrop_pallet::AuthId
