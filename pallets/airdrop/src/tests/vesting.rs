@@ -37,13 +37,73 @@ fn test_vesting() {
 		run_to_block(10);
 		credit_creditor(200_000_u32);
 
+		run_to_block(9);
+
 		let user = samples::ACCOUNT_ID[1];
-		let total_balance: types::BalanceOf<Test> = 1000_u32.into();
-		let per_block: types::BalanceOf<Test> = 10_u32.into();
+		let total_balance: types::BalanceOf<Test> = 10000_u32.into();
+		let per_block: types::BalanceOf<Test> = 1000_u32.into();
 		let vesting_schedule: pallet_vesting::VestingInfo<
 			types::BalanceOf<Test>,
 			types::BlockNumberOf<Test>,
-		> = pallet_vesting::VestingInfo::new(total_balance, per_block, 11_u32.into());
+		> = pallet_vesting::VestingInfo::new(total_balance, per_block, 10_u32.into());
+
+		assert_ok!(pallet_vesting::Pallet::<
+			<Test as pallet_airdrop::Config>::VestingModule,
+		>::vested_transfer(
+			Origin::signed(AirdropModule::get_creditor_account()),
+			user.clone(),
+			vesting_schedule.clone(),
+		));
+
+		// Vesting is transparent while quering free balance
+		assert_eq!(
+			<Test as pallet_airdrop::Config>::Currency::free_balance(&user),
+			total_balance
+		);
+
+		// Try to some transfer while vesting hasen't started yet
+		assert_err!(
+			AirdropModule::donate_to_creditor(Origin::signed(user.clone()), 70_u32.into(), false),
+			BalanceError::LiquidityRestrictions
+		);
+
+		assert_ok!(pallet_vesting::Pallet::<
+			<Test as pallet_airdrop::Config>::VestingModule,
+		>::vest(Origin::signed(user.clone())));
+		// After passing starting block we must have some usable fund
+		run_to_block(30);
+		assert_ok!(AirdropModule::donate_to_creditor(
+			Origin::signed(user.clone()),
+			600_u32.into(),
+			false
+		));
+
+		// But no more than expected
+		assert_err!(
+			AirdropModule::donate_to_creditor(Origin::signed(user.clone()), 400_u32.into(), false),
+			BalanceError::LiquidityRestrictions
+		);
+
+		// Once pass all the block required to wait
+		run_to_block(30);
+		assert_ok!(AirdropModule::donate_to_creditor(
+			Origin::signed(user.clone()),
+			total_balance - 150_u128,
+			true,
+		));
+	});
+}
+
+#[test]
+fn can_user_cancel() {
+	minimal_test_ext().execute_with(|| {
+		let user = samples::ACCOUNT_ID[1];
+		let total_balance: types::BalanceOf<Test> = 1000_u32.into();
+		let per_block: types::BalanceOf<Test> = 100_u32.into();
+		let vesting_schedule: pallet_vesting::VestingInfo<
+			types::BalanceOf<Test>,
+			types::BlockNumberOf<Test>,
+		> = pallet_vesting::VestingInfo::new(total_balance, per_block, 10_u32.into());
 
 		assert_ok!(pallet_vesting::Pallet::<
 			<Test as pallet_airdrop::Config>::VestingModule,
@@ -54,15 +114,23 @@ fn test_vesting() {
 		));
 
 		run_to_block(11);
-		assert_eq!(10_u128, get_free_balance(&user));
 
-		run_to_block(50);
-		assert_eq!(100_u128, get_free_balance(&user));
+		// We are ok that vested fund will not be in use
+		assert_err!(
+			AirdropModule::donate_to_creditor(Origin::signed(user.clone()), 300_u32.into(), false),
+			BalanceError::LiquidityRestrictions
+		);
+
+		// Let us suppose user called pallet_vesting::vest
+		assert_ok!(pallet_vesting::Pallet::<
+			<Test as pallet_airdrop::Config>::VestingModule,
+		>::vest(Origin::signed(user.clone())));
+
+		assert_err!(
+			AirdropModule::donate_to_creditor(Origin::signed(user.clone()), 300_u32.into(), false),
+			BalanceError::LiquidityRestrictions
+		);
 	});
-}
-
-fn get_free_balance(account: &types::AccountIdOf<Test>) -> types::BalanceOf<Test> {
-	<Test as pallet_airdrop::Config>::Currency::free_balance(account)
 }
 
 fn credit_creditor(balance: u32) {
@@ -75,5 +143,4 @@ fn credit_creditor(balance: u32) {
 	);
 
 	assert_ok!(deposit_res);
-	assert_eq!(get_free_balance(&creditor_account), balance.into());
 }

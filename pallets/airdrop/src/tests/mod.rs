@@ -17,11 +17,13 @@ pub mod prelude {
 	};
 	pub use pallet_airdrop::mock::{self, AirdropModule, Origin, Test};
 	pub use pallet_airdrop::types;
+	pub use sp_core::bytes;
+
 	pub use sp_runtime::traits::IdentifyAccount;
 	pub type PalletError = pallet_airdrop::Error<Test>;
 	pub type PalletEvent = pallet_airdrop::Event<Test>;
 	pub type PalletCall = pallet_airdrop::Call<Test>;
-	pub use sp_core::bytes;
+	pub type BalanceError = pallet_balances::Error<Test>;
 }
 use mock::System;
 use prelude::*;
@@ -129,11 +131,13 @@ pub fn run_to_block(n: types::BlockNumberOf<Test>) {
 	while System::block_number() < n {
 		if System::block_number() > 1 {
 			AirdropModule::on_finalize(System::block_number());
+		//	<Test as pallet_airdrop::Config>::VestingModule::on_finalize(System::block_number());
 			System::on_finalize(System::block_number());
 		}
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		AirdropModule::on_initialize(System::block_number());
+		//<Test as pallet_airdrop::Config>::VestingModule::on_initialize(System::block_number());
 	}
 }
 
