@@ -78,8 +78,8 @@ scale-info = { version = "1.0.0", default-features = false, features = [
 ] }
 
 # benchmarking dependencies
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true }
-frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true }
+frame-benchmarking = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, optional = true }
+frame-system-benchmarking = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, optional = true }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate" }
@@ -142,9 +142,9 @@ runtime-benchmarks = [
 	"frame-system-benchmarking",
 	"frame-system/runtime-benchmarks",
 	"pallet-ethereum/runtime-benchmarks",
-	"pallet-evm/runtime-benchmarks",
-	"pallet-vesting/runtime-benchmarks",
-	"pallet-airdrop/runtime-benchmarks",
+	#"pallet-evm/runtime-benchmarks",
+	#"pallet-vesting/runtime-benchmarks",
+	#"pallet-airdrop/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
-  "pallet-treasury/runtime-benchmarks",
+    #"pallet-treasury/runtime-benchmarks",
 ]
