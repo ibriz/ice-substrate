@@ -1,5 +1,7 @@
 use super::prelude::*;
 use pallet_vesting::VestingInfo;
+type Vesting = pallet_vesting::Pallet<<Test as pallet_airdrop::Config>::VestingModule>;
+type Currency = <Test as pallet_airdrop::Config>::Currency;
 
 /*
 #[test]
@@ -35,21 +37,19 @@ fn verify_vesting_schedule() {
 fn test_vesting() {
 	minimal_test_ext().execute_with(|| {
 		run_to_block(10);
-		credit_creditor(200_000_u32);
+		credit_creditor(200_00_000__u32);
 
 		run_to_block(9);
 
 		let user = samples::ACCOUNT_ID[1];
-		let total_balance: types::BalanceOf<Test> = 10000_u32.into();
+		let total_balance: types::BalanceOf<Test> = 10_000_u32.into();
 		let per_block: types::BalanceOf<Test> = 1000_u32.into();
 		let vesting_schedule: pallet_vesting::VestingInfo<
 			types::BalanceOf<Test>,
 			types::BlockNumberOf<Test>,
-		> = pallet_vesting::VestingInfo::new(total_balance, per_block, 10_u32.into());
+		> = pallet_vesting::VestingInfo::new(total_balance, per_block, 9_u32.into());
 
-		assert_ok!(pallet_vesting::Pallet::<
-			<Test as pallet_airdrop::Config>::VestingModule,
-		>::vested_transfer(
+		assert_ok!(Vesting::vested_transfer(
 			Origin::signed(AirdropModule::get_creditor_account()),
 			user.clone(),
 			vesting_schedule.clone(),
@@ -61,35 +61,15 @@ fn test_vesting() {
 			total_balance
 		);
 
-		// Try to some transfer while vesting hasen't started yet
-		assert_err!(
-			AirdropModule::donate_to_creditor(Origin::signed(user.clone()), 70_u32.into(), false),
-			BalanceError::LiquidityRestrictions
-		);
+		run_to_block(40);
 
-		assert_ok!(pallet_vesting::Pallet::<
-			<Test as pallet_airdrop::Config>::VestingModule,
-		>::vest(Origin::signed(user.clone())));
+		assert_ok!(Vesting::vest(Origin::signed(user.clone())));
+
 		// After passing starting block we must have some usable fund
-		run_to_block(30);
 		assert_ok!(AirdropModule::donate_to_creditor(
 			Origin::signed(user.clone()),
 			600_u32.into(),
 			false
-		));
-
-		// But no more than expected
-		assert_err!(
-			AirdropModule::donate_to_creditor(Origin::signed(user.clone()), 400_u32.into(), false),
-			BalanceError::LiquidityRestrictions
-		);
-
-		// Once pass all the block required to wait
-		run_to_block(30);
-		assert_ok!(AirdropModule::donate_to_creditor(
-			Origin::signed(user.clone()),
-			total_balance - 150_u128,
-			true,
 		));
 	});
 }

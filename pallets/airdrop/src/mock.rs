@@ -66,7 +66,7 @@ parameter_types! {
 	pub const MaxLocks: u32 = 50;
 	pub const FetchIconEndpoint: &'static str = "http://35.175.202.72:5000/claimDetails?address=";
 	pub const CreditorAccount: frame_support::PalletId = frame_support::PalletId(*b"t-aidrop");
-	pub const VestingMinTransfer: Balance = 1_u128;
+	pub const VestingMinTransfer: Balance = 256 * 2;
 }
 
 impl pallet_airdrop::Config for Test {
@@ -120,10 +120,17 @@ impl pallet_balances::Config for Test {
 	type WeightInfo = ();
 }
 
+pub struct BBConvert;
+impl sp_runtime::traits::Convert<u64, u128> for BBConvert {
+	fn convert(src: u64) -> u128 {
+		src as u128
+	}
+}
+
 impl pallet_vesting::Config for Test {
 	type Event = Event;
 	type Currency = <Test as pallet_airdrop::Config>::Currency;
-	type BlockNumberToBalance = ();
+	type BlockNumberToBalance = BBConvert;
 	type MinVestedTransfer = VestingMinTransfer;
 	type WeightInfo = ();
 	const MAX_VESTING_SCHEDULES: u32 = u32::MAX;
