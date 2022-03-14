@@ -315,6 +315,7 @@ impl pallet_airdrop::Config for Runtime {
 	// Also ensure effect of (not)enabling full-crypto feature
 	type AuthorityId = pallet_airdrop::airdrop_crypto::AuthId;
 	type Creditor = AirdropCreditor;
+	type VestingModule = Runtime;
 }
 
 parameter_types! {
@@ -599,9 +600,9 @@ construct_runtime!(
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Config<T>, Event<T>} = 32,
 		Assets: pallet_assets::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Airdrop: pallet_airdrop::{Pallet, Call, Storage, Event<T>},
-	  Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-    Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
-		SimpleInflation: pallet_simple_inflation::{Pallet}
+	  	Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+    	Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
+		SimpleInflation: pallet_simple_inflation::{Pallet},
 	}
 );
 
