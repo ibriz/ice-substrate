@@ -274,3 +274,29 @@ fn pending_claims_getter() {
 		}
 	})
 }
+
+#[test]
+fn getting_vesting_schedule() {
+	use sp_runtime::{DispatchError, ArithmeticError};
+
+	minimal_test_ext().execute_with(||{
+		assert_err!(
+			AirdropModule::make_vesting_schedule(&types::ServerResponse {
+				stake: u128::MAX,
+				amount: 1,
+				..Default::default()
+			}),
+			ArithmeticError::Overflow
+		);
+
+		let server_response = samples::SERVER_DATA[1];
+		let schedule = AirdropModule::make_vesting_schedule(&server_response).expect("This call should have passed");
+
+		// Is correct amount locked?
+		assert_eq!(schedule.locked(), 928333_u128 + 298329_u128);
+		// All amount should be released at once
+		assert_eq!(schedule.per_block(), schedule.locked());
+		// But only should be released after specified block
+		assert_eq!(schedule.starting_block(), types::BlockNumberOf::<Test>::from(170_u32));
+	});
+}

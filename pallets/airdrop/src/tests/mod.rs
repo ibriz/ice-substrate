@@ -3,7 +3,6 @@ mod claim;
 mod signature_validation;
 mod transfer;
 mod utility_functions;
-mod vesting;
 pub mod prelude {
 	pub use super::{
 		assert_tx_call, get_last_event, minimal_test_ext, not_offchain_account, offchain_test_ext,
@@ -131,7 +130,6 @@ pub fn run_to_block(n: types::BlockNumberOf<Test>) {
 	while System::block_number() < n {
 		if System::block_number() > 1 {
 			AirdropModule::on_finalize(System::block_number());
-		//	<Test as pallet_airdrop::Config>::VestingModule::on_finalize(System::block_number());
 			System::on_finalize(System::block_number());
 		}
 		System::set_block_number(System::block_number() + 1);

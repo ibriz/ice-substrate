@@ -80,6 +80,7 @@ pub const DEFAULT_RETRY_COUNT: u8 = 2;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::types;
+	use sp_runtime::traits::Saturating;
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::{ensure_signed, pallet_prelude::*};
@@ -90,8 +91,6 @@ pub mod pallet {
 	};
 	use frame_system::offchain::CreateSignedTransaction;
 	use types::IconVerifiable;
-
-	use sp_runtime::traits::Saturating;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -496,7 +495,7 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn vest_test(origin: OriginFor<T>) -> DispatchResult {
 			let ice_address = ensure_signed(origin)?;
-			let my_vesting_schedule = pallet_vesting::VestingInfo::<types::BalanceOf<T>, types::BlockNumberOf<T>>::new(
+			let my_vesting_schedule = types::VestingInfoOf::<T>::new(
 				((100 * 5) as u32).into(),
 				10000000_u32.into(),
 				100000000_u32.into(),
@@ -841,6 +840,44 @@ pub mod pallet {
 		/// Return block height of Node from which this was called
 		pub fn get_current_block_number() -> types::BlockNumberOf<T> {
 			<frame_system::Pallet<T>>::block_number()
+		}
+
+		/// Create vesting schedule from user icon details
+		pub fn make_vesting_schedule(
+			server_response: &types::ServerResponse,
+		) -> Result<types::VestingInfoOf<T>, sp_runtime::DispatchError> {
+			// TODO: what is the total amount to transfer?
+			let amount_to_transfer: types::BalanceOf<T> = server_response
+				.amount
+				.checked_add(server_response.stake)
+				.ok_or(
+					// TODO:
+					// Instead of failing when adding. Maybe try having seperate schedult
+					// for each additive
+					sp_runtime::ArithmeticError::Overflow,
+				)?
+				.try_into()
+				.map_err(|_| {
+					"Balance type returned by server and Balance type of pallet are incompatible"
+				})?;
+
+			let should_receive_at = if server_response.defi_user {
+				// TODO: calculate when should vesting be released
+				// when user is defi-user
+				Self::get_current_block_number() + 100_u32.into()
+			} else {
+				// TODO: calculate when should vesting be released
+				// when user is not a defi-user
+				Self::get_current_block_number() + 170_u32.into()
+			};
+
+			let schedule = types::VestingInfoOf::<T>::new(
+				amount_to_transfer,
+				amount_to_transfer,
+				should_receive_at,
+			);
+
+			Ok(schedule)
 		}
 	}
 }
