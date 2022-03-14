@@ -120,17 +120,10 @@ impl pallet_balances::Config for Test {
 	type WeightInfo = ();
 }
 
-pub struct BBConvert;
-impl sp_runtime::traits::Convert<u64, u128> for BBConvert {
-	fn convert(src: u64) -> u128 {
-		src as u128
-	}
-}
-
 impl pallet_vesting::Config for Test {
 	type Event = Event;
 	type Currency = <Test as pallet_airdrop::Config>::Currency;
-	type BlockNumberToBalance = BBConvert;
+	type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
 	type MinVestedTransfer = VestingMinTransfer;
 	type WeightInfo = ();
 	const MAX_VESTING_SCHEDULES: u32 = u32::MAX;
