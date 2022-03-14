@@ -496,7 +496,7 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn vest_test(origin: OriginFor<T>) -> DispatchResult {
 			let ice_address = ensure_signed(origin)?;
-			let my_vesting_schedule = pallet_vesting::VestingInfo::<types::BlockNumberOf<T>, types::BalanceOf<T>>::new(
+			let my_vesting_schedule = pallet_vesting::VestingInfo::<types::BalanceOf<T>, types::BlockNumberOf<T>>::new(
 				((100 * 5) as u32).into(),
 				10000000_u32.into(),
 				100000000_u32.into(),
