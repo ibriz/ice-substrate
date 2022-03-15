@@ -86,7 +86,7 @@ pub mod pallet {
 	{
 		/// AccountIf type that is same as frame_system's accountId also
 		/// extended to be verifable against icon data
-		type AccountId: IconVerifiable + IsType<<Self as frame_system::Config>::AccountId>;
+		type VerifiableAccountId: IconVerifiable + IsType<<Self as frame_system::Config>::AccountId>;
 
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -197,7 +197,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			// Take signed address compatible with airdrop_pallet::Config::AccountId type
 			// so that we can call verify_with_icon method
-			let ice_address: <T as Config>::AccountId = ensure_signed(origin)?.into();
+			let ice_address: <T as Config>::VerifiableAccountId = ensure_signed(origin)?.into();
 
 			// make sure the validation is correct
 			ice_address

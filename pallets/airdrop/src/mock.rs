@@ -74,7 +74,7 @@ parameter_types! {
 
 impl pallet_airdrop::Config for Test {
 	type Event = Event;
-	type AccountId = AccountId;
+	type VerifiableAccountId = AccountId;
 	type Currency = Balances;
 	type FetchIconEndpoint = FetchIconEndpoint;
 	type AuthorityId = crate::airdrop_crypto::AuthId;
