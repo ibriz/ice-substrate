@@ -276,27 +276,36 @@ fn pending_claims_getter() {
 }
 
 #[test]
-fn getting_vesting_schedule() {
-	use sp_runtime::{DispatchError, ArithmeticError};
-
+fn get_vesting_amounts_splitted() {
 	minimal_test_ext().execute_with(||{
-		assert_err!(
-			AirdropModule::make_vesting_schedule(&types::ServerResponse {
-				stake: u128::MAX,
-				amount: 1,
-				..Default::default()
-			}),
-			ArithmeticError::Overflow
-		);
+		use sp_runtime::ArithmeticError;
 
-		let server_response = samples::SERVER_DATA[1];
-		let schedule = AirdropModule::make_vesting_schedule(&server_response).expect("This call should have passed");
+		assert_err!(AirdropModule::get_vesting_amounts(u128::MAX, true), ArithmeticError::Overflow);
+		assert_eq!(Ok([0_u128, 0_u128, 0_u128]), AirdropModule::get_vesting_amounts(0_u128, true));
 
-		// Is correct amount locked?
-		assert_eq!(schedule.locked(), 928333_u128 + 298329_u128);
-		// All amount should be released at once
-		assert_eq!(schedule.per_block(), schedule.locked());
-		// But only should be released after specified block
-		assert_eq!(schedule.starting_block(), types::BlockNumberOf::<Test>::from(170_u32));
+		assert_eq!(Ok([900_u128, 1500_u128, 600_u128]), AirdropModule::get_vesting_amounts(3_000_u128, true));
+		assert_eq!(Ok([900_u128, 600_u128, 1500_u128]), AirdropModule::get_vesting_amounts(3_000_u128, false));
+		
+		assert_eq!(Ok([0_u128, 0_u128, 1_u128]), AirdropModule::get_vesting_amounts(1_u128, true));
+		assert_eq!(Ok([0_u128, 0_u128, 1_u128]), AirdropModule::get_vesting_amounts(1_u128, false));
+		
+	});
+}
+
+#[test]
+fn get_vesting_blocks() {
+	minimal_test_ext().execute_with(||{
+		assert_eq!([0_u64, 2700_u64, 5400_u64], AirdropModule::get_vesting_blocks());
+
+		run_to_block(1);
+		assert_eq!([0_u64, 2701_u64, 5401_u64], AirdropModule::get_vesting_blocks());
+
+		run_to_block(10);
+		assert_eq!([9_u64, 2710_u64, 5410_u64], AirdropModule::get_vesting_blocks());
+
+		let last_block_possible = types::BlockNumberOf::<Test>::MAX;
+		tests::System::set_block_number(last_block_possible);
+		assert_eq!([last_block_possible-1, last_block_possible, last_block_possible], AirdropModule::get_vesting_blocks());
+
 	});
 }

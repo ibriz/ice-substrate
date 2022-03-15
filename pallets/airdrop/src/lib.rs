@@ -842,42 +842,95 @@ pub mod pallet {
 			<frame_system::Pallet<T>>::block_number()
 		}
 
+		/// Split total amount to chunk of 3 amount
+		/// These are the amounts that are to be vested in next
+		/// 3 lot.
+		pub fn get_vesting_amounts(
+			total_amount: types::BalanceOf<T>,
+			is_defi_user: bool,
+		) -> Result<[types::BalanceOf<T>; 3], DispatchError> {
+			use sp_runtime::traits::{CheckedDiv, CheckedMul};
+			const DEFI_VESTING_PERCENTAGE: [u32; 2] = [30u32, 50u32];
+			const NORMAL_VESTING_PERCENTAGE: [u32; 2] = [30u32, 20u32];
+
+			let percentage = if is_defi_user {
+				DEFI_VESTING_PERCENTAGE
+			} else {
+				NORMAL_VESTING_PERCENTAGE
+			};
+
+			let amount_at_first_vesting = total_amount
+				.checked_mul(&percentage[0].into())
+				.ok_or(sp_runtime::ArithmeticError::Overflow)?
+				.checked_div(&100_u32.into())
+				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
+
+			let amount_at_second_vesting = total_amount
+				.checked_mul(&percentage[1].into())
+				.ok_or(sp_runtime::ArithmeticError::Overflow)?
+				.checked_div(&100_u32.into())
+				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
+
+			let amount_at_last_vesting =
+				total_amount - (amount_at_first_vesting + amount_at_second_vesting);
+
+			Ok([
+				amount_at_first_vesting,
+				amount_at_second_vesting,
+				amount_at_last_vesting,
+			])
+		}
+
+		/// Get 3 different block number in which we will release
+		pub fn get_vesting_blocks() -> [types::BlockNumberOf<T>; 3] {
+			// TODO: put accurate value here
+			const BLOCK_PER_MONTH: u32 = 2700_u32;
+
+			// First vesting block is to be done in this block so
+			// we set starting block to be previous block than curerent
+			let first = Self::get_current_block_number().saturating_sub(1_u32.into());
+
+			// Second vesting is done after one month
+			let second = Self::get_current_block_number().saturating_add(BLOCK_PER_MONTH.into());
+
+			// Third/Last vesting is done in another month
+			let third = second.saturating_add(BLOCK_PER_MONTH.into());
+
+			[first, second, third]
+		}
+
 		/// Create vesting schedule from user icon details
 		pub fn make_vesting_schedule(
 			server_response: &types::ServerResponse,
-		) -> Result<types::VestingInfoOf<T>, sp_runtime::DispatchError> {
+		) -> Result<[types::VestingInfoOf<T>; 3], sp_runtime::DispatchError> {
+			type VestingInfo<T> = types::VestingInfoOf<T>;
+
 			// TODO: what is the total amount to transfer?
-			let amount_to_transfer: types::BalanceOf<T> = server_response
+			let total_amount: types::BalanceOf<T> = server_response
 				.amount
 				.checked_add(server_response.stake)
-				.ok_or(
-					// TODO:
-					// Instead of failing when adding. Maybe try having seperate schedult
-					// for each additive
-					sp_runtime::ArithmeticError::Overflow,
-				)?
+				.ok_or(sp_runtime::ArithmeticError::Overflow)?
 				.try_into()
 				.map_err(|_| {
 					"Balance type returned by server and Balance type of pallet are incompatible"
 				})?;
 
-			let should_receive_at = if server_response.defi_user {
-				// TODO: calculate when should vesting be released
-				// when user is defi-user
-				Self::get_current_block_number() + 100_u32.into()
-			} else {
-				// TODO: calculate when should vesting be released
-				// when user is not a defi-user
-				Self::get_current_block_number() + 170_u32.into()
-			};
+			let vesting_amount = Self::get_vesting_amounts(total_amount, server_response.defi_user)
+				.map_err(|err| {
+					log::error!(
+						"[Airdrop pallet] While getting vesting_amount. Error: {:?}",
+						err
+					);
+					err
+				})?;
 
-			let schedule = types::VestingInfoOf::<T>::new(
-				amount_to_transfer,
-				amount_to_transfer,
-				should_receive_at,
-			);
+			let vesting_blocks = Self::get_vesting_blocks();
 
-			Ok(schedule)
+			Ok([
+				VestingInfo::<T>::new(vesting_amount[0], vesting_amount[0], vesting_blocks[0]),
+				VestingInfo::<T>::new(vesting_amount[1], vesting_amount[1], vesting_blocks[1]),
+				VestingInfo::<T>::new(vesting_amount[2], vesting_amount[2], vesting_blocks[2]),
+			])
 		}
 	}
 }
