@@ -714,6 +714,7 @@ impl fp_self_contained::SelfContainedCall for Call {
 #[macro_use]
 extern crate frame_benchmarking;
 
+
 impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {
 		fn version() -> RuntimeVersion {
@@ -998,10 +999,11 @@ impl_runtime_apis! {
 			use frame_benchmarking::{Benchmarking, BenchmarkList};
 			use frame_support::traits::StorageInfoTrait;
 			use frame_system_benchmarking::Pallet as SystemBench;
+			use pallet_airdrop::Pallet as AirdropBench;
 			// use frame_benchmarking::baseline::Pallet as BaselineBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
-			// list_benchmark!(list, extra);
+			list_benchmark!(list, extra,pallet_airdrop,AirdropBench::<Runtime>);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 

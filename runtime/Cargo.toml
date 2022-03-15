@@ -144,7 +144,7 @@ runtime-benchmarks = [
 	"pallet-ethereum/runtime-benchmarks",
 	#"pallet-evm/runtime-benchmarks",
 	#"pallet-vesting/runtime-benchmarks",
-	#"pallet-airdrop/runtime-benchmarks",
+	"pallet-airdrop/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
     #"pallet-treasury/runtime-benchmarks",
 ]
