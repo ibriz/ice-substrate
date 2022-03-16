@@ -315,9 +315,10 @@ pub mod pallet {
 			)
 			.map_err(|err| {
 				// This is also error from our side. We keep it for next retry
-				Self::register_failed_claim(origin.clone(), block_number, receiver.clone()).expect("Calling register failed_claim from currency::transfer. This call should not have failed..");
+            	log::info!("Currency transfer failed with error: {:?}", err);
+			    Self::register_failed_claim(origin.clone(), block_number, receiver.clone()).expect("Calling register failed_claim from currency::transfer. This call should not have failed..");
 				
-				log::info!("Currency transfer failed with error: {:?}", err);
+				
 				err
 			})?;
 
