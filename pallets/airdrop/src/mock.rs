@@ -79,6 +79,7 @@ impl pallet_airdrop::Config for Test {
 	type FetchIconEndpoint = FetchIconEndpoint;
 	type AuthorityId = crate::airdrop_crypto::AuthId;
 	type Creditor = CreditorAccount;
+	type WeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Test>;
 }
 
 impl pallet_sudo::Config for Test {

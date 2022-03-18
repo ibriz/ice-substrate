@@ -315,6 +315,7 @@ impl pallet_airdrop::Config for Runtime {
 	// Also ensure effect of (not)enabling full-crypto feature
 	type AuthorityId = pallet_airdrop::airdrop_crypto::AuthId;
 	type Creditor = AirdropCreditor;
+	type WeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
 }
 
 parameter_types! {

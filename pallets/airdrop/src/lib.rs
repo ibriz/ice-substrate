@@ -37,6 +37,7 @@
 //! This is only callable by sudo/root account
 
 #![cfg_attr(not(feature = "std"), no_std)]
+use frame_support::dispatch::Weight;
 pub use pallet::*;
 
 #[cfg(test)]
@@ -50,6 +51,8 @@ mod benchmarking;
 
 /// All the types and alises must be defined here
 mod types;
+
+pub mod weights;
 
 /// An identifier for a type of cryptographic key.
 /// For this pallet, account associated with this key must be same as
@@ -67,9 +70,12 @@ pub const OFFCHAIN_WORKER_BLOCK_GAP: u32 = 3;
 // There is NO point of seeting this to high value
 pub const DEFAULT_RETRY_COUNT: u8 = 2;
 
+
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::types;
+	use super::weights;
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
@@ -78,6 +84,9 @@ pub mod pallet {
 	use frame_support::traits::{Currency, ExistenceRequirement, Hooks, ReservableCurrency};
 	use frame_system::offchain::CreateSignedTransaction;
 	use types::IconVerifiable;
+	use weights::WeightInfo;
+
+	
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -99,6 +108,8 @@ pub mod pallet {
 
 		/// The identifier type for an offchain worker.
 		type AuthorityId: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>;
+		/// Weight information for extrinsics in this pallet.
+		type WeightInfo: WeightInfo;
 
 		/// Endpoint on where to send request url
 		#[pallet::constant]
@@ -108,6 +119,7 @@ pub mod pallet {
 		/// This account should be credited enough to supply fund for all claim requests
 		#[pallet::constant]
 		type Creditor: Get<frame_support::PalletId>;
+
 	}
 
 	#[pallet::pallet]
@@ -341,7 +353,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::remove_from_pending_queue())]
 		pub fn remove_from_pending_queue(
 			origin: OriginFor<T>,
 			block_number: types::BlockNumberOf<T>,
