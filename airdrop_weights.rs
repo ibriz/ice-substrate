@@ -24,7 +24,7 @@
 // 10
 // --raw=raw.json
 // --output
-// ./
+// ./airdrop_weights.rs
 
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
@@ -40,7 +40,24 @@ impl<T: frame_system::Config> pallet_airdrop::WeightInfo for WeightInfo<T> {
 	// Storage: Sudo Key (r:1 w:0)
 	// Storage: Airdrop PendingClaims (r:0 w:1)
 	fn remove_from_pending_queue(_x: u32, _b: u32, ) -> Weight {
-		(67_877_000 as Weight)
+		(84_935_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+	// Storage: Sudo Key (r:1 w:0)
+	// Storage: Airdrop PendingClaims (r:1 w:1)
+	// Storage: Airdrop IceSnapshotMap (r:1 w:1)
+	// Storage: System Account (r:2 w:2)
+	fn complete_transfer_success(x: u32, _b: u32, _c: u32, ) -> Weight {
+		(881_157_000 as Weight)
+			// Standard Error: 2_000
+			.saturating_add((1_000 as Weight).saturating_mul(x as Weight))
+			.saturating_add(T::DbWeight::get().reads(5 as Weight))
+			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+	}
+	// Storage: System Account (r:1 w:1)
+	fn donate_to_creditor(_x: u32, ) -> Weight {
+		(143_458_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}

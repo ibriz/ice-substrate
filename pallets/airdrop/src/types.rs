@@ -17,7 +17,6 @@ pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::B
 
 
 
-
 /// Type that represent IconAddress
 pub type IconAddress = sp_std::vec::Vec<u8>;
 

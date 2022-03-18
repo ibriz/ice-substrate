@@ -7,4 +7,4 @@
 --steps 20 \
 --repeat 10 \
 --raw=raw.json \
---output ./
+--output ./airdrop_weights.rs

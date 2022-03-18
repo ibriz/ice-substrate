@@ -739,16 +739,22 @@ pub mod pallet {
     #[cfg(feature = "runtime-benchmarks")]
 	impl <T:Config> Pallet<T>{
 		
-		pub fn init_balance(free:u32){
-			T::Currency::make_free_balance_be(&Self::get_creditor_account(),free.into());
+		pub fn init_balance(account: &types::AccountIdOf<T>, free:u32){
+			T::Currency::make_free_balance_be(account,free.into());
+			let bal = T::Currency::free_balance(account);
 			
 			
 		}
 
-		pub fn setup_claimer(claimer: &types::AccountIdOf<T>,bl_number:types::BlockNumberOf<T>){
+		pub fn setup_claimer(claimer: types::AccountIdOf<T>,bl_number:types::BlockNumberOf<T>,icon_address:types::IconAddress){
 
-             T::Currency::make_free_balance_be(claimer,types::BalanceOf::<T>::from(1u32));
-			 <PendingClaims<T>>::insert(bl_number, claimer, 1_u8);
+             T::Currency::make_free_balance_be(&claimer,10_00_00_00u32.into());
+			 let mut snapshot = types::SnapshotInfo::<T>::default();
+			 snapshot = snapshot.icon_address(icon_address);
+        
+             <IceSnapshotMap<T>>::insert(claimer.clone(), snapshot);
+			 <PendingClaims<T>>::insert(bl_number, claimer.clone(), 10_u8);
+			 
 	 
 		}
 	}
