@@ -92,7 +92,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		type Currency: Currency<types::AccountIdOf<Self>>
-			+ ReservableCurrency<types::AccountIdOf<Self>>;
+			+ ReservableCurrency<types::AccountIdOf<Self>> ;
 
 		/// The overarching dispatch call type.
 		// type Call: From<Call<Self>>;
@@ -131,6 +131,8 @@ pub mod pallet {
 
 		/// Same entry is processed by offchian worker for too many times
 		RetryExceed(types::AccountIdOf<T>, types::BlockNumberOf<T>),
+
+		DonatedToCreditor(types::AccountIdOf<T>,types::BalanceOf<T>),
 	}
 
 	#[pallet::storage]
@@ -316,7 +318,7 @@ pub mod pallet {
 			.map_err(|err| {
 				// This is also error from our side. We keep it for next retry
             	log::info!("Currency transfer failed with error: {:?}", err);
-			    Self::register_failed_claim(origin.clone(), block_number, receiver.clone()).expect("Calling register failed_claim from currency::transfer. This call should not have failed..");
+			 //   Self::register_failed_claim(origin.clone(), block_number, receiver.clone()).expect("Calling register failed_claim from currency::transfer. This call should not have failed..");
 				
 				
 				err
@@ -429,6 +431,8 @@ pub mod pallet {
 			};
 
 			T::Currency::transfer(&sponser, &creditor_account, amount, existance_req)?;
+
+			Self::deposit_event(Event::<T>::DonatedToCreditor(sponser, amount));
 
 			Ok(())
 		}
@@ -717,6 +721,23 @@ pub mod pallet {
 		/// Return block height of Node from which this was called
 		pub fn get_current_block_number() -> types::BlockNumberOf<T> {
 			<frame_system::Pallet<T>>::block_number()
+		}
+	}
+	
+    #[cfg(feature = "runtime-benchmarks")]
+	impl <T:Config> Pallet<T>{
+		
+		pub fn init_balance(free:u32){
+			T::Currency::make_free_balance_be(&Self::get_creditor_account(),free.into());
+			
+			
+		}
+
+		pub fn setup_claimer(claimer: &types::AccountIdOf<T>,bl_number:types::BlockNumberOf<T>){
+
+             T::Currency::make_free_balance_be(claimer,types::BalanceOf::<T>::from(1u32));
+			 <PendingClaims<T>>::insert(bl_number, claimer, 1_u8);
+	 
 		}
 	}
 }

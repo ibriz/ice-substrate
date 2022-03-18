@@ -7,12 +7,16 @@ use frame_system;
 use scale_info::TypeInfo;
 use serde::Deserialize;
 use sp_std::prelude::*;
+use pallet_balances::Pallet as BalancesPallet;
 
 /// AccountId of anything that implements frame_system::Config
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 /// Type that represent the balance
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+
+
+
 
 /// Type that represent IconAddress
 pub type IconAddress = sp_std::vec::Vec<u8>;

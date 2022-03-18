@@ -38,35 +38,47 @@ benchmarks! {
 	  assert_last_event::<T>(Event::RemovedFromQueue(ice_address).into());
     }
 
-    complete_transfer_success {
+    // complete_transfer_success {
        
-        let x in 0 .. 10000;
-        let b in 0 .. 10000 ;
-        let c in 0 .. 10000 ;
-        let bl_number= BlockNumberOf::<T>::from(b);
-        let system_account_id = Pallet::<T>::get_creditor_account();
-        let diposit_res = <T as pallet_airdrop::Config>::Currency::set_balance(
-			mock::Origin::root(),
-			system_account_id.clone(),
-			10_00_000_u32.into(),
-			10_000_u32.into(),
-		);
+    //     let x in 0 .. 10000;
+    //     let b in 0 .. 10000 ;
+    //     let c in 0 .. 10000 ;
+    //     let bl_number= BlockNumberOf::<T>::from(b);
+    //     let system_account_id = Pallet::<T>::get_creditor_account();
+    //     let icon_address = account("icon_address", 0, x);
        
-        let claimer : AccountIdOf<T> = account("claimer", 0, x);
-        let mut response =types::ServerResponse::default();
-        response.amount=1_u128;
-        pallet_airdrop::PendingClaims::<T>::insert(bl_number, &claimer, 1_u8);
-
-        let icon_address = sp_core::bytes::from_hex("0x000000000000000000000000000000").unwrap();
-
-		let snapshot = types::SnapshotInfo::<T>::default();
         
-        pallet_airdrop::IceSnapshotMap::<T>::insert(claimer.clone(), snapshot.clone().icon_address(icon_address));
        
-    }:complete_transfer(RawOrigin::Root,bl_number,claimer.clone(),response)
-	 verify {
-	    assert_last_event::<T>(Event::RetryExceed(claimer, bl_number).into());
-    }
+    //     let claimer : AccountIdOf<T> = account("claimer", 0, x);
+    //     let mut response =types::ServerResponse::default();
+    //     response.amount=1_u128;
+    //     // pallet_airdrop::PendingClaims::<T>::insert(bl_number, &claimer, 1_u8);
+
+    //     Pallet::<T>::init_balance(10_00_00);
+    //     Pallet::<T>::setup_claimer(&claimer,bl_number);
+
+	// 	let snapshot = types::SnapshotInfo::<T>::default();
+        
+    //     pallet_airdrop::IceSnapshotMap::<T>::insert(claimer.clone(), snapshot.clone().icon_address(icon_address));
+       
+    // }:complete_transfer(RawOrigin::Root,bl_number,claimer.clone(),response)
+	//  verify {
+	//     assert_last_event::<T>(Event::RetryExceed(claimer, bl_number).into());
+    // }
+
+
+    // donate_to_creditor{
+    //     let x in 0 .. 100;
+
+    //     let caller: <T as frame_system::Config>::AccountId = frame_benchmarking::whitelisted_caller();
+    //     let amount= types::BalanceOf<T>::from(x);
+
+        
+
+    // }:donate_to_creditor(RawOrigin::Signed(caller),amount.clone(),true)
+    // verify {
+    //     assert_last_event::<T>(Event::DonatedToCreditor(caller,amount.clone()).into());
+    // }
 
 
 
