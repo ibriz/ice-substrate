@@ -11,6 +11,10 @@ use sp_std::prelude::*;
 /// AccountId of anything that implements frame_system::Config
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
+///
+pub type VestingBalanceOf<T> =
+	<<T as pallet_vesting::Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+
 /// Type that represent the balance
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
@@ -21,7 +25,7 @@ pub type IconAddress = sp_std::vec::Vec<u8>;
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
 
 ///
-pub type VestingInfoOf<T> = pallet_vesting::VestingInfo<BalanceOf<T>, BlockNumberOf<T>>;
+pub type VestingInfoOf<T> = pallet_vesting::VestingInfo<VestingBalanceOf<T>, BlockNumberOf<T>>;
 
 /// type that represnt the error that can occur while validation the signature
 #[derive(Eq, PartialEq)]

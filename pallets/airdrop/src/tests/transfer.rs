@@ -178,7 +178,7 @@ fn insufficient_creditor_balance() {
 				claimer.clone(),
 				samples::SERVER_DATA[0]
 			),
-			BalanceError::InsufficientBalance
+			PalletError::CantApplyVesting
 		);
 
 		// Behavioural expectation on this type of failure
