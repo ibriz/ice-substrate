@@ -5,8 +5,8 @@ mod transfer;
 mod utility_functions;
 pub mod prelude {
 	pub use super::{
-		assert_tx_call, get_last_event, minimal_test_ext, not_offchain_account, offchain_test_ext,
-		put_response, run_to_block, samples,
+		assert_tx_call, credit_creditor, get_last_event, minimal_test_ext, not_offchain_account,
+		offchain_test_ext, put_response, run_to_block, samples,
 	};
 	pub use crate as pallet_airdrop;
 	pub use crate::tests;
@@ -191,4 +191,20 @@ pub fn assert_tx_call(expected_call: &[&PalletCall], pool_state: &testing::PoolS
 		.collect::<Vec<_>>();
 
 	assert_eq!(expected_call_encoded, all_calls_in_pool);
+}
+
+pub fn credit_creditor(balance: u32) {
+	let creditor_account = AirdropModule::get_creditor_account();
+	let deposit_res = <Test as pallet_airdrop::Config>::Currency::set_balance(
+		mock::Origin::root(),
+		creditor_account,
+		balance.into(),
+		10_000_u32.into(),
+	);
+
+	assert_ok!(deposit_res);
+	assert_eq!(
+		<Test as pallet_airdrop::Config>::Currency::free_balance(&creditor_account),
+		balance.into()
+	);
 }

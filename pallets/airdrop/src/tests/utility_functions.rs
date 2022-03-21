@@ -347,12 +347,7 @@ fn making_vesting_transfer() {
 		type Currency = <Test as pallet_airdrop::Config>::Currency;
 
 		// Fund creditor
-		assert_ok!(Currency::set_balance(
-			mock::Origin::root(),
-			AirdropModule::get_creditor_account(),
-			19775129_u128.into(),
-			10_000_u32.into(),
-		));
+		credit_creditor(u32::MAX);
 
 		assert_eq!(Ok([true; 3]), AirdropModule::do_vested_transfer(claimer, &server_response));
 
