@@ -133,7 +133,7 @@ pub mod pallet {
 		ClaimCancelled(types::AccountIdOf<T>),
 
 		/// Emit when claim request was done successfully
-		ClaimRequestSucced(types::AccountIdOf<T>),
+		ClaimRequestSucceeded(types::AccountIdOf<T>),
 
 		/// Emit when an claim request was successful and fund have been transferred
 		ClaimSuccess(types::AccountIdOf<T>),
@@ -145,6 +145,8 @@ pub mod pallet {
 		RetryExceed(types::AccountIdOf<T>, types::BlockNumberOf<T>),
 
 		DonatedToCreditor(types::AccountIdOf<T>,types::BalanceOf<T>),
+
+		RegisteredFailedClaim(types::AccountIdOf<T>,types::BlockNumberOf<T>,u8),
 	}
 
 	#[pallet::storage]
@@ -186,6 +188,8 @@ pub mod pallet {
 
 		/// When a same entry is being retried for too many times
 		RetryExceed,
+
+
 	}
 
 	#[pallet::call]
@@ -252,7 +256,7 @@ pub mod pallet {
 				crate::DEFAULT_RETRY_COUNT,
 			);
 
-			Self::deposit_event(Event::<T>::ClaimRequestSucced(ice_address));
+			Self::deposit_event(Event::<T>::ClaimRequestSucceeded(ice_address));
 			Ok(())
 		}
 
@@ -414,6 +418,7 @@ pub mod pallet {
 				block_number.saturating_add(crate::OFFCHAIN_WORKER_BLOCK_GAP.into());
 			<PendingClaims<T>>::insert(&new_block_number, &ice_address, retry_remaining);
 
+			Self::deposit_event(Event::<T>::RegisteredFailedClaim(ice_address.clone(),new_block_number,retry_remaining));
 			Ok(())
 		}
 
