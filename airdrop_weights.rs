@@ -39,10 +39,8 @@ pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_airdrop::WeightInfo for WeightInfo<T> {
 	// Storage: Sudo Key (r:1 w:0)
 	// Storage: Airdrop PendingClaims (r:0 w:1)
-	fn remove_from_pending_queue(x: u32, _b: u32, ) -> Weight {
-		(51_484_000 as Weight)
-			// Standard Error: 0
-			.saturating_add((1_000 as Weight).saturating_mul(x as Weight))
+	fn remove_from_pending_queue(_b: u32, ) -> Weight {
+		(71_233_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
@@ -50,17 +48,31 @@ impl<T: frame_system::Config> pallet_airdrop::WeightInfo for WeightInfo<T> {
 	// Storage: Airdrop PendingClaims (r:1 w:1)
 	// Storage: Airdrop IceSnapshotMap (r:1 w:1)
 	// Storage: System Account (r:2 w:2)
-	fn complete_transfer_success(_x: u32, _b: u32, c: u32, ) -> Weight {
-		(682_130_000 as Weight)
-			// Standard Error: 1_000
-			.saturating_add((1_000 as Weight).saturating_mul(c as Weight))
+	fn complete_transfer_success(_b: u32, ) -> Weight {
+		(674_320_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
 	// Storage: System Account (r:1 w:1)
-	fn donate_to_creditor(_x: u32, ) -> Weight {
-		(150_184_000 as Weight)
+	fn donate_to_creditor(x: u32, ) -> Weight {
+		(113_199_000 as Weight)
+			// Standard Error: 105_000
+			.saturating_add((70_000 as Weight).saturating_mul(x as Weight))
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+	// Storage: Sudo Key (r:1 w:0)
+	// Storage: Airdrop PendingClaims (r:1 w:2)
+	fn register_failed_claim(_b: u32, ) -> Weight {
+		(68_980_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+	// Storage: Airdrop IceSnapshotMap (r:1 w:1)
+	// Storage: Airdrop PendingClaims (r:0 w:1)
+	fn claim_request() -> Weight {
+		(495_400_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
 }

@@ -1,7 +1,8 @@
 use crate as airdrop;
 use airdrop::pallet::Config;
 use core::convert::Into;
-use frame_support::pallet_prelude::*;
+use std::sync::Condvar;
+use frame_support::{pallet_prelude::*, Serialize};
 use frame_support::traits::Currency;
 use frame_system;
 use scale_info::TypeInfo;
@@ -22,6 +23,9 @@ pub type IconAddress = sp_std::vec::Vec<u8>;
 
 ///
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
+
+
+
 
 /// type that represnt the error that can occur while validation the signature
 #[derive(Eq, PartialEq)]
@@ -78,6 +82,8 @@ impl<T: Config> Default for SnapshotInfo<T> {
 		}
 	}
 }
+
+
 
 /// Possible values of error that can occur when doing claim request from offchain worker
 #[cfg_attr(feature = "std", derive(Debug))]

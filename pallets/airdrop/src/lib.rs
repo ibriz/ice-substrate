@@ -192,6 +192,7 @@ pub mod pallet {
 
 	}
 
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Dispatchable to be called by user when they want to
@@ -279,7 +280,7 @@ pub mod pallet {
 		// If any of the step fails in this function,
 		// we pass the flow to register_failed_claim if needed to be retry again
 		// and cancel the request if it dont have to retried again
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::complete_transfer_success(0u32))]
 		pub fn complete_transfer(
 			origin: OriginFor<T>,
 			block_number: types::BlockNumberOf<T>,
@@ -357,7 +358,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(T::WeightInfo::remove_from_pending_queue())]
+		#[pallet::weight(T::WeightInfo::remove_from_pending_queue(0u32))]
 		pub fn remove_from_pending_queue(
 			origin: OriginFor<T>,
 			block_number: types::BlockNumberOf<T>,
@@ -375,7 +376,7 @@ pub mod pallet {
 		/// processing in offchain worker
 		/// We move the entry to future block key so that another
 		/// offchain worker can process it again
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::register_failed_claim(0u32))]
 		pub fn register_failed_claim(
 			origin: OriginFor<T>,
 			block_number: types::BlockNumberOf<T>,
@@ -432,13 +433,14 @@ pub mod pallet {
 		/// 		or cancel the donation
 		/// This function can be used as a mean to credit our creditor if being donated from
 		/// any node operator owned account
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::donate_to_creditor(*amount))]
 		pub fn donate_to_creditor(
 			origin: OriginFor<T>,
-			amount: types::BalanceOf<T>,
+			amount: u32,
 			allow_death: bool,
 		) -> DispatchResult {
 			let sponser = ensure_signed(origin)?;
+			let amount =types::BalanceOf::<T>::from(amount);
 
 			let creditor_account = Self::get_creditor_account();
 			let existance_req = if allow_death {
@@ -453,6 +455,14 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		// pub fn balance_to_u64(input: types::BalanceOf<T>) -> u32 {
+
+		// 	TryInto::<u32>::try_into(input).ok_or(0_u32)
+		
+		// }
+
+	
 	}
 
 	#[pallet::hooks]
@@ -767,7 +777,6 @@ pub mod pallet {
 
 pub mod airdrop_crypto {
 	use crate::KEY_TYPE_ID;
-
 	use codec::alloc::string::String;
 	use sp_runtime::{
 		app_crypto::{app_crypto, sr25519},
