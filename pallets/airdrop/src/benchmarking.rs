@@ -2,26 +2,18 @@
 
 use super::*;
 
-// use super::Event;
-
 #[allow(unused)]
 use crate::Pallet;
 use crate as pallet_airdrop;
 use frame_benchmarking::{benchmarks,account,whitelisted_caller};
 use frame_system::RawOrigin;
-use frame_system::Origin;
-// use frame_system::Config;
 use sp_std::prelude::*;
 use types::AccountIdOf;
 use types::BlockNumberOf;
-use pallet_balances::Pallet as Balances;
 use sp_runtime::traits::Saturating;
 use sp_core::*;
-use log;
-use codec::alloc::string::String;
-use codec::{Decode, Encode};
-use sp_runtime::traits::TrailingZeroInput;
-use sp_runtime::AccountId32;
+use codec::{Decode};
+
 
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
