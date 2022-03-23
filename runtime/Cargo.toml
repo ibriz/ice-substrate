@@ -30,7 +30,7 @@ frame-support = { default-features = false, git = "https://github.com/paritytech
 frame-system = { default-features = false, package = "frame-system", git = "https://github.com/paritytech/substrate" }
 frame-system-rpc-runtime-api = { default-features = false, git = "https://github.com/paritytech/substrate" }
 
-pallet-evm = { version = "6.0.0-dev", default-features = false, git = "https://github.com/paritytech/frontier" }
+pallet-evm = { default-features = false, git = "https://github.com/paritytech/frontier" }
 pallet-ethereum = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/frontier" }
 pallet-dynamic-fee = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/frontier" }
 

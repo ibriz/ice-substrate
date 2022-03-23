@@ -14,12 +14,10 @@ use frame_system::Origin;
 use sp_std::prelude::*;
 use types::AccountIdOf;
 use types::BlockNumberOf;
-use core::str::FromStr;
 use pallet_balances::Pallet as Balances;
 use sp_runtime::traits::Saturating;
 use sp_core::*;
 use log;
-use serde::Deserialize;
 use codec::alloc::string::String;
 use codec::{Decode, Encode};
 use sp_runtime::traits::TrailingZeroInput;
@@ -96,13 +94,11 @@ benchmarks! {
 
         Pallet::<T>::init_balance(&caller,10_00_00_00_00);
 
-        let amount= types::BalanceOf::<T>::from(x);
-
-    }:donate_to_creditor(RawOrigin::Signed(caller.clone()),amount.clone(),false)
+    }:donate_to_creditor(RawOrigin::Signed(caller.clone()),x,false)
 
     verify {
 
-        assert_last_event::<T>(Event::DonatedToCreditor(caller,amount.clone()).into());
+        assert_last_event::<T>(Event::DonatedToCreditor(caller,types::BalanceOf::<T>::from(x)).into());
     }
 
     register_failed_claim {

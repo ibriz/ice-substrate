@@ -37,7 +37,6 @@
 //! This is only callable by sudo/root account
 
 #![cfg_attr(not(feature = "std"), no_std)]
-use frame_support::dispatch::Weight;
 pub use pallet::*;
 
 #[cfg(test)]
@@ -319,8 +318,11 @@ pub mod pallet {
 				// We are moving it to keep for retry
 				// But it will also fail in next time because it is eror
 				// with incompatable format between server response & rust struct
-				Self::register_failed_claim(origin.clone(), block_number, receiver.clone())
-					.expect("Calling register_failed_claim from amount.try_into.This call should not have failed.");
+				Self::register_failed_claim(
+					origin.clone(), 
+					block_number, 
+					receiver.clone()
+				).expect("Calling register_failed_claim from amount.try_into.This call should not have failed.");
 
 				DispatchError::Other("Cannot convert server_response.value into Balance type")
 			})?;
@@ -455,13 +457,6 @@ pub mod pallet {
 
 			Ok(())
 		}
-
-		// pub fn balance_to_u64(input: types::BalanceOf<T>) -> u32 {
-
-		// 	TryInto::<u32>::try_into(input).ok_or(0_u32)
-		
-		// }
-
 	
 	}
 
@@ -756,21 +751,19 @@ pub mod pallet {
 		
 		pub fn init_balance(account: &types::AccountIdOf<T>, free:u32){
 			T::Currency::make_free_balance_be(account,free.into());
-			let bal = T::Currency::free_balance(account);
-			
-			
 		}
 
 		pub fn setup_claimer(claimer: types::AccountIdOf<T>,bl_number:types::BlockNumberOf<T>,icon_address:types::IconAddress){
 
              T::Currency::make_free_balance_be(&claimer,10_00_00_00u32.into());
+
 			 let mut snapshot = types::SnapshotInfo::<T>::default();
+
 			 snapshot = snapshot.icon_address(icon_address);
         
              <IceSnapshotMap<T>>::insert(claimer.clone(), snapshot);
+
 			 <PendingClaims<T>>::insert(bl_number, claimer.clone(), 10_u8);
-			 
-	 
 		}
 	}
 }

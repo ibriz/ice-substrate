@@ -1,14 +1,12 @@
 use crate as airdrop;
 use airdrop::pallet::Config;
 use core::convert::Into;
-use std::sync::Condvar;
-use frame_support::{pallet_prelude::*, Serialize};
 use frame_support::traits::Currency;
+use frame_support::{pallet_prelude::*};
 use frame_system;
 use scale_info::TypeInfo;
 use serde::Deserialize;
 use sp_std::prelude::*;
-use pallet_balances::Pallet as BalancesPallet;
 
 /// AccountId of anything that implements frame_system::Config
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
