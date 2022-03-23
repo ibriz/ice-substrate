@@ -343,13 +343,15 @@ pub mod pallet {
 			});
 
 			// Get snapshot from map and return with error if not present
-			let mut snapshot = Self::get_icon_snapshot_map(&receiver_icon).ok_or({
-				log::info!(
-					"[Airdrop pallet] There is no entry in SnapshotMap for {:?}",
-					receiver_icon
-				);
-				Error::<T>::IncompleteData
-			})?;
+			let mut snapshot = Self::get_icon_snapshot_map(&receiver_icon)
+				.ok_or(())
+				.map_err(|_| {
+					log::info!(
+						"[Airdrop pallet] There is no entry in SnapshotMap for {:?}",
+						receiver_icon
+					);
+					Error::<T>::IncompleteData
+				})?;
 
 			// Also make sure that claim_status of this snapshot is false
 			ensure!(!snapshot.claim_status, {
@@ -459,7 +461,8 @@ pub mod pallet {
 			Self::ensure_root_or_offchain(origin).map_err(|_| Error::<T>::DeniedOperation)?;
 
 			let ice_address = Self::get_icon_snapshot_map(&icon_address)
-				.ok_or({
+				.ok_or(())
+				.map_err(|_| {
 					log::info!(
 						"[Airdrop pallet] {}. {:?}",
 						"Cannot register as failed claim because was not in map",
@@ -468,8 +471,9 @@ pub mod pallet {
 					Error::<T>::IncompleteData
 				})?
 				.ice_address;
-			let retry_remaining =
-				Self::get_pending_claims(&block_number, &icon_address).ok_or({
+			let retry_remaining = Self::get_pending_claims(&block_number, &icon_address)
+				.ok_or(())
+				.map_err(|_| {
 					log::info!(
 						"[Airdrop pallet] {}. {:?}",
 						"Cannot register as failed claim because was not in queue",
