@@ -854,66 +854,31 @@ pub mod pallet {
 		pub fn get_vesting_amounts<Amount>(
 			total_amount: Amount,
 			is_defi_user: bool,
-		) -> Result<[Amount; 3], DispatchError>
+		) -> Result<[Amount; 2], DispatchError>
 		where
 			Amount: CheckedMul + CheckedDiv + CheckedSub + CheckedAdd + AtLeast32BitUnsigned,
 		{
-			const DEFI_VESTING_PERCENTAGE: [u32; 2] = [30u32, 50u32];
-			const NORMAL_VESTING_PERCENTAGE: [u32; 2] = [30u32, 20u32];
-
-			let percentage = if is_defi_user {
-				DEFI_VESTING_PERCENTAGE
-			} else {
-				NORMAL_VESTING_PERCENTAGE
-			};
+			let percentage = if is_defi_user { 40_u32 } else { 30_u32 };
 
 			let amount_at_first_vesting = total_amount
-				.checked_mul(&percentage[0].into())
+				.checked_mul(&percentage.into())
 				.ok_or(sp_runtime::ArithmeticError::Overflow)?
 				.checked_div(&100_u32.into())
 				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
 
 			let amount_at_second_vesting = total_amount
-				.checked_mul(&percentage[1].into())
-				.ok_or(sp_runtime::ArithmeticError::Overflow)?
-				.checked_div(&100_u32.into())
-				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
-
-			let amount_at_last_vesting = total_amount
 				.checked_sub(&amount_at_first_vesting)
-				.ok_or(sp_runtime::ArithmeticError::Overflow)?
-				.checked_sub(&amount_at_second_vesting)
 				.ok_or(sp_runtime::ArithmeticError::Overflow)?;
 
-			Ok([
-				amount_at_first_vesting,
-				amount_at_second_vesting,
-				amount_at_last_vesting,
-			])
-		}
-
-		/// Get 3 different block number in which we will release
-		pub fn get_vesting_blocks() -> [types::BlockNumberOf<T>; 3] {
-			// TODO: put accurate value here
-			const BLOCK_PER_MONTH: u32 = 2700_u32;
-
-			// First vesting block is to be done in this block so
-			// we set starting block to be previous block than curerent
-			let first = Self::get_current_block_number().saturating_sub(1_u32.into());
-
-			// Second vesting is done after one month
-			let second = Self::get_current_block_number().saturating_add(BLOCK_PER_MONTH.into());
-
-			// Third/Last vesting is done in another month
-			let third = second.saturating_add(BLOCK_PER_MONTH.into());
-
-			[first, second, third]
+			Ok([amount_at_first_vesting, amount_at_second_vesting])
 		}
 
 		/// Create vesting schedule from user icon details
 		pub fn make_vesting_schedule(
 			server_response: &types::ServerResponse,
-		) -> Result<[types::VestingInfoOf<T>; 3], sp_runtime::DispatchError> {
+		) -> Result<[types::VestingInfoOf<T>; 2], sp_runtime::DispatchError> {
+			// block_per_day x 30 x period to finish vesting
+			const VESTING_DURATION: u32 = 5000 * 30_u32 * 11_u32;
 			type VestingInfo<T> = types::VestingInfoOf<T>;
 
 			// TODO: what is the total amount to transfer?
@@ -928,72 +893,79 @@ pub mod pallet {
 					"Balance type returned by server and Balance type of pallet are incompatible"
 				})?;
 
-			let vesting_amount = Self::get_vesting_amounts(total_amount, server_response.defi_user)
-				.map_err(|err| {
-					log::error!(
-						"[Airdrop pallet] While getting vesting_amount. Error: {:?}",
-						err
-					);
-					err
-				})?;
+			let [instant_amount, vesting_amount] =
+				Self::get_vesting_amounts(total_amount, server_response.defi_user)?;
 
-			let vesting_blocks = Self::get_vesting_blocks();
+			let release_per_block = vesting_amount
+				.checked_div(&VESTING_DURATION.into())
+				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
 
+			let current_block_num = Self::get_current_block_number();
 			Ok([
-				VestingInfo::<T>::new(vesting_amount[0], vesting_amount[0], vesting_blocks[0]),
-				VestingInfo::<T>::new(vesting_amount[1], vesting_amount[1], vesting_blocks[1]),
-				VestingInfo::<T>::new(vesting_amount[2], vesting_amount[2], vesting_blocks[2]),
+				VestingInfo::<T>::new(
+					instant_amount,
+					instant_amount,
+					current_block_num.saturating_sub(1_u32.into()),
+				),
+				VestingInfo::<T>::new(
+					vesting_amount,
+					release_per_block,
+					current_block_num.saturating_add(1_u32.into()),
+				),
 			])
 		}
 
 		pub fn do_vested_transfer(
 			claimer: types::AccountIdOf<T>,
 			server_response: &types::ServerResponse,
-		) -> Result<[bool; 3], DispatchError> {
-			let mut vesting_applied_for = [true; 3];
-
-			let creditor_origin: <T as frame_system::Config>::Origin =
-				frame_system::RawOrigin::Signed(Self::get_creditor_account()).into();
+		) -> Result<(), DispatchError> {
+			let creditor_origin = <T as frame_system::Config>::Origin::from(
+				frame_system::RawOrigin::Signed(Self::get_creditor_account()),
+			);
 			let claimer_origin = <T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(claimer);
 
-			let all_schedules = Self::make_vesting_schedule(server_response).map_err(|err| {
-				log::info!(
-					"[Airdrop pallet] While making vesting schedules. Error: {:?}",
+			let [instant_vesting, extended_vesting] = Self::make_vesting_schedule(server_response)?;
+
+			// Apply first vesting instantly
+			pallet_vesting::Pallet::<T>::vested_transfer(
+				creditor_origin.clone(),
+				claimer_origin.clone(),
+				instant_vesting,
+			)
+			.map_err(|err| {
+				log::error!(
+					"[Airdrop pallet] Cannot apply instant vesting. Error: {:?}",
 					err
 				);
-				err
+				Error::<T>::CantApplyVesting
 			})?;
 
-			for (i, schedule) in all_schedules.iter().enumerate() {
-				pallet_vesting::Pallet::<T>::vested_transfer(
-					creditor_origin.clone(),
-					claimer_origin.clone(),
-					*schedule,
-				)
-				.map_err(|err| {
-					vesting_applied_for[i] = false;
-					log::error!(
-						"[Airdrop pallet] While doing {}th vesting: {:?}, Error: {:?}",
-						i,
-						schedule,
-						err
-					);
-				})
-				// We will continue to apply another vesting
-				// even if previous one failed. It is responsibility of
-				// node operator to monitor error
-				.ok();
-			}
+			// Apply extended vesting
+			pallet_vesting::Pallet::<T>::vested_transfer(
+				creditor_origin.clone(),
+				claimer_origin.clone(),
+				extended_vesting,
+			)
+			.map_err(|err| {
+				log::error!(
+					"[Airdrop pallet] Cannot apply extended vesting. Error: {:?}",
+					err
+				);
+				Error::<T>::CantApplyVesting
+			})?;
 
-			// First vesting schedule is already released. Claim it
+			// Claim first vesting as it is to be received instantly
 			pallet_vesting::Pallet::<T>::vest_other(creditor_origin, claimer_origin).map_err(
 				|err| {
-					log::error!("[Airdrop pallet] While doing vest call. error: {:?}", err);
-					err
+					log::error!(
+						"[Airdrop pallet] Cannot claim instant vested aount. Error: {:?}",
+						err
+					);
+					Error::<T>::CantApplyVesting
 				},
 			)?;
 
-			Ok(vesting_applied_for)
+			Ok(())
 		}
 	}
 }

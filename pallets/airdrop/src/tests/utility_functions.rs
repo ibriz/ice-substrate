@@ -281,34 +281,16 @@ fn get_vesting_amounts_splitted() {
 		use sp_runtime::ArithmeticError;
 
 		assert_err!(AirdropModule::get_vesting_amounts(u128::MAX, true), ArithmeticError::Overflow);
-		assert_eq!(Ok([0_u128, 0_u128, 0_u128]), AirdropModule::get_vesting_amounts(0_u128, true));
+		assert_eq!(Ok([0_u128, 0_u128]), AirdropModule::get_vesting_amounts(0_u128, true));
 
-		assert_eq!(Ok([900_u128, 1500_u128, 600_u128]), AirdropModule::get_vesting_amounts(3_000_u128, true));
-		assert_eq!(Ok([900_u128, 600_u128, 1500_u128]), AirdropModule::get_vesting_amounts(3_000_u128, false));
+		assert_eq!(Ok([900_u128, 2100_u128]), AirdropModule::get_vesting_amounts(3_000_u128, false));
+		assert_eq!(Ok([1200_u128, 1800_u128]), AirdropModule::get_vesting_amounts(3_000_u128, true));
 		
-		assert_eq!(Ok([0_u128, 0_u128, 1_u128]), AirdropModule::get_vesting_amounts(1_u128, true));
-		assert_eq!(Ok([0_u128, 0_u128, 1_u128]), AirdropModule::get_vesting_amounts(1_u128, false));
+		assert_eq!(Ok([0_u128, 1_u128]), AirdropModule::get_vesting_amounts(1_u128, false));
+		assert_eq!(Ok([0_u128, 1_u128]), AirdropModule::get_vesting_amounts(1_u128, true));
 
-		assert_eq!(Ok([2932538_u128, 1955025_u128, 4887566_u128]), AirdropModule::get_vesting_amounts(9775129_u128, false));
-		assert_eq!(Ok([2932538_u128, 4887564_u128, 1955027_u128]), AirdropModule::get_vesting_amounts(9775129_u128, true));
-	});
-}
-
-#[test]
-fn get_vesting_blocks() {
-	minimal_test_ext().execute_with(||{
-		assert_eq!([0_u64, 2700_u64, 5400_u64], AirdropModule::get_vesting_blocks());
-
-		run_to_block(1);
-		assert_eq!([0_u64, 2701_u64, 5401_u64], AirdropModule::get_vesting_blocks());
-
-		run_to_block(10);
-		assert_eq!([9_u64, 2710_u64, 5410_u64], AirdropModule::get_vesting_blocks());
-
-		let last_block_possible = types::BlockNumberOf::<Test>::MAX;
-		tests::System::set_block_number(last_block_possible);
-		assert_eq!([last_block_possible-1, last_block_possible, last_block_possible], AirdropModule::get_vesting_blocks());
-
+		assert_eq!(Ok([2932538_u128, 6842591_u128]), AirdropModule::get_vesting_amounts(9775129_u128, false));
+		assert_eq!(Ok([3910051_u128, 5865078_u128]), AirdropModule::get_vesting_amounts(9775129_u128, true));
 	});
 }
 
@@ -321,19 +303,15 @@ fn cooking_vesting_schedule() {
 		
 		let vesting_res = AirdropModule::make_vesting_schedule(&server_response);
 		assert_ok!(vesting_res);
-		let [first_vesting, second_vesting, third_vesting] = vesting_res.unwrap();
+		let [first_vesting, second_vesting] = vesting_res.unwrap();
 
 		let first_vest_amount = 2932538_u128;
 		let expected_first_vesting = types::VestingInfoOf::<Test>::new(first_vest_amount, first_vest_amount, 9_u64);
 		assert_eq!(expected_first_vesting, first_vesting);
 
-		let second_vest_amount = 1955025_u128;
-		let expected_second_vesting = types::VestingInfoOf::<Test>::new(second_vest_amount, second_vest_amount, 2710_u64);
+		let second_vest_amount = 6842591_u128;
+		let expected_second_vesting = types::VestingInfoOf::<Test>::new(second_vest_amount, 4, 11_u64);
 		assert_eq!(expected_second_vesting, second_vesting);
-
-		let third_vest_amount = 4887566_u128;
-		let expected_third_vesting = types::VestingInfoOf::<Test>::new(third_vest_amount, third_vest_amount, 5410_u64);
-		assert_eq!(expected_third_vesting, third_vesting);
 	});
 }
 
@@ -349,7 +327,7 @@ fn making_vesting_transfer() {
 		// Fund creditor
 		credit_creditor(u32::MAX);
 
-		assert_eq!(Ok([true; 3]), AirdropModule::do_vested_transfer(claimer, &server_response));
+		assert_ok!(AirdropModule::do_vested_transfer(claimer, &server_response));
 
 		// Ensure all amount is being transferred
 		assert_eq!(9775129_u128, Currency::free_balance(&claimer));
