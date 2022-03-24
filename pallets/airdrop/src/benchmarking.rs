@@ -85,12 +85,13 @@ benchmarks! {
         Pallet::<T>::init_balance(&system_account_id,10_00_00_00);
 
         Pallet::<T>::init_balance(&caller,10_00_00_00_00);
+        let amount = types::BalanceOf::<T>::from(x);
 
-    }:donate_to_creditor(RawOrigin::Signed(caller.clone()),x,false)
+    }:donate_to_creditor(RawOrigin::Signed(caller.clone()),amount.clone(),false)
 
     verify {
 
-        assert_last_event::<T>(Event::DonatedToCreditor(caller,types::BalanceOf::<T>::from(x)).into());
+        assert_last_event::<T>(Event::DonatedToCreditor(caller,amount).into());
     }
 
     register_failed_claim {

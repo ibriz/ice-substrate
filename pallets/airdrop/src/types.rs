@@ -169,3 +169,13 @@ pub trait IconVerifiable {
 		message: &[u8],
 	) -> Result<(), SignatureValidationError>;
 }
+
+pub fn balance_to_u32<T: Config>(input:BalanceOf<T>) -> u32 {
+	TryInto::<u32>::try_into(input).ok().unwrap()
+}
+
+pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
+	TryInto::<u32>::try_into(input).ok().unwrap()
+}
+
+

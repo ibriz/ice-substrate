@@ -206,7 +206,7 @@ pub mod pallet {
 		// this will filter the invalid call before that are kept in pool so
 		// allowing valid transaction to take over which inturn improve
 		// node performance
-		#[pallet::weight(10_000)]
+		#[pallet::weight(T::WeightInfo::claim_request())]
 		pub fn claim_request(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
@@ -435,10 +435,10 @@ pub mod pallet {
 		/// 		or cancel the donation
 		/// This function can be used as a mean to credit our creditor if being donated from
 		/// any node operator owned account
-		#[pallet::weight(T::WeightInfo::donate_to_creditor(*amount))]
+		#[pallet::weight(T::WeightInfo::donate_to_creditor(types::balance_to_u32::<T>(amount.clone())))]
 		pub fn donate_to_creditor(
 			origin: OriginFor<T>,
-			amount: u32,
+			amount: types::BalanceOf<T>,
 			allow_death: bool,
 		) -> DispatchResult {
 			let sponser = ensure_signed(origin)?;
@@ -744,6 +744,7 @@ pub mod pallet {
 		pub fn get_current_block_number() -> types::BlockNumberOf<T> {
 			<frame_system::Pallet<T>>::block_number()
 		}
+		
 	}
 	
     #[cfg(feature = "runtime-benchmarks")]
