@@ -19,7 +19,7 @@ pub type VestingBalanceOf<T> =
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
 /// Type that represent IconAddress
-pub type IconAddress = sp_std::vec::Vec<u8>;
+pub type IconAddress = [u8; 20];
 
 ///
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;

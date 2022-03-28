@@ -2,7 +2,7 @@
 name = "pallet-airdrop"
 version = "4.0.0-dev"
 description = "Logic to do airdrop"
-authors = ["iBriz team <https://github.com/ibriz>"]
+authors = ["ICONOSphere <social@iconosphere.io>"]
 edition = "2021"
 license = "Unlicense"
 publish = false
@@ -23,7 +23,7 @@ scale-info = { version = "1.0", default-features = false, features = [
 serde = { version = '1.0', default-features = false, features = ['derive'] }
 serde_json = { version = '1.0', default-features = false, features = ['alloc'] }
 parking_lot = { version = "0.11", optional = true }
-
+hex-literal = { version = "*", default-features = false }
 # substrate packages
 
 [dependencies.frame-support]
