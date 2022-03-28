@@ -202,7 +202,7 @@ fn complete_transfer_valid_flow() {
 	minimal_test_ext().execute_with(|| {
 		run_to_block(2);
 
-		let claimer_icon = bytes::from_hex(samples::ICON_ADDRESS[0]).unwrap();
+		let claimer_icon = samples::ICON_ADDRESS[0];
 		let claimer_ice = samples::ACCOUNT_ID[0];
 		let bl_num: types::BlockNumberOf<Test> = 1_u32.into();
 		let server_response = samples::SERVER_DATA[0];
