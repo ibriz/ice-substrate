@@ -581,22 +581,6 @@ pub mod pallet {
 
 			Ok(Pays::No.into())
 		}
-
-		// TODO: templorary code
-		#[pallet::weight(0)]
-		pub fn vest_test(origin: OriginFor<T>) -> DispatchResult {
-			let ice_address = ensure_signed(origin)?;
-			let my_vesting_schedule = types::VestingInfoOf::<T>::new(
-				((100 * 5) as u32).into(),
-				10000000_u32.into(),
-				100000000_u32.into(),
-			);
-
-			// assert_eq!(Vesting::vesting(a).unwrap(), vec![my_vesting_schedule]);
-			log::info!("__VESTING__SCHEDULE__: {:?}", my_vesting_schedule);
-
-			Ok(())
-		}
 	}
 
 	#[pallet::hooks]
