@@ -253,17 +253,6 @@ pub mod pallet {
 				message, icon_signature
 			);
 
-			// We check the claim status before hand
-			let is_already_on_map = <IceSnapshotMap<T>>::contains_key(&icon_address);
-			ensure!(!is_already_on_map, {
-				log::trace!(
-					"[Airdrop pallet] Address pair: {:?} was ignored. {}",
-					(&ice_address, &icon_address),
-					"Entry already exists in map"
-				);
-				Error::<T>::RequestAlreadyMade
-			});
-
 			// make sure the validation is correct
 			<types::AccountIdOf<T> as Into<<T as Config>::AccountId>>::into(ice_address.clone())
 				.verify_with_icon(&icon_address, &icon_signature, &message)
@@ -277,9 +266,7 @@ pub mod pallet {
 					Error::<T>::InvalidSignature
 				})?;
 
-			Self::claim_request_unchecked(ice_address, icon_address);
-
-			Ok(())
+			Self::claim_request_unverified(ice_address, icon_address)
 		}
 
 		// Means to push claim request force fully
@@ -297,18 +284,7 @@ pub mod pallet {
 				(&ice_address, &icon_address),
 			);
 
-			// If it is already in map, even force_insert will fail
-			let is_already_on_map = <IceSnapshotMap<T>>::contains_key(&icon_address);
-			ensure!(!is_already_on_map, {
-				log::trace!(
-					"[Airdrop pallet] Address pair: {:?} was ignored. {}",
-					(&ice_address, &icon_address),
-					"Entry already exists in map"
-				);
-				Error::<T>::RequestAlreadyMade
-			});
-
-			Self::claim_request_unchecked(ice_address, icon_address);
+			Self::claim_request_unverified(ice_address, icon_address)?;
 
 			Ok(Pays::No.into())
 		}
@@ -884,10 +860,21 @@ pub mod pallet {
 		/// Do claim request withing checking for anything.
 		/// This is seperated as a means to share logic
 		/// And always should be called only after doing proper check before hand
-		pub fn claim_request_unchecked(
+		pub fn claim_request_unverified(
 			ice_address: types::AccountIdOf<T>,
 			icon_address: types::IconAddress,
-		) {
+		) -> DispatchResult {
+			// We check the claim status before hand
+			let is_already_on_map = <IceSnapshotMap<T>>::contains_key(&icon_address);
+			ensure!(!is_already_on_map, {
+				log::trace!(
+					"[Airdrop pallet] Address pair: {:?} was ignored. {}",
+					(&ice_address, &icon_address),
+					"Entry already exists in map"
+				);
+				Error::<T>::RequestAlreadyMade
+			});
+
 			// Get the current block number. This is the number where user asked for claim
 			// and we store it in PencingClaims to preserve FIFO
 			let current_block_number = Self::get_current_block_number();
@@ -915,6 +902,8 @@ pub mod pallet {
 				ice_address,
 				icon_address,
 			});
+
+			Ok(())
 		}
 
 		/// Helper function to create similar interface like `ensure_root`
