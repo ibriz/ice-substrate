@@ -3,11 +3,10 @@ mod claim;
 mod signature_validation;
 mod transfer;
 mod utility_functions;
-
 pub mod prelude {
 	pub use super::{
-		assert_tx_call, get_last_event, minimal_test_ext, not_offchain_account, offchain_test_ext,
-		put_response, run_to_block, samples,
+		assert_tx_call, credit_creditor, get_last_event, minimal_test_ext, not_offchain_account,
+		offchain_test_ext, put_response, run_to_block, samples,
 	};
 	pub use crate as pallet_airdrop;
 	pub use crate::tests;
@@ -19,11 +18,13 @@ pub mod prelude {
 	pub use pallet_airdrop::mock::{self, AirdropModule, Origin, Test};
 	pub use pallet_airdrop::types;
 	pub use sp_core::bytes;
+  
 	pub use sp_runtime::traits::IdentifyAccount;
 
 	pub type PalletError = pallet_airdrop::Error<Test>;
 	pub type PalletEvent = pallet_airdrop::Event<Test>;
 	pub type PalletCall = pallet_airdrop::Call<Test>;
+	pub type BalanceError = pallet_balances::Error<Test>;
 }
 use mock::System;
 use prelude::*;
@@ -137,6 +138,7 @@ pub fn run_to_block(n: types::BlockNumberOf<Test>) {
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		AirdropModule::on_initialize(System::block_number());
+		//<Test as pallet_airdrop::Config>::VestingModule::on_initialize(System::block_number());
 	}
 }
 
@@ -192,4 +194,20 @@ pub fn assert_tx_call(expected_call: &[&PalletCall], pool_state: &testing::PoolS
 		.collect::<Vec<_>>();
 
 	assert_eq!(expected_call_encoded, all_calls_in_pool);
+}
+
+pub fn credit_creditor(balance: u32) {
+	let creditor_account = AirdropModule::get_creditor_account();
+	let deposit_res = <Test as pallet_airdrop::Config>::Currency::set_balance(
+		mock::Origin::root(),
+		creditor_account,
+		balance.into(),
+		10_000_u32.into(),
+	);
+
+	assert_ok!(deposit_res);
+	assert_eq!(
+		<Test as pallet_airdrop::Config>::Currency::free_balance(&creditor_account),
+		balance.into()
+	);
 }

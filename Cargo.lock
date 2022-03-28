@@ -4200,6 +4200,7 @@ dependencies = [
  "pallet-balances",
  "pallet-evm-precompile-sha3fips",
  "pallet-evm-precompile-simple",
+ "pallet-vesting",
  "parity-scale-codec",
  "parking_lot",
  "scale-info",

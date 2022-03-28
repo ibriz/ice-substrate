@@ -263,3 +263,65 @@ fn pending_claims_getter() {
 		}
 	})
 }
+
+#[test]
+fn get_vesting_amounts_splitted() {
+	minimal_test_ext().execute_with(||{
+		use sp_runtime::ArithmeticError;
+
+		assert_err!(AirdropModule::get_vesting_amounts(u128::MAX, true), ArithmeticError::Overflow);
+		assert_eq!(Ok([0_u128, 0_u128]), AirdropModule::get_vesting_amounts(0_u128, true));
+
+		assert_eq!(Ok([900_u128, 2100_u128]), AirdropModule::get_vesting_amounts(3_000_u128, false));
+		assert_eq!(Ok([1200_u128, 1800_u128]), AirdropModule::get_vesting_amounts(3_000_u128, true));
+		
+		assert_eq!(Ok([0_u128, 1_u128]), AirdropModule::get_vesting_amounts(1_u128, false));
+		assert_eq!(Ok([0_u128, 1_u128]), AirdropModule::get_vesting_amounts(1_u128, true));
+
+		assert_eq!(Ok([2932538_u128, 6842591_u128]), AirdropModule::get_vesting_amounts(9775129_u128, false));
+		assert_eq!(Ok([3910051_u128, 5865078_u128]), AirdropModule::get_vesting_amounts(9775129_u128, true));
+	});
+}
+
+#[test]
+fn cooking_vesting_schedule() {
+	minimal_test_ext().execute_with(||{
+		run_to_block(10);
+
+		let server_response = samples::SERVER_DATA[1];
+		
+		let vesting_res = AirdropModule::make_vesting_schedule(&server_response);
+		assert_ok!(vesting_res);
+		let [first_vesting, second_vesting] = vesting_res.unwrap();
+
+		let first_vest_amount = 2932538_u128;
+		let expected_first_vesting = types::VestingInfoOf::<Test>::new(first_vest_amount, first_vest_amount, 9_u64);
+		assert_eq!(expected_first_vesting, first_vesting);
+
+		let second_vest_amount = 6842591_u128;
+		let expected_second_vesting = types::VestingInfoOf::<Test>::new(second_vest_amount, 4, 11_u64);
+		assert_eq!(expected_second_vesting, second_vesting);
+	});
+}
+
+#[test]
+fn making_vesting_transfer() {
+	minimal_test_ext().execute_with(||{
+		run_to_block(3);
+
+		let server_response = samples::SERVER_DATA[1];
+		let claimer = samples::ACCOUNT_ID[1];
+		type Currency = <Test as pallet_airdrop::Config>::Currency;
+
+		// Fund creditor
+		credit_creditor(u32::MAX);
+
+		assert_ok!(AirdropModule::do_vested_transfer(claimer, &server_response));
+
+		// Ensure all amount is being transferred
+		assert_eq!(9775129_u128, Currency::free_balance(&claimer));
+
+		// First vesting should be usable instantly
+		assert_eq!(2932538_u128, Currency::usable_balance(&claimer));
+	});
+}

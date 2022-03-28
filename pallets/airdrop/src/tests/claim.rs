@@ -294,6 +294,9 @@ fn complete_flow() {
 			cleared_upto
 		));
 
+		// Put enough fund in creditor
+		credit_creditor(u32::MAX);
+
 		// Make a claim reqest
 		assert_ok!(AirdropModule::claim_request(
 			Origin::signed(claimer_ice_address.clone()),
@@ -335,7 +338,7 @@ fn complete_flow() {
 
 		// Make sure user got right balance
 		assert_eq!(
-			server_data.amount,
+			server_data.amount + server_data.omm + server_data.stake,
 			<Test as pallet_airdrop::Config>::Currency::free_balance(&claimer_ice_address),
 		);
 

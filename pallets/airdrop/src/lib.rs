@@ -80,20 +80,26 @@ pub const DEFAULT_RETRY_COUNT: u8 = 2;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::types;
+	use sp_runtime::traits::Saturating;
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::{ensure_signed, pallet_prelude::*};
 	use sp_std::prelude::*;
 
-	use frame_support::traits::{Currency, ExistenceRequirement, Hooks, ReservableCurrency};
+	use frame_support::traits::{
+		Currency, ExistenceRequirement, Hooks, LockableCurrency, ReservableCurrency,
+	};
 	use frame_system::offchain::CreateSignedTransaction;
+	use sp_runtime::traits::{
+		AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub,
+	};
 	use types::IconVerifiable;
-
-	use sp_runtime::traits::Saturating;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
+	pub trait Config:
+		frame_system::Config + CreateSignedTransaction<Call<Self>> + pallet_vesting::Config
+	{
 		/// AccountIf type that is same as frame_system's accountId also
 		/// extended to be verifable against icon data
 		type AccountId: IconVerifiable + IsType<<Self as frame_system::Config>::AccountId>;
@@ -102,7 +108,12 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		type Currency: Currency<types::AccountIdOf<Self>>
-			+ ReservableCurrency<types::AccountIdOf<Self>>;
+			+ ReservableCurrency<types::AccountIdOf<Self>>
+			+ LockableCurrency<types::AccountIdOf<Self>>
+			+ IsType<<Self as pallet_vesting::Config>::Currency>;
+
+		#[deprecated(note = "Do tight coupling or expanded loose coupling of vesting_pallet")]
+		type VestingModule: pallet_vesting::Config + IsType<Self>;
 
 		/// The overarching dispatch call type.
 		// type Call: From<Call<Self>>;
@@ -206,6 +217,9 @@ pub mod pallet {
 
 		/// When a same entry is being retried for too many times
 		RetryExceed,
+
+		/// Some operation while applying vesting failed
+		CantApplyVesting,
 	}
 
 	#[pallet::call]
@@ -343,6 +357,7 @@ pub mod pallet {
 			});
 
 			// Get snapshot from map and return with error if not present
+
 			let mut snapshot = Self::get_icon_snapshot_map(&receiver_icon)
 				.ok_or(())
 				.map_err(|_| {
@@ -355,32 +370,26 @@ pub mod pallet {
 
 			// Also make sure that claim_status of this snapshot is false
 			ensure!(!snapshot.claim_status, {
-				log::trace!(
-					"[Airdrop pallet] Claiming for pair {:?} ignored because claim_status was true",
-					(&receiver_icon, &block_number)
+				log::info!(
+					"[Airdrop pallet] Claim already made for entry {:?}",
+					(block_number, &snapshot.ice_address, &receiver_icon)
 				);
 				Error::<T>::ClaimAlreadyMade
 			});
 
-			let amount = Self::get_total_amount(&server_response).map_err(|e| {
-				log::error!("[Airdrop pallet] While getting total amount: {}", e);
-				DispatchError::Other("Cannot calculate total amount from server_response")
-			})?;
+			// Apply all vesting
+			Self::do_vested_transfer(snapshot.ice_address.clone(), &server_response).map_err(
+				|_| {
+					Self::register_failed_claim(
+						frame_system::RawOrigin::Root.into(),
+						block_number,
+						receiver_icon.clone(),
+					)
+					.expect("Calling register_failed_claim should not have been failed...");
 
-			// Transfer the amount to this reciver keeping creditor alive
-			T::Currency::transfer(
-				&Self::get_creditor_account(),
-				&snapshot.ice_address,
-				amount,
-				ExistenceRequirement::KeepAlive,
-			)
-			.map_err(|err| {
-				// This is also error from our side. We keep it for next retry
-				Self::register_failed_claim(origin.clone(), block_number, receiver_icon.clone()).expect("Calling register failed_claim from currency::transfer. This call should not have failed..");
-
-				log::info!("Currency transfer failed with error: {:?}", err);
-				err
-			})?;
+					Error::<T>::CantApplyVesting
+				},
+			)?;
 
 			// Update claim_status to true and store it
 			snapshot.claim_status = true;
@@ -555,7 +564,7 @@ pub mod pallet {
 				ExistenceRequirement::KeepAlive
 			};
 
-			T::Currency::transfer(&sponser, &creditor_account, amount, existance_req)?;
+			<T as Config>::Currency::transfer(&sponser, &creditor_account, amount, existance_req)?;
 
 			Ok(())
 		}
@@ -571,6 +580,22 @@ pub mod pallet {
 			<ProcessedUpto<T>>::set(new_value);
 
 			Ok(Pays::No.into())
+		}
+
+		// TODO: templorary code
+		#[pallet::weight(0)]
+		pub fn vest_test(origin: OriginFor<T>) -> DispatchResult {
+			let ice_address = ensure_signed(origin)?;
+			let my_vesting_schedule = types::VestingInfoOf::<T>::new(
+				((100 * 5) as u32).into(),
+				10000000_u32.into(),
+				100000000_u32.into(),
+			);
+
+			// assert_eq!(Vesting::vesting(a).unwrap(), vec![my_vesting_schedule]);
+			log::info!("__VESTING__SCHEDULE__: {:?}", my_vesting_schedule);
+
+			Ok(())
 		}
 	}
 
@@ -924,6 +949,126 @@ pub mod pallet {
 		/// Return block height of Node from which this was called
 		pub fn get_current_block_number() -> types::BlockNumberOf<T> {
 			<frame_system::Pallet<T>>::block_number()
+		}
+
+		/// Split total amount to chunk of 3 amount
+		/// These are the amounts that are to be vested in next
+		/// 3 lot.
+		pub fn get_vesting_amounts<Amount>(
+			total_amount: Amount,
+			is_defi_user: bool,
+		) -> Result<[Amount; 2], DispatchError>
+		where
+			Amount: CheckedMul + CheckedDiv + CheckedSub + CheckedAdd + AtLeast32BitUnsigned,
+		{
+			let percentage = if is_defi_user { 40_u32 } else { 30_u32 };
+
+			let amount_at_first_vesting = total_amount
+				.checked_mul(&percentage.into())
+				.ok_or(sp_runtime::ArithmeticError::Overflow)?
+				.checked_div(&100_u32.into())
+				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
+
+			let amount_at_second_vesting = total_amount
+				.checked_sub(&amount_at_first_vesting)
+				.ok_or(sp_runtime::ArithmeticError::Overflow)?;
+
+			Ok([amount_at_first_vesting, amount_at_second_vesting])
+		}
+
+		/// Create vesting schedule from user icon details
+		pub fn make_vesting_schedule(
+			server_response: &types::ServerResponse,
+		) -> Result<[types::VestingInfoOf<T>; 2], sp_runtime::DispatchError> {
+			// block_per_day x 30 x period to finish vesting
+			const VESTING_DURATION: u32 = 5000 * 30_u32 * 11_u32;
+			type VestingInfo<T> = types::VestingInfoOf<T>;
+
+			// TODO: what is the total amount to transfer?
+			let total_amount: types::VestingBalanceOf<T> = server_response
+				.amount
+				.checked_add(server_response.stake)
+				.ok_or(sp_runtime::ArithmeticError::Overflow)?
+				.checked_add(server_response.omm)
+				.ok_or(sp_runtime::ArithmeticError::Overflow)?
+				.try_into()
+				.map_err(|_| {
+					"Balance type returned by server and Balance type of pallet are incompatible"
+				})?;
+
+			let [instant_amount, vesting_amount] =
+				Self::get_vesting_amounts(total_amount, server_response.defi_user)?;
+
+			let release_per_block = vesting_amount
+				.checked_div(&VESTING_DURATION.into())
+				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
+
+			let current_block_num = Self::get_current_block_number();
+			Ok([
+				VestingInfo::<T>::new(
+					instant_amount,
+					instant_amount,
+					current_block_num.saturating_sub(1_u32.into()),
+				),
+				VestingInfo::<T>::new(
+					vesting_amount,
+					release_per_block,
+					current_block_num.saturating_add(1_u32.into()),
+				),
+			])
+		}
+
+		pub fn do_vested_transfer(
+			claimer: types::AccountIdOf<T>,
+			server_response: &types::ServerResponse,
+		) -> Result<(), DispatchError> {
+			let creditor_origin = <T as frame_system::Config>::Origin::from(
+				frame_system::RawOrigin::Signed(Self::get_creditor_account()),
+			);
+			let claimer_origin = <T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(claimer);
+
+			let [instant_vesting, extended_vesting] = Self::make_vesting_schedule(server_response)?;
+
+			// Apply first vesting instantly
+			pallet_vesting::Pallet::<T>::vested_transfer(
+				creditor_origin.clone(),
+				claimer_origin.clone(),
+				instant_vesting,
+			)
+			.map_err(|err| {
+				log::error!(
+					"[Airdrop pallet] Cannot apply instant vesting. Error: {:?}",
+					err
+				);
+				Error::<T>::CantApplyVesting
+			})?;
+
+			// Apply extended vesting
+			pallet_vesting::Pallet::<T>::vested_transfer(
+				creditor_origin.clone(),
+				claimer_origin.clone(),
+				extended_vesting,
+			)
+			.map_err(|err| {
+				log::error!(
+					"[Airdrop pallet] Cannot apply extended vesting. Error: {:?}",
+					err
+				);
+				Error::<T>::CantApplyVesting
+			})?;
+
+			// Claim first vesting as it is to be received instantly
+			pallet_vesting::Pallet::<T>::vest_other(creditor_origin, claimer_origin).map_err(
+				|err| {
+					log::error!(
+						"[Airdrop pallet] Cannot claim instant vested aount. Error: {:?}",
+						err
+					);
+					Error::<T>::CantApplyVesting
+				},
+			)?;
+
+			Ok(())
 		}
 	}
 }
