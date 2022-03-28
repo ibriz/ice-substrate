@@ -1,5 +1,4 @@
 use super::prelude::*;
-type BalanceError = pallet_balances::pallet::Error<Test>;
 
 #[test]
 fn complete_transfer_access() {
