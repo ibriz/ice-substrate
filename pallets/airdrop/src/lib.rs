@@ -91,7 +91,7 @@ pub mod pallet {
 	};
 	use frame_system::offchain::CreateSignedTransaction;
 	use sp_runtime::traits::{
-		AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub,
+		AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Convert,
 	};
 	use types::IconVerifiable;
 
@@ -927,119 +927,136 @@ pub mod pallet {
 		/// Split total amount to chunk of 3 amount
 		/// These are the amounts that are to be vested in next
 		/// 3 lot.
-		pub fn get_vesting_amounts<Amount>(
-			total_amount: Amount,
+		pub fn get_splitted_amounts(
+			total_amount: types::ServerBalance,
 			is_defi_user: bool,
-		) -> Result<[Amount; 2], DispatchError>
-		where
-			Amount: CheckedMul + CheckedDiv + CheckedSub + CheckedAdd + AtLeast32BitUnsigned,
-		{
-			let percentage = if is_defi_user { 40_u32 } else { 30_u32 };
+		) -> Result<(types::BalanceOf<T>, types::VestingBalanceOf<T>), DispatchError> {
+			const DEFI_INSTANT_PER: u32 = 40_u32;
+			const NORMAL_INSTANT_PER: u32 = 30_u32;
 
-			let amount_at_first_vesting = total_amount
-				.checked_mul(&percentage.into())
+			let percentage = if is_defi_user {
+				DEFI_INSTANT_PER
+			} else {
+				NORMAL_INSTANT_PER
+			};
+
+			let instant_amount = total_amount
+				.checked_mul(percentage.into())
 				.ok_or(sp_runtime::ArithmeticError::Overflow)?
-				.checked_div(&100_u32.into())
+				.checked_div(100_u32.into())
 				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
 
-			let amount_at_second_vesting = total_amount
-				.checked_sub(&amount_at_first_vesting)
+			let vesting_amount = total_amount
+				.checked_sub(instant_amount)
 				.ok_or(sp_runtime::ArithmeticError::Overflow)?;
 
-			Ok([amount_at_first_vesting, amount_at_second_vesting])
-		}
-
-		/// Create vesting schedule from user icon details
-		pub fn make_vesting_schedule(
-			server_response: &types::ServerResponse,
-		) -> Result<[types::VestingInfoOf<T>; 2], sp_runtime::DispatchError> {
-			// block_per_day x 30 x period to finish vesting
-			const VESTING_DURATION: u32 = 5000 * 30_u32 * 11_u32;
-			type VestingInfo<T> = types::VestingInfoOf<T>;
-
-			// TODO: what is the total amount to transfer?
-			let total_amount: types::VestingBalanceOf<T> = server_response
-				.amount
-				.checked_add(server_response.stake)
-				.ok_or(sp_runtime::ArithmeticError::Overflow)?
-				.checked_add(server_response.omm)
-				.ok_or(sp_runtime::ArithmeticError::Overflow)?
-				.try_into()
-				.map_err(|_| {
-					"Balance type returned by server and Balance type of pallet are incompatible"
-				})?;
-
-			let [instant_amount, vesting_amount] =
-				Self::get_vesting_amounts(total_amount, server_response.defi_user)?;
-
-			let release_per_block = vesting_amount
-				.checked_div(&VESTING_DURATION.into())
-				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
-
-			let current_block_num = Self::get_current_block_number();
-			Ok([
-				VestingInfo::<T>::new(
-					instant_amount,
-					instant_amount,
-					current_block_num.saturating_sub(1_u32.into()),
-				),
-				VestingInfo::<T>::new(
-					vesting_amount,
-					release_per_block,
-					current_block_num.saturating_add(1_u32.into()),
-				),
-			])
+			Ok((
+				instant_amount
+					.try_into()
+					.map_err(|_| "Server balance type and Airdrop balance type are incompatible")?,
+				vesting_amount
+					.try_into()
+					.map_err(|_| "Server balance type and Vesting balance type are incompatible")?,
+			))
 		}
 
 		pub fn do_vested_transfer(
 			claimer: types::AccountIdOf<T>,
 			server_response: &types::ServerResponse,
 		) -> Result<(), DispatchError> {
+			// TODO: put more relaible value
+			const BLOCKS_IN_YEAR: u32 = 10_000u32;
+			// Block number after which enable to do vesting
+			const VESTING_APPLICABLE_FROM: u32 = 100u32;
+
+			let total_amount = server_response
+				.amount
+				.checked_add(server_response.stake)
+				.ok_or(sp_runtime::ArithmeticError::Overflow)?
+				.checked_add(server_response.omm)
+				.ok_or(sp_runtime::ArithmeticError::Overflow)?;
+
+			let (instant_amount, vesting_amount): (
+				types::BalanceOf<T>,
+				types::VestingBalanceOf<T>,
+			) = Self::get_splitted_amounts(total_amount, server_response.defi_user)?;
+
+			let creditor = Self::get_creditor_account();
+
+			// Instantly transfer certain amount amount
+			<T as Config>::Currency::transfer(
+				&creditor,
+				&claimer,
+				instant_amount,
+				ExistenceRequirement::KeepAlive,
+			)
+			.map_err(|err| {
+				log::error!(
+					"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
+					claimer,
+					err
+				);
+				err
+			})?;
+
+			// Get primary & secondary vesting to be applied
+			let [primary_vesting, secondary_vesting] = types::new_vesting_with_deadline::<
+				T,
+				VESTING_APPLICABLE_FROM,
+			>(vesting_amount, BLOCKS_IN_YEAR.into());
+
+			// Prepare to and from origin
 			let creditor_origin = <T as frame_system::Config>::Origin::from(
-				frame_system::RawOrigin::Signed(Self::get_creditor_account()),
+				frame_system::RawOrigin::Signed(creditor),
 			);
 			let claimer_origin = <T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(claimer);
 
-			let [instant_vesting, extended_vesting] = Self::make_vesting_schedule(server_response)?;
-
-			// Apply first vesting instantly
-			pallet_vesting::Pallet::<T>::vested_transfer(
-				creditor_origin.clone(),
-				claimer_origin.clone(),
-				instant_vesting,
-			)
-			.map_err(|err| {
-				log::error!(
-					"[Airdrop pallet] Cannot apply instant vesting. Error: {:?}",
-					err
-				);
-				Error::<T>::CantApplyVesting
-			})?;
-
-			// Apply extended vesting
-			pallet_vesting::Pallet::<T>::vested_transfer(
-				creditor_origin.clone(),
-				claimer_origin.clone(),
-				extended_vesting,
-			)
-			.map_err(|err| {
-				log::error!(
-					"[Airdrop pallet] Cannot apply extended vesting. Error: {:?}",
-					err
-				);
-				Error::<T>::CantApplyVesting
-			})?;
-
-			// Claim first vesting as it is to be received instantly
-			pallet_vesting::Pallet::<T>::vest_other(creditor_origin, claimer_origin).map_err(
-				|err| {
-					log::error!(
-						"[Airdrop pallet] Cannot claim instant vested aount. Error: {:?}",
-						err
+			// Apply primary vesting
+			if let Some(schedule) = primary_vesting {
+				pallet_vesting::Pallet::<T>::vested_transfer(
+					creditor_origin.clone(),
+					claimer_origin.clone(),
+					schedule,
+				)
+				.map_err(|e| {
+					log::info!(
+						"[Airdrop pallet] Cannot apply primary vesting for {:?}. Reason {:?}",
+						claimer_origin,
+						e
 					);
-					Error::<T>::CantApplyVesting
-				},
-			)?;
+					e
+				})?;
+			} else {
+				log::trace!(
+					"[Airdrop pallet] Primary vesting not applicable for {:?}",
+					claimer_origin,
+				);
+			}
+
+			// TODO:
+			// If primary vesting succeed and secondary vesting fails. What to do?
+
+			// Apply secondary vesting
+			if let Some(schedule) = secondary_vesting {
+				pallet_vesting::Pallet::<T>::vested_transfer(
+					creditor_origin.clone(),
+					claimer_origin.clone(),
+					schedule,
+				)
+				.map_err(|e| {
+					log::info!(
+						"[Airdrop pallet] Cannot apply primary vesting for {:?}. Reason {:?}",
+						claimer_origin,
+						e
+					);
+					e
+				})?;
+			} else {
+				log::trace!(
+					"[Airdrop pallet] No need for seconday vesting for {:?}",
+					claimer_origin,
+				);
+			}
 
 			Ok(())
 		}

@@ -34,19 +34,28 @@ fn pool_dispatchable_from_offchain() {
 
 #[test]
 fn update_offchain_account() {
-	minimal_test_ext().execute_with(||{
+	minimal_test_ext().execute_with(|| {
 		assert_noop!(
 			AirdropModule::set_offchain_account(Origin::none(), samples::ACCOUNT_ID[1]),
 			PalletError::DeniedOperation
 		);
 
 		assert_noop!(
-			AirdropModule::set_offchain_account(Origin::signed(samples::ACCOUNT_ID[1]), samples::ACCOUNT_ID[2]),
+			AirdropModule::set_offchain_account(
+				Origin::signed(samples::ACCOUNT_ID[1]),
+				samples::ACCOUNT_ID[2]
+			),
 			PalletError::DeniedOperation
 		);
 
-		assert_ok!(AirdropModule::set_offchain_account(Origin::root(), samples::ACCOUNT_ID[1]));
-		assert_eq!(Some(samples::ACCOUNT_ID[1]), AirdropModule::get_offchain_account());
+		assert_ok!(AirdropModule::set_offchain_account(
+			Origin::root(),
+			samples::ACCOUNT_ID[1]
+		));
+		assert_eq!(
+			Some(samples::ACCOUNT_ID[1]),
+			AirdropModule::get_offchain_account()
+		);
 	});
 }
 
@@ -59,15 +68,27 @@ fn ensure_root_or_offchain() {
 		assert_ok!(AirdropModule::ensure_root_or_offchain(Origin::root()));
 
 		// Any signed other than offchian account should fail
-		assert_err!(AirdropModule::ensure_root_or_offchain(Origin::signed(not_offchain_account(samples::ACCOUNT_ID[1]))), BadOrigin);
+		assert_err!(
+			AirdropModule::ensure_root_or_offchain(Origin::signed(not_offchain_account(
+				samples::ACCOUNT_ID[1]
+			))),
+			BadOrigin
+		);
 
 		// Unsigned origin should fail
-		assert_err!(AirdropModule::ensure_root_or_offchain(Origin::none()), BadOrigin);
+		assert_err!(
+			AirdropModule::ensure_root_or_offchain(Origin::none()),
+			BadOrigin
+		);
 
 		// Signed with offchain account should work
-		assert_ok!(AirdropModule::set_offchain_account(Origin::root(), samples::ACCOUNT_ID[1]));
-		assert_ok!(AirdropModule::ensure_root_or_offchain(Origin::signed(samples::ACCOUNT_ID[1])));
-
+		assert_ok!(AirdropModule::set_offchain_account(
+			Origin::root(),
+			samples::ACCOUNT_ID[1]
+		));
+		assert_ok!(AirdropModule::ensure_root_or_offchain(Origin::signed(
+			samples::ACCOUNT_ID[1]
+		)));
 	});
 }
 
@@ -75,7 +96,7 @@ fn ensure_root_or_offchain() {
 fn making_correct_http_request() {
 	let icon_address = samples::ICON_ADDRESS[0];
 
-	let (mut test_ext, offchain_state,_,_) = offchain_test_ext();
+	let (mut test_ext, offchain_state, _, _) = offchain_test_ext();
 	put_response(
 		&mut offchain_state.write(),
 		&icon_address,
@@ -123,7 +144,10 @@ fn failed_entry_regestration() {
 				PalletError::DeniedOperation.into()
 			});
 
-			assert_ok!(AirdropModule::set_offchain_account(Origin::root(), samples::ACCOUNT_ID[2]));
+			assert_ok!(AirdropModule::set_offchain_account(
+				Origin::root(),
+				samples::ACCOUNT_ID[2]
+			));
 			assert_storage_noop!(assert_ne! {
 				AirdropModule::register_failed_claim(
 					Origin::signed(AirdropModule::get_offchain_account().unwrap()),
@@ -160,9 +184,11 @@ fn failed_entry_regestration() {
 
 		// When there are no more retry left in this entry
 		{
-			assert_ok!(
-				AirdropModule::register_failed_claim(Origin::root(), bl_num, claimer.clone())
-			);
+			assert_ok!(AirdropModule::register_failed_claim(
+				Origin::root(),
+				bl_num,
+				claimer.clone()
+			));
 			// Still entry should be removed from queue
 			assert_eq!(None, AirdropModule::get_pending_claims(bl_num, &claimer));
 		}
@@ -208,7 +234,7 @@ fn pending_claims_getter() {
 	};
 
 	let sample_entries: &[(types::BlockNumberOf<Test>, types::IconAddress)] = &[
-		(1_u32.into(),ICON_ADDRESS[0]),
+		(1_u32.into(), ICON_ADDRESS[0]),
 		(1_u32.into(), ICON_ADDRESS[1]),
 		(2_u32.into(), ICON_ADDRESS[3]),
 		(10_u32.into(), ICON_ADDRESS[2]),
@@ -237,10 +263,7 @@ fn pending_claims_getter() {
 			assert_eq!(EMPTY.to_vec(), entries);
 
 			let entries = get_flattened_vec(PendingClaimsOf::new(10_u32.into()..20_u32.into()));
-			assert_eq!(
-				vec![(10_u32.into(),ICON_ADDRESS[2])],
-				entries
-			);
+			assert_eq!(vec![(10_u32.into(), ICON_ADDRESS[2])], entries);
 		}
 
 		// Make sure out of range is always empty
@@ -266,47 +289,133 @@ fn pending_claims_getter() {
 
 #[test]
 fn get_vesting_amounts_splitted() {
-	minimal_test_ext().execute_with(||{
+	minimal_test_ext().execute_with(|| {
 		use sp_runtime::ArithmeticError;
 
-		assert_err!(AirdropModule::get_vesting_amounts(u128::MAX, true), ArithmeticError::Overflow);
-		assert_eq!(Ok([0_u128, 0_u128]), AirdropModule::get_vesting_amounts(0_u128, true));
+		assert_err!(
+			AirdropModule::get_splitted_amounts(types::ServerBalance::max_value(), true),
+			ArithmeticError::Overflow
+		);
+		assert_eq!(
+			Ok((0_u128, 0_u128)),
+			AirdropModule::get_splitted_amounts(0_u32.into(), true)
+		);
 
-		assert_eq!(Ok([900_u128, 2100_u128]), AirdropModule::get_vesting_amounts(3_000_u128, false));
-		assert_eq!(Ok([1200_u128, 1800_u128]), AirdropModule::get_vesting_amounts(3_000_u128, true));
-		
-		assert_eq!(Ok([0_u128, 1_u128]), AirdropModule::get_vesting_amounts(1_u128, false));
-		assert_eq!(Ok([0_u128, 1_u128]), AirdropModule::get_vesting_amounts(1_u128, true));
+		assert_eq!(
+			Ok((900_u128, 2100_u128)),
+			AirdropModule::get_splitted_amounts(3_000_u32.into(), false)
+		);
+		assert_eq!(
+			Ok((1200_u128, 1800_u128)),
+			AirdropModule::get_splitted_amounts(3_000_u32.into(), true)
+		);
 
-		assert_eq!(Ok([2932538_u128, 6842591_u128]), AirdropModule::get_vesting_amounts(9775129_u128, false));
-		assert_eq!(Ok([3910051_u128, 5865078_u128]), AirdropModule::get_vesting_amounts(9775129_u128, true));
+		assert_eq!(
+			Ok((0_u128, 1_u128)),
+			AirdropModule::get_splitted_amounts(1_u32.into(), false)
+		);
+		assert_eq!(
+			Ok((0_u128, 1_u128)),
+			AirdropModule::get_splitted_amounts(1_u32.into(), true)
+		);
+
+		assert_eq!(
+			Ok((2932538_u128, 6842591_u128)),
+			AirdropModule::get_splitted_amounts(9775129_u32.into(), false)
+		);
+		assert_eq!(
+			Ok((3910051_u128, 5865078_u128)),
+			AirdropModule::get_splitted_amounts(9775129_u32.into(), true)
+		);
 	});
 }
 
 #[test]
-fn cooking_vesting_schedule() {
-	minimal_test_ext().execute_with(||{
-		run_to_block(10);
+fn cook_vesting_schedule() {
+	type BlockToBalance = <Test as pallet_vesting::Config>::BlockNumberToBalance;
+	minimal_test_ext().execute_with(|| {
+		{
+			let [primary, secondary] =
+				types::new_vesting_with_deadline::<Test, 0u32>(10u32.into(), 10u32.into());
+			let primary = primary.unwrap();
+			assert_eq!(None, secondary);
 
-		let server_response = samples::SERVER_DATA[1];
-		
-		let vesting_res = AirdropModule::make_vesting_schedule(&server_response);
-		assert_ok!(vesting_res);
-		let [first_vesting, second_vesting] = vesting_res.unwrap();
+			assert_eq!(primary.locked(), 10u32.into());
+			assert_eq!(primary.per_block(), 1u32.into());
+			assert_eq!(
+				primary.ending_block_as_balance::<BlockToBalance>(),
+				10u32.into()
+			);
+		}
 
-		let first_vest_amount = 2932538_u128;
-		let expected_first_vesting = types::VestingInfoOf::<Test>::new(first_vest_amount, first_vest_amount, 9_u64);
-		assert_eq!(expected_first_vesting, first_vesting);
+		{
+			let [primary, secondary] =
+				types::new_vesting_with_deadline::<Test, 5u32>(12u32.into(), 10u32.into());
+			let primary = primary.unwrap();
+			let secondary = secondary.unwrap();
 
-		let second_vest_amount = 6842591_u128;
-		let expected_second_vesting = types::VestingInfoOf::<Test>::new(second_vest_amount, 4, 11_u64);
-		assert_eq!(expected_second_vesting, second_vesting);
+			assert_eq!(primary.locked(), 10u32.into());
+			assert_eq!(primary.per_block(), 2u32.into());
+			assert_eq!(
+				primary.ending_block_as_balance::<BlockToBalance>(),
+				10u32.into()
+			);
+
+			assert_eq!(secondary.locked(), 2u32.into());
+			assert_eq!(secondary.per_block(), secondary.locked());
+			assert_eq!(
+				secondary.ending_block_as_balance::<BlockToBalance>(),
+				10u32.into()
+			);
+		}
+
+		{
+			let [primary, secondary] =
+				types::new_vesting_with_deadline::<Test, 0u32>(16u32.into(), 10u32.into());
+			let primary = primary.unwrap();
+			let secondary = secondary.unwrap();
+
+			assert_eq!(primary.locked(), 10u32.into());
+			assert_eq!(primary.per_block(), 1u32.into());
+			assert_eq!(
+				primary.ending_block_as_balance::<BlockToBalance>(),
+				10u32.into()
+			);
+
+			assert_eq!(secondary.locked(), 6u32.into());
+			assert_eq!(secondary.per_block(), secondary.locked());
+			assert_eq!(
+				secondary.ending_block_as_balance::<BlockToBalance>(),
+				10u32.into()
+			);
+		}
+
+		{
+			let [primary, secondary] =
+				types::new_vesting_with_deadline::<Test, 0u32>(3336553u32.into(), 10_000u32.into());
+			let primary = primary.unwrap();
+			let secondary = secondary.unwrap();
+
+			assert_eq!(primary.locked(), 3330000u32.into());
+			assert_eq!(primary.per_block(), 333u32.into());
+			assert_eq!(
+				primary.ending_block_as_balance::<BlockToBalance>(),
+				10_000u32.into()
+			);
+
+			assert_eq!(secondary.locked(), 6553u32.into());
+			assert_eq!(secondary.per_block(), secondary.locked());
+			assert_eq!(
+				secondary.ending_block_as_balance::<BlockToBalance>(),
+				10_000u32.into()
+			);
+		}
 	});
 }
 
 #[test]
 fn making_vesting_transfer() {
-	minimal_test_ext().execute_with(||{
+	minimal_test_ext().execute_with(|| {
 		run_to_block(3);
 
 		let server_response = samples::SERVER_DATA[1];

@@ -18,8 +18,8 @@ pub mod prelude {
 	pub use pallet_airdrop::mock::{self, AirdropModule, Origin, Test};
 	pub use pallet_airdrop::types;
 	pub use sp_core::bytes;
-  
-	pub use sp_runtime::traits::IdentifyAccount;
+
+	pub use sp_runtime::traits::{Bounded, IdentifyAccount, Saturating};
 
 	pub type PalletError = pallet_airdrop::Error<Test>;
 	pub type PalletEvent = pallet_airdrop::Event<Test>;

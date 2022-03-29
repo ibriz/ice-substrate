@@ -6,6 +6,7 @@ use frame_support::traits::Currency;
 use frame_system;
 use scale_info::TypeInfo;
 use serde::Deserialize;
+use sp_runtime::traits::{CheckedDiv, Saturating};
 use sp_std::prelude::*;
 
 /// AccountId of anything that implements frame_system::Config
@@ -17,6 +18,9 @@ pub type VestingBalanceOf<T> =
 
 /// Type that represent the balance
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+
+/// Balance type that will be returned on server
+pub type ServerBalance = u128;
 
 /// Type that represent IconAddress
 pub type IconAddress = [u8; 20];
@@ -115,19 +119,15 @@ pub enum ClaimError {
 #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct ServerResponse {
-	// TODO:: Use u64 instead of u128 to save on-chain space
-
 	// TODO: Add description of this field
-	pub omm: u128,
+	pub omm: ServerBalance,
 
 	/// Amount to transfer in this claim
-	// TODO:
-	// is this amount to tranfer in this claim or tranfser in total?
 	#[serde(rename = "balanced")]
-	pub amount: u128,
+	pub amount: ServerBalance,
 
 	// TODO: add description of this field
-	pub stake: u128,
+	pub stake: ServerBalance,
 
 	/// Indicator weather this icon_address is defi_user or not
 	pub defi_user: bool,
@@ -203,4 +203,46 @@ impl<T: Config> core::iter::Iterator for PendingClaimsOf<T> {
 
 		Some((this_block, this_block_iter))
 	}
+}
+
+// Returns pair of vesting schedule
+// that when applied completes the vestinf in expected block number
+pub fn new_vesting_with_deadline<T: pallet_vesting::Config, const VESTING_APPLICABLE_FROM: u32>(
+	amount: VestingBalanceOf<T>,
+	ends_in: BlockNumberOf<T>,
+) -> [Option<VestingInfoOf<T>>; 2] {
+	use sp_runtime::traits::{Bounded, Convert};
+	const MIN_AMOUNT_PER_BLOCK: u32 = 1u32;
+
+	type BlockToBalance<T> = <T as pallet_vesting::Config>::BlockNumberToBalance;
+	let mut vestings = [None; 2];
+
+	let ends_in_as_balance = BlockToBalance::<T>::convert(ends_in);
+	let transfer_over = ends_in_as_balance.saturating_sub(VESTING_APPLICABLE_FROM.into());
+
+	let idol_transfer_multiple = transfer_over * MIN_AMOUNT_PER_BLOCK.into();
+
+	let remainding_amount = amount % idol_transfer_multiple;
+	let primary_transfer_amount = amount.saturating_sub(remainding_amount);
+
+	let per_block = primary_transfer_amount
+		.checked_div(&idol_transfer_multiple)
+		.unwrap_or(Bounded::min_value());
+
+	if per_block > Bounded::min_value() {
+		vestings[0] = Some(VestingInfoOf::<T>::new(
+			primary_transfer_amount,
+			per_block,
+			VESTING_APPLICABLE_FROM.into(),
+		));
+	}
+	if remainding_amount > Bounded::min_value() {
+		vestings[1] = Some(VestingInfoOf::<T>::new(
+			remainding_amount,
+			remainding_amount,
+			ends_in.saturating_sub(1u32.into()),
+		));
+	}
+
+	vestings
 }
