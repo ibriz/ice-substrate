@@ -336,7 +336,7 @@ fn cook_vesting_schedule() {
 	minimal_test_ext().execute_with(|| {
 		{
 			let [primary, secondary] =
-				types::new_vesting_with_deadline::<Test, 0u32>(10u32.into(), 10u32.into());
+				utils::new_vesting_with_deadline::<Test, 0u32>(10u32.into(), 10u32.into());
 			let primary = primary.unwrap();
 			assert_eq!(None, secondary);
 
@@ -350,7 +350,7 @@ fn cook_vesting_schedule() {
 
 		{
 			let [primary, secondary] =
-				types::new_vesting_with_deadline::<Test, 5u32>(12u32.into(), 10u32.into());
+				utils::new_vesting_with_deadline::<Test, 5u32>(12u32.into(), 10u32.into());
 			let primary = primary.unwrap();
 			let secondary = secondary.unwrap();
 
@@ -371,7 +371,7 @@ fn cook_vesting_schedule() {
 
 		{
 			let [primary, secondary] =
-				types::new_vesting_with_deadline::<Test, 0u32>(16u32.into(), 10u32.into());
+				utils::new_vesting_with_deadline::<Test, 0u32>(16u32.into(), 10u32.into());
 			let primary = primary.unwrap();
 			let secondary = secondary.unwrap();
 
@@ -392,7 +392,7 @@ fn cook_vesting_schedule() {
 
 		{
 			let [primary, secondary] =
-				types::new_vesting_with_deadline::<Test, 0u32>(3336553u32.into(), 10_000u32.into());
+				utils::new_vesting_with_deadline::<Test, 0u32>(3336553u32.into(), 10_000u32.into());
 			let primary = primary.unwrap();
 			let secondary = secondary.unwrap();
 

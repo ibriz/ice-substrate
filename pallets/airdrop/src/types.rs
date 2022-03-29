@@ -173,76 +173,7 @@ pub trait IconVerifiable {
 }
 
 pub struct PendingClaimsOf<T: Config> {
-	range: core::ops::Range<BlockNumberOf<T>>,
+	pub range: core::ops::Range<BlockNumberOf<T>>,
 }
 
-impl<T: Config> PendingClaimsOf<T> {
-	pub fn new(range: core::ops::Range<BlockNumberOf<T>>) -> Self {
-		PendingClaimsOf::<T> { range }
-	}
-}
 
-impl<T: Config> core::iter::Iterator for PendingClaimsOf<T> {
-	// This iterator returns a block number and an iterator to entiries
-	// in PendingClaims under same block number
-	type Item = (BlockNumberOf<T>, storage::KeyPrefixIterator<IconAddress>);
-
-	fn next(&mut self) -> Option<Self::Item> {
-		// Take the block to process
-		let this_block = self.range.start;
-		// Increment start by one
-		self.range.start = this_block + 1_u32.into();
-
-		// Check if range is valid
-		if self.range.start > self.range.end {
-			return None;
-		}
-
-		// Get the actual iterator result
-		let this_block_iter = <crate::PendingClaims<T>>::iter_key_prefix(this_block);
-
-		Some((this_block, this_block_iter))
-	}
-}
-
-// Returns pair of vesting schedule
-// that when applied completes the vestinf in expected block number
-pub fn new_vesting_with_deadline<T: pallet_vesting::Config, const VESTING_APPLICABLE_FROM: u32>(
-	amount: VestingBalanceOf<T>,
-	ends_in: BlockNumberOf<T>,
-) -> [Option<VestingInfoOf<T>>; 2] {
-	use sp_runtime::traits::{Bounded, Convert};
-	const MIN_AMOUNT_PER_BLOCK: u32 = 1u32;
-
-	type BlockToBalance<T> = <T as pallet_vesting::Config>::BlockNumberToBalance;
-	let mut vestings = [None; 2];
-
-	let ends_in_as_balance = BlockToBalance::<T>::convert(ends_in);
-	let transfer_over = ends_in_as_balance.saturating_sub(VESTING_APPLICABLE_FROM.into());
-
-	let idol_transfer_multiple = transfer_over * MIN_AMOUNT_PER_BLOCK.into();
-
-	let remainding_amount = amount % idol_transfer_multiple;
-	let primary_transfer_amount = amount.saturating_sub(remainding_amount);
-
-	let per_block = primary_transfer_amount
-		.checked_div(&idol_transfer_multiple)
-		.unwrap_or(Bounded::min_value());
-
-	if per_block > Bounded::min_value() {
-		vestings[0] = Some(VestingInfoOf::<T>::new(
-			primary_transfer_amount,
-			per_block,
-			VESTING_APPLICABLE_FROM.into(),
-		));
-	}
-	if remainding_amount > Bounded::min_value() {
-		vestings[1] = Some(VestingInfoOf::<T>::new(
-			remainding_amount,
-			remainding_amount,
-			ends_in.saturating_sub(1u32.into()),
-		));
-	}
-
-	vestings
-}
