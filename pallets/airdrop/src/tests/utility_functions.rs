@@ -23,10 +23,10 @@ fn pool_dispatchable_from_offchain() {
 
 		assert_ok!(AirdropModule::make_signed_call(&calls[0]));
 		assert_tx_call(&calls[..1], &pool_state.read());
-		
+
 		assert_ok!(AirdropModule::make_signed_call(&calls[1]));
 		assert_tx_call(&calls[..2], &pool_state.read());
-		
+
 		assert_ok!(AirdropModule::make_signed_call(&calls[2]));
 		assert_tx_call(&calls[..3], &pool_state.read());
 	});

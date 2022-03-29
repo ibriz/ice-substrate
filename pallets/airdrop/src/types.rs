@@ -6,7 +6,6 @@ use frame_support::traits::Currency;
 use frame_system;
 use scale_info::TypeInfo;
 use serde::Deserialize;
-use sp_runtime::traits::{CheckedDiv, Saturating};
 use sp_std::prelude::*;
 
 /// AccountId of anything that implements frame_system::Config
@@ -175,5 +174,3 @@ pub trait IconVerifiable {
 pub struct PendingClaimsOf<T: Config> {
 	pub range: core::ops::Range<BlockNumberOf<T>>,
 }
-
-

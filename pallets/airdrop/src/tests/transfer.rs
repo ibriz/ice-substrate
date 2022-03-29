@@ -246,10 +246,7 @@ fn complete_transfer_valid_flow() {
 			assert_eq!(post_user_balance, total_amount);
 
 			// System balance is only redueced by balance transferred only as fee is 0 for this call
-			assert_eq!(
-				post_system_balance,
-				pre_system_balance - total_amount
-			);
+			assert_eq!(post_system_balance, pre_system_balance - total_amount);
 
 			// Make sure that net sum of node remains same.
 			// i.e fund is not lost anywhere

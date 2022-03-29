@@ -1,6 +1,6 @@
 use crate as pallet_airdrop;
-use crate::types;
-use crate::Config;
+use pallet_airdrop::types;
+use pallet_airdrop::Config;
 use sp_runtime::traits::{Bounded, CheckedDiv, Convert, Saturating};
 
 // Returns pair of vesting schedule
