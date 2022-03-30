@@ -7,13 +7,23 @@ fn claim_request_access() {
 	minimal_test_ext().execute_with(|| {
 		// Unsigned should not be able to call
 		assert_noop!(
-			AirdropModule::claim_request(Origin::none(), samples::ICON_ADDRESS[1], vec![], vec![]),
+			AirdropModule::claim_request(
+				Origin::none(),
+				samples::ICON_ADDRESS[1],
+				vec![],
+				[0u8; 65]
+			),
 			DispatchError::BadOrigin
 		);
 
 		// Root should not be able to call
 		assert_noop!(
-			AirdropModule::claim_request(Origin::root(), samples::ICON_ADDRESS[1], vec![], vec![]),
+			AirdropModule::claim_request(
+				Origin::root(),
+				samples::ICON_ADDRESS[1],
+				vec![],
+				[0u8; 65]
+			),
 			DispatchError::BadOrigin
 		);
 
@@ -22,7 +32,7 @@ fn claim_request_access() {
 			Origin::signed(samples::ACCOUNT_ID[0]),
 			samples::ICON_ADDRESS[1],
 			vec![],
-			vec![]
+			[0u8; 65],
 		));
 	});
 }
@@ -41,7 +51,7 @@ fn already_in_map() {
 				Origin::signed(samples::ACCOUNT_ID[0]),
 				claimer.clone(),
 				vec![],
-				vec![]
+				[0u8; 65],
 			),
 			PalletError::RequestAlreadyMade
 		);
@@ -57,7 +67,7 @@ fn valid_claim_request() {
 			Origin::signed(samples::ACCOUNT_ID[0]),
 			claimer.clone(),
 			vec![],
-			vec![]
+			[0u8; 65],
 		));
 
 		let expected_snapshot = types::SnapshotInfo::<Test> {
@@ -166,7 +176,7 @@ fn multi_ice_single_icon() {
 				Origin::signed(ice_address_one.clone()),
 				icon_address.clone(),
 				vec![],
-				vec![]
+				[0u8; 65]
 			));
 		}
 
@@ -177,7 +187,7 @@ fn multi_ice_single_icon() {
 					Origin::signed(ice_address_two.clone()),
 					icon_address.clone(),
 					vec![],
-					vec![],
+					[0u8; 65],
 				),
 				PalletError::RequestAlreadyMade
 			);
@@ -198,7 +208,7 @@ fn multi_icon_single_ice() {
 				Origin::signed(ice_address.clone()),
 				icon_address_first,
 				vec![],
-				vec![]
+				[0u8; 65]
 			));
 		}
 
@@ -208,7 +218,7 @@ fn multi_icon_single_ice() {
 				Origin::signed(ice_address.clone()),
 				icon_address_second,
 				vec![],
-				vec![]
+				[0u8; 65]
 			));
 		}
 	});
@@ -265,7 +275,7 @@ fn complete_flow() {
 			Origin::signed(claimer_ice_address.clone()),
 			claimer_icon_address.clone(),
 			b"any-messsage".to_vec(),
-			b"any-signature".to_vec()
+			[0u8; 65],
 		));
 
 		let current_block_number = inserted_in_bl_num + 2_u64;

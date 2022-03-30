@@ -198,7 +198,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
 			message: Vec<u8>,
-			icon_signature: Vec<u8>,
+			icon_signature: types::IconSignature,
 		) -> DispatchResult {
 			// Take signed address compatible with airdrop_pallet::Config::AccountId type
 			// so that we can call verify_with_icon method

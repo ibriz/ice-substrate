@@ -9,7 +9,7 @@ fn pool_dispatchable_from_offchain() {
 			&PalletCall::claim_request {
 				icon_address: samples::ICON_ADDRESS[0],
 				message: b"icx_sendTransaction.data.{method.transfer.params.{wallet.da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c}}.dataType.call.from.hxdd9ecb7d3e441d25e8c4f03cd20a80c502f0c374.nid.0x1.nonce.0x1..timestamp.0x5d56f3231f818.to.cx8f87a4ce573a2e1377545feabac48a960e8092bb.version.0x3".to_vec(),
-				icon_signature: bytes::from_hex("0xa64874af3653").unwrap(),
+				icon_signature: [0u8; 65],
 			},
 			&PalletCall::donate_to_creditor {
 				amount: 10_00_u32.into(),
@@ -413,7 +413,6 @@ fn making_vesting_transfer() {
 		// Ensure all amount is being transferred
 		assert_eq!(9775129_u128, Currency::free_balance(&claimer));
 
-		
 		// Make sure user is getting atleast of instant amount
 		// might get more due to vesting remainder
 		assert!(Currency::usable_balance(&claimer) >= 2932538_u32.into());

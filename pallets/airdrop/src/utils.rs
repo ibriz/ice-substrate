@@ -114,7 +114,7 @@ impl types::IconVerifiable for sp_runtime::AccountId32 {
 	fn verify_with_icon(
 		&self,
 		icon_wallet: &types::IconAddress,
-		icon_signature: &[u8],
+		icon_signature: &types::IconSignature,
 		message: &[u8],
 	) -> Result<(), types::SignatureValidationError> {
 		use codec::Encode;

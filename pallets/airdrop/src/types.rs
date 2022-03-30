@@ -23,6 +23,8 @@ pub type ServerBalance = u64;
 
 /// Type that represent IconAddress
 pub type IconAddress = [u8; 20];
+/// Type that represent Icon signed message
+pub type IconSignature = [u8; 65];
 
 ///
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
@@ -166,7 +168,7 @@ pub trait IconVerifiable {
 	fn verify_with_icon(
 		&self,
 		icon_wallet: &IconAddress,
-		icon_signature: &[u8],
+		icon_signature: &IconSignature,
 		message: &[u8],
 	) -> Result<(), SignatureValidationError>;
 }

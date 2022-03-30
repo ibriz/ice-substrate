@@ -71,7 +71,7 @@ impl types::IconVerifiable for sp_core::sr25519::Public {
 	fn verify_with_icon(
 		&self,
 		_icon_wallet: &types::IconAddress,
-		_icon_signature: &[u8],
+		_icon_signature: &types::IconSignature,
 		_message: &[u8],
 	) -> Result<(), types::SignatureValidationError> {
 		Ok(())
