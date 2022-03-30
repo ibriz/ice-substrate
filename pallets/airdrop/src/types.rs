@@ -18,8 +18,8 @@ pub type VestingBalanceOf<T> =
 /// Type that represent the balance
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
-/// Balance type that will be returned on server
-pub type ServerBalance = u128;
+/// Balance type that will be returned from server
+pub type ServerBalance = u64;
 
 /// Type that represent IconAddress
 pub type IconAddress = [u8; 20];

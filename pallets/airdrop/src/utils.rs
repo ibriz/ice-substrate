@@ -1,18 +1,23 @@
-use crate as pallet_airdrop;
-use pallet_airdrop::types;
-use pallet_airdrop::Config;
+use crate as airdrop;
+use airdrop::types;
+use airdrop::Config;
 use sp_runtime::traits::{Bounded, CheckedDiv, Convert, Saturating};
 
-// Returns pair of vesting schedule
-// that when applied completes the vestinf in expected block number
-pub fn new_vesting_with_deadline<T: pallet_vesting::Config, const VESTING_APPLICABLE_FROM: u32>(
+/// Reuturns an optional vesting schedule which when applied release given amount
+/// which will be complete in given block. If
+/// Also return amount which is remaineder if amount can't be perfectly divided
+/// in per block basis
+pub fn new_vesting_with_deadline<T, const VESTING_APPLICABLE_FROM: u32>(
 	amount: types::VestingBalanceOf<T>,
 	ends_in: types::BlockNumberOf<T>,
-) -> [Option<types::VestingInfoOf<T>>; 2] {
+) -> (Option<types::VestingInfoOf<T>>, types::VestingBalanceOf<T>)
+where
+	T: pallet_vesting::Config,
+{
 	const MIN_AMOUNT_PER_BLOCK: u32 = 1u32;
 
 	type BlockToBalance<T> = <T as pallet_vesting::Config>::BlockNumberToBalance;
-	let mut vestings = [None; 2];
+	let mut vesting = None;
 
 	let ends_in_as_balance = BlockToBalance::<T>::convert(ends_in);
 	let transfer_over = ends_in_as_balance.saturating_sub(VESTING_APPLICABLE_FROM.into());
@@ -27,21 +32,14 @@ pub fn new_vesting_with_deadline<T: pallet_vesting::Config, const VESTING_APPLIC
 		.unwrap_or(Bounded::min_value());
 
 	if per_block > Bounded::min_value() {
-		vestings[0] = Some(types::VestingInfoOf::<T>::new(
+		vesting = Some(types::VestingInfoOf::<T>::new(
 			primary_transfer_amount,
 			per_block,
 			VESTING_APPLICABLE_FROM.into(),
 		));
 	}
-	if remainding_amount > Bounded::min_value() {
-		vestings[1] = Some(types::VestingInfoOf::<T>::new(
-			remainding_amount,
-			remainding_amount,
-			ends_in.saturating_sub(1u32.into()),
-		));
-	}
 
-	vestings
+	(vesting, remainding_amount)
 }
 
 // Return the iterator that resolves to iterator which in turn resolves to item

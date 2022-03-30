@@ -77,6 +77,7 @@ impl pallet_airdrop::Config for Test {
 	type AuthorityId = crate::airdrop_crypto::AuthId;
 	type Creditor = CreditorAccount;
 	type VestingModule = Test;
+	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 }
 
 type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;

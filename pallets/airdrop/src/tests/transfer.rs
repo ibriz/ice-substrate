@@ -240,7 +240,8 @@ fn complete_transfer_valid_flow() {
 
 		// Bhavioural expectation after complete_transfer is called
 		{
-			let total_amount = server_response.amount + server_response.omm + server_response.stake;
+			let total_amount: types::BalanceOf<Test> =
+				(server_response.amount + server_response.omm + server_response.stake).into();
 
 			// Make sure user got right amount of money
 			assert_eq!(post_user_balance, total_amount);

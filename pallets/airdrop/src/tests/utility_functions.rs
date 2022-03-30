@@ -297,34 +297,34 @@ fn get_vesting_amounts_splitted() {
 			ArithmeticError::Overflow
 		);
 		assert_eq!(
-			Ok((0_u128, 0_u128)),
+			Ok((0_u32.into(), 0_u32.into())),
 			AirdropModule::get_splitted_amounts(0_u32.into(), true)
 		);
 
 		assert_eq!(
-			Ok((900_u128, 2100_u128)),
+			Ok((900_u32.into(), 2100_u32.into())),
 			AirdropModule::get_splitted_amounts(3_000_u32.into(), false)
 		);
 		assert_eq!(
-			Ok((1200_u128, 1800_u128)),
+			Ok((1200_u32.into(), 1800_u32.into())),
 			AirdropModule::get_splitted_amounts(3_000_u32.into(), true)
 		);
 
 		assert_eq!(
-			Ok((0_u128, 1_u128)),
+			Ok((0_u32.into(), 1_u32.into())),
 			AirdropModule::get_splitted_amounts(1_u32.into(), false)
 		);
 		assert_eq!(
-			Ok((0_u128, 1_u128)),
+			Ok((0_u32.into(), 1_u32.into())),
 			AirdropModule::get_splitted_amounts(1_u32.into(), true)
 		);
 
 		assert_eq!(
-			Ok((2932538_u128, 6842591_u128)),
+			Ok((2932538_u32.into(), 6842591_u32.into())),
 			AirdropModule::get_splitted_amounts(9775129_u32.into(), false)
 		);
 		assert_eq!(
-			Ok((3910051_u128, 5865078_u128)),
+			Ok((3910051_u32.into(), 5865078_u32.into())),
 			AirdropModule::get_splitted_amounts(9775129_u32.into(), true)
 		);
 	});
@@ -335,24 +335,26 @@ fn cook_vesting_schedule() {
 	type BlockToBalance = <Test as pallet_vesting::Config>::BlockNumberToBalance;
 	minimal_test_ext().execute_with(|| {
 		{
-			let [primary, secondary] =
+			let (schedule, remainder) =
 				utils::new_vesting_with_deadline::<Test, 0u32>(10u32.into(), 10u32.into());
-			let primary = primary.unwrap();
-			assert_eq!(None, secondary);
 
-			assert_eq!(primary.locked(), 10u32.into());
-			assert_eq!(primary.per_block(), 1u32.into());
+			let schedule = schedule.unwrap();
+			assert_eq!(remainder, 0u32.into());
+
+			assert_eq!(schedule.locked(), 10u32.into());
+			assert_eq!(schedule.per_block(), 1u32.into());
 			assert_eq!(
-				primary.ending_block_as_balance::<BlockToBalance>(),
+				schedule.ending_block_as_balance::<BlockToBalance>(),
 				10u32.into()
 			);
 		}
 
 		{
-			let [primary, secondary] =
+			let (schedule, remainer) =
 				utils::new_vesting_with_deadline::<Test, 5u32>(12u32.into(), 10u32.into());
-			let primary = primary.unwrap();
-			let secondary = secondary.unwrap();
+
+			let primary = schedule.unwrap();
+			assert_eq!(remainer, 2u32.into());
 
 			assert_eq!(primary.locked(), 10u32.into());
 			assert_eq!(primary.per_block(), 2u32.into());
@@ -360,53 +362,34 @@ fn cook_vesting_schedule() {
 				primary.ending_block_as_balance::<BlockToBalance>(),
 				10u32.into()
 			);
-
-			assert_eq!(secondary.locked(), 2u32.into());
-			assert_eq!(secondary.per_block(), secondary.locked());
-			assert_eq!(
-				secondary.ending_block_as_balance::<BlockToBalance>(),
-				10u32.into()
-			);
 		}
 
 		{
-			let [primary, secondary] =
+			let (schedule, remainer) =
 				utils::new_vesting_with_deadline::<Test, 0u32>(16u32.into(), 10u32.into());
-			let primary = primary.unwrap();
-			let secondary = secondary.unwrap();
 
-			assert_eq!(primary.locked(), 10u32.into());
-			assert_eq!(primary.per_block(), 1u32.into());
-			assert_eq!(
-				primary.ending_block_as_balance::<BlockToBalance>(),
-				10u32.into()
-			);
+			let schedule = schedule.unwrap();
+			assert_eq!(remainer, 6u32.into());
 
-			assert_eq!(secondary.locked(), 6u32.into());
-			assert_eq!(secondary.per_block(), secondary.locked());
+			assert_eq!(schedule.locked(), 10u32.into());
+			assert_eq!(schedule.per_block(), 1u32.into());
 			assert_eq!(
-				secondary.ending_block_as_balance::<BlockToBalance>(),
+				schedule.ending_block_as_balance::<BlockToBalance>(),
 				10u32.into()
 			);
 		}
 
 		{
-			let [primary, secondary] =
+			let (schedule, remainer) =
 				utils::new_vesting_with_deadline::<Test, 0u32>(3336553u32.into(), 10_000u32.into());
-			let primary = primary.unwrap();
-			let secondary = secondary.unwrap();
 
-			assert_eq!(primary.locked(), 3330000u32.into());
-			assert_eq!(primary.per_block(), 333u32.into());
-			assert_eq!(
-				primary.ending_block_as_balance::<BlockToBalance>(),
-				10_000u32.into()
-			);
+			let schedule = schedule.unwrap();
+			assert_eq!(remainer, 6553u32.into());
 
-			assert_eq!(secondary.locked(), 6553u32.into());
-			assert_eq!(secondary.per_block(), secondary.locked());
+			assert_eq!(schedule.locked(), 3330000u32.into());
+			assert_eq!(schedule.per_block(), 333u32.into());
 			assert_eq!(
-				secondary.ending_block_as_balance::<BlockToBalance>(),
+				schedule.ending_block_as_balance::<BlockToBalance>(),
 				10_000u32.into()
 			);
 		}
@@ -430,7 +413,9 @@ fn making_vesting_transfer() {
 		// Ensure all amount is being transferred
 		assert_eq!(9775129_u128, Currency::free_balance(&claimer));
 
-		// First vesting should be usable instantly
-		assert_eq!(2932538_u128, Currency::usable_balance(&claimer));
+		
+		// Make sure user is getting atleast of instant amount
+		// might get more due to vesting remainder
+		assert!(Currency::usable_balance(&claimer) >= 2932538_u32.into());
 	});
 }

@@ -44,15 +44,15 @@ pub mod samples {
 
 	pub const SERVER_DATA: &[ServerResponse] = &[
 		ServerResponse {
-			omm: 1234443_u128,
-			amount: 345323_u128,
-			stake: 8437566_u128,
+			omm: 1234443,
+			amount: 345323,
+			stake: 8437566,
 			defi_user: true,
 		},
 		ServerResponse {
-			omm: 8548467_u128,
-			amount: 928333_u128,
-			stake: 298329_u128,
+			omm: 8548467,
+			amount: 928333,
+			stake: 298329,
 			defi_user: false,
 		},
 	];

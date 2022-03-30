@@ -34,7 +34,7 @@ pub const DEFAULT_RETRY_COUNT: u8 = 2;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::{types, utils};
-	use sp_runtime::traits::Saturating;
+	use sp_runtime::traits::{CheckedAdd, Convert, Saturating};
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::{ensure_signed, pallet_prelude::*};
@@ -71,6 +71,12 @@ pub mod pallet {
 
 		/// The identifier type for an offchain worker.
 		type AuthorityId: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>;
+
+		/// Type that allows back and forth conversion
+		/// Server Balance type <==> Airdrop Balance <==> Vesting Balance
+		type BalanceTypeConversion: Convert<types::ServerBalance, types::BalanceOf<Self>>
+			+ Convert<types::ServerBalance, types::VestingBalanceOf<Self>>
+			+ Convert<types::VestingBalanceOf<Self>, types::BalanceOf<Self>>;
 
 		/// Endpoint on where to send request url
 		#[pallet::constant]
@@ -855,15 +861,11 @@ pub mod pallet {
 
 			let vesting_amount = total_amount
 				.checked_sub(instant_amount)
-				.ok_or(sp_runtime::ArithmeticError::Overflow)?;
+				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
 
 			Ok((
-				instant_amount
-					.try_into()
-					.map_err(|_| "Server balance type and Airdrop balance type are incompatible")?,
-				vesting_amount
-					.try_into()
-					.map_err(|_| "Server balance type and Vesting balance type are incompatible")?,
+				<T::BalanceTypeConversion as Convert<_, _>>::convert(instant_amount),
+				<T::BalanceTypeConversion as Convert<_, _>>::convert(vesting_amount),
 			))
 		}
 
@@ -876,6 +878,8 @@ pub mod pallet {
 			// Block number after which enable to do vesting
 			const VESTING_APPLICABLE_FROM: u32 = 100u32;
 
+			let creditor = Self::get_creditor_account();
+
 			let total_amount = utils::get_response_sum(&server_response).map_err(|e| {
 				log::error!(
 					"[Airdrop pallet] Cannot get total sum from server response. {:?}",
@@ -884,14 +888,62 @@ pub mod pallet {
 				e
 			})?;
 
-			let (instant_amount, vesting_amount): (
-				types::BalanceOf<T>,
-				types::VestingBalanceOf<T>,
-			) = Self::get_splitted_amounts(total_amount, server_response.defi_user)?;
+			let (mut instant_amount, vesting_amount) =
+				Self::get_splitted_amounts(total_amount, server_response.defi_user)?;
 
-			let creditor = Self::get_creditor_account();
+			let (transfer_shcedule, remainding_amount) = utils::new_vesting_with_deadline::<
+				T,
+				VESTING_APPLICABLE_FROM,
+			>(vesting_amount, BLOCKS_IN_YEAR.into());
 
-			// Instantly transfer certain amount amount
+			// Amount to be transferred is:
+			// x% of totoal amount
+			// + remainding amount which was not perfectly divisible
+			instant_amount = {
+				let remainding_amount = <T::BalanceTypeConversion as Convert<
+					types::VestingBalanceOf<T>,
+					types::BalanceOf<T>,
+				>>::convert(remainding_amount);
+
+				instant_amount
+					.checked_add(&remainding_amount)
+					.ok_or(sp_runtime::ArithmeticError::Overflow)?
+			};
+
+			let creditor_origin = <T as frame_system::Config>::Origin::from(
+				frame_system::RawOrigin::Signed(creditor.clone()),
+			);
+			let claimer_origin =
+				<T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(claimer.clone());
+
+			// Apply Vesting schedule if applicable
+			if let Some(schedule) = transfer_shcedule {
+				let vest_res = pallet_vesting::Pallet::<T>::vested_transfer(
+					creditor_origin.clone(),
+					claimer_origin.clone(),
+					schedule,
+				);
+
+				if let Err(err) = vest_res {
+					// TODO:
+					// Finalize error handeling or rollback here
+
+					log::info!(
+						"[Airdrop pallet] Applying vesting for {:?} failed with error: {:?}",
+						claimer,
+						err
+					);
+
+					return Err(Error::<T>::CantApplyVesting.into());
+				}
+			} else {
+				log::trace!(
+					"[Airdrop pallet] Primary vesting not applicable for {:?}",
+					claimer_origin,
+				);
+			}
+
+			// Transfer the amount user is expected to receiver instantly
 			<T as Config>::Currency::transfer(
 				&creditor,
 				&claimer,
@@ -906,65 +958,6 @@ pub mod pallet {
 				);
 				err
 			})?;
-
-			// Get primary & secondary vesting to be applied
-			let [primary_vesting, secondary_vesting] = utils::new_vesting_with_deadline::<
-				T,
-				VESTING_APPLICABLE_FROM,
-			>(vesting_amount, BLOCKS_IN_YEAR.into());
-
-			// Prepare to and from origin
-			let creditor_origin = <T as frame_system::Config>::Origin::from(
-				frame_system::RawOrigin::Signed(creditor),
-			);
-			let claimer_origin = <T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(claimer);
-
-			// Apply primary vesting
-			if let Some(schedule) = primary_vesting {
-				pallet_vesting::Pallet::<T>::vested_transfer(
-					creditor_origin.clone(),
-					claimer_origin.clone(),
-					schedule,
-				)
-				.map_err(|e| {
-					log::info!(
-						"[Airdrop pallet] Cannot apply primary vesting for {:?}. Reason {:?}",
-						claimer_origin,
-						e
-					);
-					e
-				})?;
-			} else {
-				log::trace!(
-					"[Airdrop pallet] Primary vesting not applicable for {:?}",
-					claimer_origin,
-				);
-			}
-
-			// TODO:
-			// If primary vesting succeed and secondary vesting fails. What to do?
-
-			// Apply secondary vesting
-			if let Some(schedule) = secondary_vesting {
-				pallet_vesting::Pallet::<T>::vested_transfer(
-					creditor_origin.clone(),
-					claimer_origin.clone(),
-					schedule,
-				)
-				.map_err(|e| {
-					log::info!(
-						"[Airdrop pallet] Cannot apply primary vesting for {:?}. Reason {:?}",
-						claimer_origin,
-						e
-					);
-					e
-				})?;
-			} else {
-				log::trace!(
-					"[Airdrop pallet] No need for seconday vesting for {:?}",
-					claimer_origin,
-				);
-			}
 
 			Ok(())
 		}
