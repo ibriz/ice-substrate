@@ -21,39 +21,42 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
 }
 
 
+
 benchmarks! {
 	
     remove_from_pending_queue{
        
         let b in 0 .. 10000 ;
+        let u in 0 .. 250;
 
         let bl_number= BlockNumberOf::<T>::from(b);
 
-        let caller: <T as frame_system::Config>::AccountId = whitelisted_caller();
+        let icon_address : [u8;20] = [u as u8;20];
 
-        let ice_address : AccountIdOf<T> = account("ice_address", 0, 0);
+        pallet_airdrop::PendingClaims::<T>::insert(bl_number, icon_address.clone(), 1_u8);
+       
+        
 
-        pallet_airdrop::PendingClaims::<T>::insert(bl_number, &ice_address, 1_u8);
-
-    }:remove_from_pending_queue(RawOrigin::Root,bl_number,ice_address.clone())
+    }:remove_from_pending_queue(RawOrigin::Root,bl_number,icon_address.clone())
 
 	 verify {
 
-	  assert_last_event::<T>(Event::RemovedFromQueue(ice_address).into());
+	  assert_last_event::<T>(Event::RemovedFromQueue(icon_address).into());
 
     }
 
-    complete_transfer_success {
+    complete_transfer{
        
         let b in 0 .. 10000 ;
+        let u in 0 .. 250;
 
         let bl_number= BlockNumberOf::<T>::from(b);
 
         let system_account_id = Pallet::<T>::get_creditor_account();
 
-        let icon_address:types::IconAddress = account("icon_address", 0, 0);
+        let icon_address : [u8;20] = [u as u8;20];
        
-        let claimer : AccountIdOf<T> = AccountIdOf::<T>::default();
+        let claimer = AccountIdOf::<T>::default();
 
         let response =types::ServerResponse {
             omm: 123_u32.into(),
@@ -67,11 +70,11 @@ benchmarks! {
         Pallet::<T>::setup_claimer(claimer.clone(),bl_number,icon_address.clone());
        
        
-    }:complete_transfer(RawOrigin::Root,bl_number,claimer.clone(),response)
+    }:complete_transfer(RawOrigin::Root,bl_number,icon_address.clone(),response)
 
 	 verify {
 
-	    assert_last_event::<T>(Event::ClaimSuccess(claimer).into());
+	    assert_last_event::<T>(Event::ClaimSuccess(icon_address.clone()).into());
     }
 
 
@@ -97,21 +100,23 @@ benchmarks! {
     register_failed_claim {
 
         let b in 10 .. 10000 ;
+        let u in 0 .. 250;
 
-        let ice_address : AccountIdOf<T> = account("ice_address", 0, 0);
+        let icon_address : [u8;20] = [u as u8;20];
 
         let block_number = BlockNumberOf::<T>::from(b);
 
-        let new_block_number=block_number.saturating_add(3u32.into());
+        let claimer: types::AccountIdOf<T> = frame_benchmarking::whitelisted_caller();
 
-        pallet_airdrop::PendingClaims::<T>::insert(block_number, &ice_address, 3u8);
+        Pallet::<T>::setup_claimer(claimer.clone(),block_number,icon_address.clone());
         
 
-    }:register_failed_claim(RawOrigin::Root,block_number,ice_address.clone())
+    }:register_failed_claim(RawOrigin::Root,block_number,icon_address.clone())
 
     verify {
-
-        assert_last_event::<T>(Event::RegisteredFailedClaim(ice_address.clone(),new_block_number.clone(),2u8).into());
+       //  let new_block_number = Pallet::<T>::block_number().saturating_add(1_u32.into());
+        let new_block_number = BlockNumberOf::<T>::from(2_u32);
+        assert_last_event::<T>(Event::RegisteredFailedClaim(claimer.clone(),new_block_number.clone(),2u8).into());
     }
 
     claim_request {
@@ -120,7 +125,7 @@ benchmarks! {
 
         let ice_address = T::AccountId::decode(&mut &ice_bytes[..]).unwrap_or_default();
 
-        let icon_address = hex_literal::hex!("ee1448f0867b90e6589289a4b9c06ac4516a75a9").to_vec();
+        let icon_address:[u8; 20] = hex_literal::hex!("ee1448f0867b90e6589289a4b9c06ac4516a75a9");
 
         let icon_signature = hex_literal::hex!("628af708622383d60e1d9d95763cf4be64d0bafa8daebb87847f14fde0db40013105586f0c937ddf0e8913251bf01cf8e0ed82e4f631b666453e15e50d69f3b900").to_vec();
 
@@ -131,7 +136,35 @@ benchmarks! {
 
     verify {
 
-        assert_last_event::<T>(Event::ClaimRequestSucceeded(ice_address.clone()).into());
+        assert_last_event::<T>(Event::ClaimRequestSucceeded{
+            ice_address:ice_address.clone(),
+            icon_address: icon_address.clone(),
+            registered_in: Pallet::<T>::get_current_block_number()
+        }.into());
+    }
+
+    update_processed_upto_counter {
+        let b in 10 .. 10000;
+        let block_number = BlockNumberOf::<T>::from(b);
+
+    }:update_processed_upto_counter(RawOrigin::Root,block_number.clone())
+    verify {
+        assert_last_event::<T>(Event::ProcessedCounterSet(block_number.clone()).into());
+    }
+
+    set_offchain_account {
+
+       
+        let old_account: types::AccountIdOf<T> = frame_benchmarking::whitelisted_caller();
+        let new_account: types::AccountIdOf<T> = frame_benchmarking::whitelisted_caller();
+        <OffchainAccount<T>>::set(Some(old_account.clone()));
+
+    }: set_offchain_account(RawOrigin::Root,new_account.clone())
+    verify {
+        assert_last_event::<T>(Event::OffchainAccountChanged{
+            old_account:Some(old_account.clone()),
+            new_account:new_account.clone()
+        }.into());
     }
 
     impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Test);

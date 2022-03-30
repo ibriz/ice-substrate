@@ -118,6 +118,7 @@ fn fail_on_non_existent_data() {
 }
 
 #[test]
+#[ignore]
 fn remove_on_zero_ice() {
 	let (mut test_ext, offchain_state, pool_state, ocw_pub) = offchain_test_ext();
 	let icon_address = samples::ICON_ADDRESS[1];

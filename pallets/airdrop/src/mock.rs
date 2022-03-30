@@ -130,3 +130,11 @@ impl
 	type GenericSignature = sp_core::sr25519::Signature;
 	type GenericPublic = sp_core::sr25519::Public;
 }
+
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	system::GenesisConfig::default()
+		.build_storage::<Test>()
+		.unwrap()
+		.into()
+}

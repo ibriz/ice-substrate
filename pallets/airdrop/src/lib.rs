@@ -142,7 +142,7 @@ pub mod pallet {
 		ClaimCancelled(types::IconAddress),
 
 		/// Emit when claim request was done successfully
-		ClaimRequestSucced {
+		ClaimRequestSucceeded{
 			ice_address: types::AccountIdOf<T>,
 			icon_address: types::IconAddress,
 			registered_in: types::BlockNumberOf<T>,
@@ -174,6 +174,8 @@ pub mod pallet {
 			old_account: Option<types::AccountIdOf<T>>,
 			new_account: types::AccountIdOf<T>,
 		},
+
+		ProcessedCounterSet(types::BlockNumberOf<T>),
 	}
 
 	#[pallet::storage]
@@ -252,8 +254,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			// Take signed address compatible with airdrop_pallet::Config::AccountId type
 			// so that we can call verify_with_icon method
-			let ice_address: <T as Config>::VerifiableAccountId = ensure_signed(origin)?.into();
-			// let ice_address: types::AccountIdOf<T> = ensure_signed(origin)?.into();
+
+			let ice_address: types::AccountIdOf<T> = ensure_signed(origin)?.into();
 
 			log::trace!(
 				"[Airdorp pallet] Claim_request called by user: {:?} with message: {:?} and sig: {:?}",
@@ -273,7 +275,7 @@ pub mod pallet {
 			});
 
 			// make sure the validation is correct
-			<types::AccountIdOf<T> as Into<<T as Config>::AccountId>>::into(ice_address.clone())
+			<types::AccountIdOf<T> as Into<<T as Config>::VerifiableAccountId>>::into(ice_address.clone())
 				.verify_with_icon(&icon_address, &icon_signature, &message)
 				.map_err(|err| {
 					log::trace!(
@@ -318,7 +320,7 @@ pub mod pallet {
 			});
 
 			Self::claim_request_unchecked(ice_address, icon_address);
-			Self::deposit_event(Event::<T>::ClaimRequestSucceeded(ice_address));
+			// Self::deposit_event(Event::<T>::ClaimRequestSucceeded(ice_address));
 
 			Ok(Pays::No.into())
 		}
@@ -593,6 +595,8 @@ pub mod pallet {
 
 			log::trace!("ProceedUpto Counter updating to value: {:?}", new_value);
 			<ProcessedUpto<T>>::set(new_value);
+
+			Self::deposit_event(Event::<T>::ProcessedCounterSet(new_value));
 
 			Ok(Pays::No.into())
 		}
@@ -925,7 +929,7 @@ pub mod pallet {
 				current_block_number
 			);
 
-			Self::deposit_event(Event::<T>::ClaimRequestSucced {
+			Self::deposit_event(Event::<T>::ClaimRequestSucceeded {
 				registered_in: current_block_number,
 				ice_address,
 				icon_address,
@@ -965,11 +969,11 @@ pub mod pallet {
 
 			 let mut snapshot = types::SnapshotInfo::<T>::default();
 
-			 snapshot = snapshot.icon_address(icon_address);
+			 snapshot = snapshot.ice_address(claimer.clone());
         
-             <IceSnapshotMap<T>>::insert(claimer.clone(), snapshot);
+             <IceSnapshotMap<T>>::insert(icon_address.clone(), snapshot);
 
-			 <PendingClaims<T>>::insert(bl_number, claimer.clone(), 10_u8);
+			 <PendingClaims<T>>::insert(bl_number, icon_address.clone(), 2_u8);
 		}
 	}
 }

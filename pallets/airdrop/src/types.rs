@@ -61,7 +61,7 @@ pub struct SnapshotInfo<T: Config> {
 }
 
 impl<T: Config> SnapshotInfo<T> {
-	/// Helper function to set icon_address in builder-pattern way
+	/// Helper function to set ice_address in builder-pattern way
 	/// so that initilisation can be done in single line
 	pub fn ice_address(mut self, val: AccountIdOf<T>) -> Self {
 		self.ice_address = val;
