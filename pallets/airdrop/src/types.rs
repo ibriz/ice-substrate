@@ -17,7 +17,7 @@ pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::B
 
 
 /// Type that represent IconAddress
-pub type IconAddress = sp_std::vec::Vec<u8>;
+pub type IconAddress = [u8; 20];
 
 ///
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
@@ -34,7 +34,6 @@ pub enum SignatureValidationError {
 	InvalidIconSignature,
 	InvalidIceAddress,
 	Sha3Execution,
-	ECRecoverExecution,
 }
 
 #[derive(Encode, Decode, Clone, TypeInfo)]
@@ -44,7 +43,9 @@ pub enum SignatureValidationError {
 #[derive(Eq, PartialEq)]
 pub struct SnapshotInfo<T: Config> {
 	/// Icon address of this snapshot
-	pub icon_address: Vec<u8>,
+	// TODO:
+	// change this to [u8; _]
+	pub ice_address: AccountIdOf<T>,
 
 	/// Total airdroppable-amount this icon_address hold
 	pub amount: BalanceOf<T>,
@@ -62,8 +63,8 @@ pub struct SnapshotInfo<T: Config> {
 impl<T: Config> SnapshotInfo<T> {
 	/// Helper function to set icon_address in builder-pattern way
 	/// so that initilisation can be done in single line
-	pub fn icon_address(mut self, val: Vec<u8>) -> Self {
-		self.icon_address = val;
+	pub fn ice_address(mut self, val: AccountIdOf<T>) -> Self {
+		self.ice_address = val;
 		self
 	}
 }
@@ -72,7 +73,7 @@ impl<T: Config> SnapshotInfo<T> {
 impl<T: Config> Default for SnapshotInfo<T> {
 	fn default() -> Self {
 		Self {
-			icon_address: sp_std::vec![],
+			ice_address: AccountIdOf::<T>::default(),
 			amount: 0_u32.into(),
 			defi_user: false,
 			vesting_percentage: 0,
@@ -112,6 +113,7 @@ pub enum ClaimError {
 #[derive(Deserialize, Encode, Decode, Clone, Default, Eq, PartialEq, TypeInfo, Copy)]
 #[cfg_attr(feature = "std", derive(Debug))]
 #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
+#[cfg_attr(test, derive(serde::Serialize))]
 pub struct ServerResponse {
 	// TODO:: Use u64 instead of u128 to save on-chain space
 
@@ -179,3 +181,35 @@ pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
 }
 
 
+pub struct PendingClaimsOf<T: Config> {
+	range: core::ops::Range<BlockNumberOf<T>>,
+}
+
+impl<T: Config> PendingClaimsOf<T> {
+	pub fn new(range: core::ops::Range<BlockNumberOf<T>>) -> Self {
+		PendingClaimsOf::<T> { range }
+	}
+}
+
+impl<T: Config> core::iter::Iterator for PendingClaimsOf<T> {
+	// This iterator returns a block number and an iterator to entiries
+	// in PendingClaims under same block number
+	type Item = (BlockNumberOf<T>, storage::KeyPrefixIterator<IconAddress>);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		// Take the block to process
+		let this_block = self.range.start;
+		// Increment start by one
+		self.range.start = this_block + 1_u32.into();
+
+		// Check if range is valid
+		if self.range.start > self.range.end {
+			return None;
+		}
+
+		// Get the actual iterator result
+		let this_block_iter = <crate::PendingClaims<T>>::iter_key_prefix(this_block);
+
+		Some((this_block, this_block_iter))
+	}
+}

@@ -4201,7 +4201,6 @@ dependencies = [
  "pallet-balances",
  "pallet-evm-precompile-sha3fips",
  "pallet-evm-precompile-simple",
- "pallet-sudo",
  "parity-scale-codec",
  "parking_lot",
  "scale-info",

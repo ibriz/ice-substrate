@@ -1,15 +1,12 @@
 use crate as pallet_airdrop;
-use crate::types;
-use codec::Encode;
+
 use frame_support::parameter_types;
 use frame_system as system;
 use pallet_balances;
 use sp_core::H256;
 use sp_runtime::{
-	generic,
 	testing::Header,
 	traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
-	SaturatedConversion,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -19,7 +16,6 @@ type Signature = sp_core::sr25519::Signature;
 type Index = u64;
 type BlockNumber = u64;
 type Extrinsic = sp_runtime::testing::TestXt<Call, ()>;
-type AuthorityId = crate::airdrop_crypto::AuthId;
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -29,7 +25,6 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		AirdropModule: pallet_airdrop::{Pallet, Call, Storage, Event<T>},
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 	}
 );
@@ -80,11 +75,6 @@ impl pallet_airdrop::Config for Test {
 	type AuthorityId = crate::airdrop_crypto::AuthId;
 	type Creditor = CreditorAccount;
 	type WeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Test>;
-}
-
-impl pallet_sudo::Config for Test {
-	type Event = Event;
-	type Call = Call;
 }
 
 type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
@@ -139,25 +129,4 @@ impl
 	type RuntimeAppPublic = crate::airdrop_crypto::Public;
 	type GenericSignature = sp_core::sr25519::Signature;
 	type GenericPublic = sp_core::sr25519::Public;
-}
-
-// Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default()
-		.build_storage::<Test>()
-		.unwrap()
-		.into()
-}
-
-/// Dummy implementation for IconVerififable trait for test AccountId
-// This implementation always passes so should not be dependent upon
-impl types::IconVerifiable for sp_core::sr25519::Public {
-	fn verify_with_icon(
-		&self,
-		icon_wallet: &types::IconAddress,
-		icon_signature: &[u8],
-		message: &[u8],
-	) -> Result<(), types::SignatureValidationError> {
-		Ok(())
-	}
 }
