@@ -344,7 +344,10 @@ pub mod pallet {
 		// If any of the step fails in this function,
 		// we pass the flow to register_failed_claim if needed to be retry again
 		// and cancel the request if it dont have to retried again
-		#[pallet::weight(T::WeightInfo::complete_transfer(0u32,receiver_icon.len() as u32))]
+		#[pallet::weight(T::WeightInfo::complete_transfer(
+			types::block_number_to_u32::<T>(block_number.clone()),
+			receiver_icon.len() as u32)
+		)]
 		pub fn complete_transfer(
 			origin: OriginFor<T>,
 			block_number: types::BlockNumberOf<T>,
@@ -453,7 +456,10 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-		#[pallet::weight(T::WeightInfo::remove_from_pending_queue(0u32,icon_address.len() as u32))]
+		#[pallet::weight(T::WeightInfo::remove_from_pending_queue(
+			types::block_number_to_u32::<T>(block_number.clone()),
+			icon_address.len() as u32)
+		)]
 		pub fn remove_from_pending_queue(
 			origin: OriginFor<T>,
 			block_number: types::BlockNumberOf<T>,
@@ -477,7 +483,10 @@ pub mod pallet {
 		/// processing in offchain worker
 		/// We move the entry to future block key so that another
 		/// offchain worker can process it again
-		#[pallet::weight(T::WeightInfo::register_failed_claim(0u32,icon_address.len() as u32))]
+		#[pallet::weight(T::WeightInfo::register_failed_claim(
+			types::block_number_to_u32::<T>(block_number.clone()),
+			icon_address.len() as u32)
+		)]
 		pub fn register_failed_claim(
 			origin: OriginFor<T>,
 			block_number: types::BlockNumberOf<T>,
@@ -587,7 +596,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(T::WeightInfo::update_processed_upto_counter(0u32))]
+		#[pallet::weight(T::WeightInfo::update_processed_upto_counter(
+			types::block_number_to_u32::<T>(new_value.clone()))
+		)]
 		pub fn update_processed_upto_counter(
 			origin: OriginFor<T>,
 			new_value: types::BlockNumberOf<T>,
