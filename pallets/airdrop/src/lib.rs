@@ -294,7 +294,7 @@ pub mod pallet {
 
 		// Means to push claim request force fully
 		// This skips signature verification
-		#[pallet::weight(10_000)]
+		#[pallet::weight(T::WeightInfo::force_claim_request(0u32))]
 		pub fn force_claim_request(
 			origin: OriginFor<T>,
 			ice_address: types::AccountIdOf<T>,
@@ -320,7 +320,7 @@ pub mod pallet {
 			});
 
 			Self::claim_request_unchecked(ice_address, icon_address);
-			// Self::deposit_event(Event::<T>::ClaimRequestSucceeded(ice_address));
+			
 
 			Ok(Pays::No.into())
 		}
@@ -344,7 +344,7 @@ pub mod pallet {
 		// If any of the step fails in this function,
 		// we pass the flow to register_failed_claim if needed to be retry again
 		// and cancel the request if it dont have to retried again
-		#[pallet::weight(T::WeightInfo::complete_transfer_success(0u32))]
+		#[pallet::weight(T::WeightInfo::complete_transfer(0u32,receiver_icon.len() as u32))]
 		pub fn complete_transfer(
 			origin: OriginFor<T>,
 			block_number: types::BlockNumberOf<T>,
@@ -369,13 +369,14 @@ pub mod pallet {
 			});
 
 			// Get snapshot from map and return with error if not present
-			let mut snapshot = Self::get_icon_snapshot_map(&receiver_icon).ok_or({
+			let mut snapshot = Self::get_icon_snapshot_map(&receiver_icon).ok_or_else(||{
 				log::info!(
 					"[Airdrop pallet] There is no entry in SnapshotMap for {:?}",
 					receiver_icon
 				);
 				Error::<T>::IncompleteData
 			})?;
+
 
 			// Also make sure that claim_status of this snapshot is false
 			ensure!(!snapshot.claim_status, {
@@ -428,7 +429,7 @@ pub mod pallet {
 		/// We have to have a way that this signed call is from offchain so we can perform
 		/// critical operation. When offchain worker key and this storage have same account
 		/// then we have a way to ensure this call is from offchain worker
-		#[pallet::weight(10_000)]
+		#[pallet::weight(T::WeightInfo::set_offchain_account())]
 		pub fn set_offchain_account(
 			origin: OriginFor<T>,
 			new_account: types::AccountIdOf<T>,
@@ -452,7 +453,7 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-		#[pallet::weight(T::WeightInfo::remove_from_pending_queue(0u32))]
+		#[pallet::weight(T::WeightInfo::remove_from_pending_queue(0u32,icon_address.len() as u32))]
 		pub fn remove_from_pending_queue(
 			origin: OriginFor<T>,
 			block_number: types::BlockNumberOf<T>,
@@ -476,7 +477,7 @@ pub mod pallet {
 		/// processing in offchain worker
 		/// We move the entry to future block key so that another
 		/// offchain worker can process it again
-		#[pallet::weight(T::WeightInfo::register_failed_claim(0u32))]
+		#[pallet::weight(T::WeightInfo::register_failed_claim(0u32,icon_address.len() as u32))]
 		pub fn register_failed_claim(
 			origin: OriginFor<T>,
 			block_number: types::BlockNumberOf<T>,
@@ -485,7 +486,7 @@ pub mod pallet {
 			Self::ensure_root_or_offchain(origin).map_err(|_| Error::<T>::DeniedOperation)?;
 
 			let ice_address = Self::get_icon_snapshot_map(&icon_address)
-				.ok_or({
+				.ok_or_else(||{
 					log::info!(
 						"[Airdrop pallet] {}. {:?}",
 						"Cannot register as failed claim because was not in map",
@@ -495,7 +496,7 @@ pub mod pallet {
 				})?
 				.ice_address;
 			let retry_remaining =
-				Self::get_pending_claims(&block_number, &icon_address).ok_or({
+				Self::get_pending_claims(&block_number, &icon_address).ok_or_else(||{
 					log::info!(
 						"[Airdrop pallet] {}. {:?}",
 						"Cannot register as failed claim because was not in queue",
@@ -586,7 +587,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(10_000)]
+		#[pallet::weight(T::WeightInfo::update_processed_upto_counter(0u32))]
 		pub fn update_processed_upto_counter(
 			origin: OriginFor<T>,
 			new_value: types::BlockNumberOf<T>,
@@ -971,9 +972,9 @@ pub mod pallet {
 
 			 snapshot = snapshot.ice_address(claimer.clone());
         
-             <IceSnapshotMap<T>>::insert(icon_address.clone(), snapshot);
+             <IceSnapshotMap<T>>::insert(&icon_address, snapshot);
 
-			 <PendingClaims<T>>::insert(bl_number, icon_address.clone(), 2_u8);
+			 <PendingClaims<T>>::insert(bl_number, &icon_address, 2_u8);
 		}
 	}
 }
