@@ -350,6 +350,14 @@ fn cook_vesting_schedule() {
 		}
 
 		{
+			let (schedule, remainder) =
+				utils::new_vesting_with_deadline::<Test, 0u32>(5u32.into(), 10u32.into());
+
+			assert_eq!(None, schedule);
+			assert_eq!(remainder, 5u32.into());
+		}
+
+		{
 			let (schedule, remainer) =
 				utils::new_vesting_with_deadline::<Test, 5u32>(12u32.into(), 10u32.into());
 
