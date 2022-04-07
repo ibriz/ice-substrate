@@ -177,6 +177,9 @@ pub mod pallet {
 
 		/// Some operation while applying vesting failed
 		CantApplyVesting,
+
+		/// Creditor have too low balance
+		CreditorOutOfFund,
 	}
 
 	#[pallet::call]
@@ -887,6 +890,24 @@ pub mod pallet {
 				);
 				e
 			})?;
+
+			// Check creditor have eough balance to handle this transaction
+			{
+				let total_amount = <T::BalanceTypeConversion as Convert<
+					types::ServerBalance,
+					types::BalanceOf<T>,
+				>>::convert(total_amount);
+				let crediotr_balance =
+					<T as Config>::Currency::free_balance(&Self::get_creditor_account());
+				if crediotr_balance <= total_amount {
+					log::error!(
+						"[Airdrop pallet] Creditor have too low balance to transfer {:?} to {:?}",
+						total_amount,
+						claimer
+					);
+					return Err(Error::<T>::CreditorOutOfFund.into());
+				}
+			}
 
 			let (mut instant_amount, vesting_amount) =
 				Self::get_splitted_amounts(total_amount, server_response.defi_user)?;
