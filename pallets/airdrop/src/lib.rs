@@ -37,7 +37,7 @@ pub mod pallet {
 	use sp_runtime::traits::{CheckedAdd, Convert, Saturating};
 
 	use frame_support::pallet_prelude::*;
-	use frame_system::{ensure_signed, pallet_prelude::*};
+	use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 	use sp_std::prelude::*;
 
 	use frame_support::traits::{
@@ -124,6 +124,12 @@ pub mod pallet {
 			old_account: Option<types::AccountIdOf<T>>,
 			new_account: types::AccountIdOf<T>,
 		},
+
+		/// AirdropState have been updated
+		AirdropStateUpdated {
+			old_state: types::AirdropState,
+			new_state: types::AirdropState,
+		},
 	}
 
 	#[pallet::storage]
@@ -141,6 +147,10 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_processed_upto_counter)]
 	pub(super) type ProcessedUpto<T: Config> = StorageValue<_, types::BlockNumberOf<T>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_airdrop_state)]
+	pub(super) type AirdropChainState<T: Config> = StorageValue<_, types::AirdropState, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_icon_snapshot_map)]
@@ -180,6 +190,12 @@ pub mod pallet {
 
 		/// Creditor have too low balance
 		CreditorOutOfFund,
+
+		/// Currently no new claim request is being accepted
+		NewClaimRequestBlocked,
+
+		/// Currently processing of claim request is blocked
+		ClaimProcessingBlocked,
 	}
 
 	#[pallet::call]
@@ -206,6 +222,11 @@ pub mod pallet {
 			// Take signed address compatible with airdrop_pallet::Config::AccountId type
 			// so that we can call verify_with_icon method
 			let ice_address: types::AccountIdOf<T> = ensure_signed(origin)?.into();
+
+			// Check that we are ok to receive new claim request
+			if Self::get_airdrop_state().block_claim_request {
+				return Err(Error::<T>::NewClaimRequestBlocked.into());
+			}
 
 			log::trace!(
 				"[Airdorp pallet] Claim_request called by user: {:?} with message: {:?} and sig: {:?}",
@@ -279,6 +300,15 @@ pub mod pallet {
 			Self::ensure_root_or_offchain(origin.clone())
 				.map_err(|_| Error::<T>::DeniedOperation)?;
 
+			// Make sure chain is ready to process new request
+			if Self::get_airdrop_state().avoid_claim_processing {
+				log::info!(
+					"[Airdrop pallet] Called complete_transfer for {:?} but avoided.",
+					receiver_icon
+				);
+				return Err(Error::<T>::ClaimProcessingBlocked.into());
+			}
+
 			// Check again if it is still in the pending queue
 			// Eg: If another node had processed the same request
 			// or if user had decided to cancel_claim_request
@@ -304,31 +334,28 @@ pub mod pallet {
 					Error::<T>::IncompleteData
 				})?;
 
-			// Also make sure that claim_status of this snapshot is false
-			ensure!(!snapshot.claim_status, {
-				log::info!(
-					"[Airdrop pallet] Claim already made for entry {:?}",
-					(block_number, &snapshot.ice_address, &receiver_icon)
-				);
-				Error::<T>::ClaimAlreadyMade
-			});
+			// If both of transfer is done. return early
+			if snapshot.done_vesting && snapshot.done_instant {
+				return Err(Error::<T>::ClaimAlreadyMade.into());
+			}
 
 			// Apply all vesting
-			Self::do_vested_transfer(snapshot.ice_address.clone(), &server_response).map_err(
-				|_| {
-					Self::register_failed_claim(
-						frame_system::RawOrigin::Root.into(),
-						block_number,
-						receiver_icon.clone(),
-					)
-					.expect("Calling register_failed_claim should not have been failed...");
+			Self::do_transfer(
+				snapshot.ice_address.clone(),
+				&server_response,
+				&mut snapshot,
+			)
+			.map_err(|_| {
+				Self::register_failed_claim(
+					frame_system::RawOrigin::Root.into(),
+					block_number,
+					receiver_icon.clone(),
+				)
+				.expect("Calling register_failed_claim should not have been failed...");
 
-					Error::<T>::CantApplyVesting
-				},
-			)?;
+				Error::<T>::CantApplyVesting
+			})?;
 
-			// Update claim_status to true and store it
-			snapshot.claim_status = true;
 			<IceSnapshotMap<T>>::insert(&receiver_icon, snapshot);
 
 			// Now we can remove this claim from queue
@@ -368,6 +395,31 @@ pub mod pallet {
 			Self::deposit_event(Event::OffchainAccountChanged {
 				old_account,
 				new_account,
+			});
+
+			Ok(Pays::No.into())
+		}
+
+		#[pallet::weight(10_000)]
+		pub fn update_airdrop_state(
+			origin: OriginFor<T>,
+			new_state: types::AirdropState,
+		) -> DispatchResultWithPostInfo {
+			// Only root can call this
+			ensure_root(origin).map_err(|_| Error::<T>::DeniedOperation)?;
+
+			let old_state = Self::get_airdrop_state();
+			<AirdropChainState<T>>::set(new_state.clone());
+
+			log::info!(
+				"[Airdrop pallet] AirdropState updated. (Old, New): {:?} in block number {:?}",
+				(&old_state, &new_state),
+				Self::get_current_block_number(),
+			);
+
+			Self::deposit_event(Event::AirdropStateUpdated {
+				old_state,
+				new_state,
 			});
 
 			Ok(Pays::No.into())
@@ -525,8 +577,19 @@ pub mod pallet {
 			// If this is not the block to start offchain worker
 			// print a log and early return
 			if !Self::should_run_on_this_block(block_number) {
-				log::trace!("Offchain worker skipped for block: {:?}", block_number);
+				log::trace!(
+					"[Airdrop pallet] Offchain worker skipped for block: {:?}",
+					block_number
+				);
 				return;
+			}
+
+			// If this network is no longer processing claim request
+			if Self::get_airdrop_state().avoid_claim_processing {
+				log::trace!(
+					"[Airdrop pallet] Offchain worker avoided for block {:?}",
+					block_number
+				);
 			}
 
 			log::info!(
@@ -872,9 +935,10 @@ pub mod pallet {
 			))
 		}
 
-		pub fn do_vested_transfer(
+		pub fn do_transfer(
 			claimer: types::AccountIdOf<T>,
 			server_response: &types::ServerResponse,
+			snapshot: &mut types::SnapshotInfo<T>,
 		) -> Result<(), DispatchError> {
 			// TODO: put more relaible value
 			const BLOCKS_IN_YEAR: u32 = 10_000u32;
@@ -937,48 +1001,77 @@ pub mod pallet {
 			let claimer_origin =
 				<T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(claimer.clone());
 
-			// Apply Vesting schedule if applicable
-			if let Some(schedule) = transfer_shcedule {
-				let vest_res = pallet_vesting::Pallet::<T>::vested_transfer(
-					creditor_origin.clone(),
-					claimer_origin.clone(),
-					schedule,
-				);
+			match transfer_shcedule {
+				// Apply vesting
+				Some(schedule) if !snapshot.done_vesting => {
+					let vest_res = pallet_vesting::Pallet::<T>::vested_transfer(
+						creditor_origin.clone(),
+						claimer_origin.clone(),
+						schedule,
+					);
 
-				if let Err(err) = vest_res {
-					// TODO:
-					// Finalize error handeling or rollback here
+					match vest_res {
+						// Everything went ok. update flag
+						Ok(()) => {
+							snapshot.done_vesting = true;
+							log::info!("[Airdrop pallet] Vesting applied for {:?}", claimer);
+						}
+						// log error
+						Err(err) => {
+							log::info!(
+								"[Airdrop pallet] Applying vesting for {:?} failed with error: {:?}",
+								claimer,
+								err
+							);
+						}
+					}
+				}
 
-					log::info!(
-						"[Airdrop pallet] Applying vesting for {:?} failed with error: {:?}",
+				// Vesting was already done as snapshot.done_vesting is true
+				Some(_) => {
+					log::trace!(
+						"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
+						claimer,
+						Self::get_current_block_number()
+					);
+				}
+
+				// No schedule was created
+				None => {
+					log::trace!(
+						"[Airdrop pallet] Primary vesting not applicable for {:?}",
+						claimer_origin,
+					);
+				}
+			}
+
+			// if not done previously
+			// Transfer the amount user is expected to receiver instantly
+			if !snapshot.done_instant {
+				<T as Config>::Currency::transfer(
+					&creditor,
+					&claimer,
+					instant_amount,
+					ExistenceRequirement::KeepAlive,
+				)
+				.map_err(|err| {
+					log::error!(
+						"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
 						claimer,
 						err
 					);
+					err
+				})?;
 
-					return Err(Error::<T>::CantApplyVesting.into());
-				}
+				// Everything went ok. Update flag
+				snapshot.done_instant = true;
 			} else {
 				log::trace!(
-					"[Airdrop pallet] Primary vesting not applicable for {:?}",
-					claimer_origin,
+					"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
+					claimer,
+					Self::get_current_block_number()
 				);
 			}
-
-			// Transfer the amount user is expected to receiver instantly
-			<T as Config>::Currency::transfer(
-				&creditor,
-				&claimer,
-				instant_amount,
-				ExistenceRequirement::KeepAlive,
-			)
-			.map_err(|err| {
-				log::error!(
-					"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
-					claimer,
-					err
-				);
-				err
-			})?;
 
 			Ok(())
 		}
