@@ -69,11 +69,12 @@ parameter_types! {
 
 impl pallet_airdrop::Config for Test {
 	type Event = Event;
-	type AccountId = AccountId;
+	type VerifiableAccountId = AccountId;
 	type Currency = Balances;
 	type FetchIconEndpoint = FetchIconEndpoint;
 	type AuthorityId = crate::airdrop_crypto::AuthId;
 	type Creditor = CreditorAccount;
+	type WeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Test>;
 }
 
 type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
@@ -128,4 +129,12 @@ impl
 	type RuntimeAppPublic = crate::airdrop_crypto::Public;
 	type GenericSignature = sp_core::sr25519::Signature;
 	type GenericPublic = sp_core::sr25519::Public;
+}
+
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	system::GenesisConfig::default()
+		.build_storage::<Test>()
+		.unwrap()
+		.into()
 }

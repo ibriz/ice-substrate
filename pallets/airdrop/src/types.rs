@@ -1,8 +1,8 @@
 use crate as airdrop;
 use airdrop::pallet::Config;
 use core::convert::Into;
-use frame_support::pallet_prelude::*;
 use frame_support::traits::Currency;
+use frame_support::{pallet_prelude::*};
 use frame_system;
 use scale_info::TypeInfo;
 use serde::Deserialize;
@@ -14,11 +14,16 @@ pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 /// Type that represent the balance
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
+
+
 /// Type that represent IconAddress
 pub type IconAddress = [u8; 20];
 
 ///
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
+
+
+
 
 /// type that represnt the error that can occur while validation the signature
 #[derive(Eq, PartialEq)]
@@ -56,7 +61,7 @@ pub struct SnapshotInfo<T: Config> {
 }
 
 impl<T: Config> SnapshotInfo<T> {
-	/// Helper function to set icon_address in builder-pattern way
+	/// Helper function to set ice_address in builder-pattern way
 	/// so that initilisation can be done in single line
 	pub fn ice_address(mut self, val: AccountIdOf<T>) -> Self {
 		self.ice_address = val;
@@ -76,6 +81,8 @@ impl<T: Config> Default for SnapshotInfo<T> {
 		}
 	}
 }
+
+
 
 /// Possible values of error that can occur when doing claim request from offchain worker
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -164,6 +171,15 @@ pub trait IconVerifiable {
 		message: &[u8],
 	) -> Result<(), SignatureValidationError>;
 }
+
+pub fn balance_to_u32<T: Config>(input:BalanceOf<T>) -> u32 {
+	TryInto::<u32>::try_into(input).ok().unwrap()
+}
+
+pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
+	TryInto::<u32>::try_into(input).ok().unwrap()
+}
+
 
 pub struct PendingClaimsOf<T: Config> {
 	range: core::ops::Range<BlockNumberOf<T>>,
