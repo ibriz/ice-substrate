@@ -10,6 +10,7 @@ pub trait WeightInfo {
 	fn update_processed_upto_counter(_b: u32, )-> Weight;
 	fn set_offchain_account() -> Weight;
 	fn force_claim_request(_u: u32, ) -> Weight;
+	fn dispatch_claim()->Weight;
 }
 
 
@@ -73,6 +74,10 @@ impl<T: frame_system::Config> WeightInfo for AirDropWeightInfo<T> {
 		(107_069_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+
+	fn dispatch_claim()->Weight{
+		return 10000 as Weight;
 	}
 
 	

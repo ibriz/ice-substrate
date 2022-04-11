@@ -233,6 +233,86 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+        /// Dispatchable to be called by server with privileged account
+		/// dispatch claim
+		#[pallet::weight((
+			T::WeightInfo::dispatch_claim(),
+			DispatchClass::Normal,
+			Pays::No
+		))]
+		pub fn dispatch_claim(
+			origin: OriginFor<T>,
+			icon_address: types::IconAddress,
+			ice_address: types::AccountIdOf<T>,
+			message: Vec<u8>,
+			icon_signature: Vec<u8>,
+			server_response: types::ServerResponse,
+		) -> DispatchResultWithPostInfo {
+			
+			// Make sure its callable by sudo or offchain
+			Self::ensure_root_or_offchain(origin.clone())
+				.map_err(|_| Error::<T>::DeniedOperation)?;
+
+			// First check if claim has already been processed
+			let is_already_on_map = <IceSnapshotMap<T>>::contains_key(&icon_address);
+			ensure!(!is_already_on_map, {
+				log::trace!(
+					"[Airdrop pallet] Address pair: {:?} was ignored. {}",
+					(&ice_address, &icon_address),
+					"Entry already exists in map"
+				);
+				Error::<T>::RequestAlreadyMade
+			});
+			// check creditor balance
+
+
+
+			// validate that the icon signature is valid
+			<types::AccountIdOf<T> as Into<<T as Config>::VerifiableAccountId>>::into(ice_address.clone())
+				.verify_with_icon(&icon_address, &icon_signature, &message)
+				.map_err(|err| {
+					log::trace!(
+						"[Airdrop pallet] Address pair: {:?} was ignored. {}{:?}",
+						(&ice_address, &icon_address),
+						"Signature verification failed with error: ",
+						err
+					);
+					Error::<T>::InvalidSignature
+				})?;
+			
+			let amount=Self::get_total_amount(&server_response)?;
+			let block_number =Self::get_current_block_number();
+			let mut new_snapshot = types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
+			new_snapshot.defi_user=server_response.defi_user;
+			new_snapshot.amount = amount;
+			new_snapshot.claim_status = true;
+
+			// transfer claim amount
+			T::Currency::transfer(
+				&Self::get_creditor_account(),
+				&ice_address,
+				amount,
+				ExistenceRequirement::KeepAlive,
+			)?;
+
+			<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
+
+			log::trace!(
+				"[Airdrop pallet] Transfer done for pair {:?}",
+				(&icon_address, &block_number)
+			);
+
+			Self::deposit_event(Event::<T>::ClaimSuccess(icon_address.clone()));
+			
+			Ok(Pays::No.into())
+
+		}
+
+		
+
+
+
+
 		/// Dispatchable to be called by user when they want to
 		/// make a claim request
 		//
@@ -902,6 +982,8 @@ pub mod pallet {
 				.checked_add(&omm)
 				.ok_or("Adding server_response(amount+stake+omm) overflowed")
 		}
+
+		
 	}
 
 	// implement all the helper function that are called from pallet dispatchable
