@@ -4,6 +4,9 @@ mod signature_validation;
 mod transfer;
 mod utility_functions;
 
+mod exchange_claim;
+mod user_claim;
+
 pub mod prelude {
 	pub use super::{
 		assert_tx_call, get_last_event, minimal_test_ext, not_offchain_account, offchain_test_ext,
