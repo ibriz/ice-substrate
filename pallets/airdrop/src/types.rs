@@ -11,14 +11,27 @@ use sp_std::prelude::*;
 /// AccountId of anything that implements frame_system::Config
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
+///
+pub type VestingBalanceOf<T> =
+	<<T as pallet_vesting::Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+
 /// Type that represent the balance
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+
+/// Balance type that will be returned from server
+pub type ServerBalance = u64;
 
 /// Type that represent IconAddress
 pub type IconAddress = [u8; 20];
 
+/// Type that represent Icon signed message
+pub type IconSignature = [u8; 65];
+
 ///
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
+
+///
+pub type VestingInfoOf<T> = pallet_vesting::VestingInfo<VestingBalanceOf<T>, BlockNumberOf<T>>;
 
 /// type that represnt the error that can occur while validation the signature
 #[derive(Eq, PartialEq)]
@@ -108,19 +121,15 @@ pub enum ClaimError {
 #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct ServerResponse {
-	// TODO:: Use u64 instead of u128 to save on-chain space
-
 	// TODO: Add description of this field
-	pub omm: u128,
+	pub omm: ServerBalance,
 
 	/// Amount to transfer in this claim
-	// TODO:
-	// is this amount to tranfer in this claim or tranfser in total?
 	#[serde(rename = "balanced")]
-	pub amount: u128,
+	pub amount: ServerBalance,
 
 	// TODO: add description of this field
-	pub stake: u128,
+	pub stake: ServerBalance,
 
 	/// Indicator weather this icon_address is defi_user or not
 	pub defi_user: bool,
@@ -160,7 +169,7 @@ pub trait IconVerifiable {
 	fn verify_with_icon(
 		&self,
 		icon_wallet: &IconAddress,
-		icon_signature: &[u8],
+		icon_signature: &IconSignature,
 		message: &[u8],
 	) -> Result<(), SignatureValidationError>;
 }
@@ -174,34 +183,5 @@ pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
 }
 
 pub struct PendingClaimsOf<T: Config> {
-	range: core::ops::Range<BlockNumberOf<T>>,
-}
-
-impl<T: Config> PendingClaimsOf<T> {
-	pub fn new(range: core::ops::Range<BlockNumberOf<T>>) -> Self {
-		PendingClaimsOf::<T> { range }
-	}
-}
-
-impl<T: Config> core::iter::Iterator for PendingClaimsOf<T> {
-	// This iterator returns a block number and an iterator to entiries
-	// in PendingClaims under same block number
-	type Item = (BlockNumberOf<T>, storage::KeyPrefixIterator<IconAddress>);
-
-	fn next(&mut self) -> Option<Self::Item> {
-		// Take the block to process
-		let this_block = self.range.start;
-		// Increment start by one
-		self.range.start = this_block + 1_u32.into();
-
-		// Check if range is valid
-		if self.range.start > self.range.end {
-			return None;
-		}
-
-		// Get the actual iterator result
-		let this_block_iter = <crate::PendingClaims<T>>::iter_key_prefix(this_block);
-
-		Some((this_block, this_block_iter))
-	}
+	pub range: core::ops::Range<BlockNumberOf<T>>,
 }

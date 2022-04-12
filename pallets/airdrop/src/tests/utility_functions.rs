@@ -9,7 +9,7 @@ fn pool_dispatchable_from_offchain() {
 			&PalletCall::claim_request {
 				icon_address: samples::ICON_ADDRESS[0],
 				message: b"icx_sendTransaction.data.{method.transfer.params.{wallet.da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c}}.dataType.call.from.hxdd9ecb7d3e441d25e8c4f03cd20a80c502f0c374.nid.0x1.nonce.0x1..timestamp.0x5d56f3231f818.to.cx8f87a4ce573a2e1377545feabac48a960e8092bb.version.0x3".to_vec(),
-				icon_signature: bytes::from_hex("0xa64874af3653").unwrap(),
+				icon_signature: [0u8; 65],
 			},
 			&PalletCall::donate_to_creditor {
 				amount: 10_00_u32.into(),
@@ -285,4 +285,136 @@ fn pending_claims_getter() {
 			);
 		}
 	})
+}
+
+#[test]
+fn get_vesting_amounts_splitted() {
+	minimal_test_ext().execute_with(|| {
+		use sp_runtime::ArithmeticError;
+
+		assert_err!(
+			AirdropModule::get_splitted_amounts(types::ServerBalance::max_value(), true),
+			ArithmeticError::Overflow
+		);
+		assert_eq!(
+			Ok((0_u32.into(), 0_u32.into())),
+			AirdropModule::get_splitted_amounts(0_u32.into(), true)
+		);
+
+		assert_eq!(
+			Ok((900_u32.into(), 2100_u32.into())),
+			AirdropModule::get_splitted_amounts(3_000_u32.into(), false)
+		);
+		assert_eq!(
+			Ok((1200_u32.into(), 1800_u32.into())),
+			AirdropModule::get_splitted_amounts(3_000_u32.into(), true)
+		);
+
+		assert_eq!(
+			Ok((0_u32.into(), 1_u32.into())),
+			AirdropModule::get_splitted_amounts(1_u32.into(), false)
+		);
+		assert_eq!(
+			Ok((0_u32.into(), 1_u32.into())),
+			AirdropModule::get_splitted_amounts(1_u32.into(), true)
+		);
+
+		assert_eq!(
+			Ok((2932538_u32.into(), 6842591_u32.into())),
+			AirdropModule::get_splitted_amounts(9775129_u32.into(), false)
+		);
+		assert_eq!(
+			Ok((3910051_u32.into(), 5865078_u32.into())),
+			AirdropModule::get_splitted_amounts(9775129_u32.into(), true)
+		);
+	});
+}
+
+#[test]
+fn cook_vesting_schedule() {
+	type BlockToBalance = <Test as pallet_vesting::Config>::BlockNumberToBalance;
+	minimal_test_ext().execute_with(|| {
+		{
+			let (schedule, remainder) =
+				utils::new_vesting_with_deadline::<Test, 0u32>(10u32.into(), 10u32.into());
+
+			let schedule = schedule.unwrap();
+			assert_eq!(remainder, 0u32.into());
+
+			assert_eq!(schedule.locked(), 10u32.into());
+			assert_eq!(schedule.per_block(), 1u32.into());
+			assert_eq!(
+				schedule.ending_block_as_balance::<BlockToBalance>(),
+				10u32.into()
+			);
+		}
+
+		{
+			let (schedule, remainer) =
+				utils::new_vesting_with_deadline::<Test, 5u32>(12u32.into(), 10u32.into());
+
+			let primary = schedule.unwrap();
+			assert_eq!(remainer, 2u32.into());
+
+			assert_eq!(primary.locked(), 10u32.into());
+			assert_eq!(primary.per_block(), 2u32.into());
+			assert_eq!(
+				primary.ending_block_as_balance::<BlockToBalance>(),
+				10u32.into()
+			);
+		}
+
+		{
+			let (schedule, remainer) =
+				utils::new_vesting_with_deadline::<Test, 0u32>(16u32.into(), 10u32.into());
+
+			let schedule = schedule.unwrap();
+			assert_eq!(remainer, 6u32.into());
+
+			assert_eq!(schedule.locked(), 10u32.into());
+			assert_eq!(schedule.per_block(), 1u32.into());
+			assert_eq!(
+				schedule.ending_block_as_balance::<BlockToBalance>(),
+				10u32.into()
+			);
+		}
+
+		{
+			let (schedule, remainer) =
+				utils::new_vesting_with_deadline::<Test, 0u32>(3336553u32.into(), 10_000u32.into());
+
+			let schedule = schedule.unwrap();
+			assert_eq!(remainer, 6553u32.into());
+
+			assert_eq!(schedule.locked(), 3330000u32.into());
+			assert_eq!(schedule.per_block(), 333u32.into());
+			assert_eq!(
+				schedule.ending_block_as_balance::<BlockToBalance>(),
+				10_000u32.into()
+			);
+		}
+	});
+}
+
+#[test]
+fn making_vesting_transfer() {
+	minimal_test_ext().execute_with(|| {
+		run_to_block(3);
+
+		let server_response = samples::SERVER_DATA[1];
+		let claimer = samples::ACCOUNT_ID[1];
+		type Currency = <Test as pallet_airdrop::Config>::Currency;
+
+		// Fund creditor
+		credit_creditor(u32::MAX);
+
+		assert_ok!(AirdropModule::do_vested_transfer(claimer, &server_response));
+
+		// Ensure all amount is being transferred
+		assert_eq!(9775129_u128, Currency::free_balance(&claimer));
+
+		// Make sure user is getting atleast of instant amount
+		// might get more due to vesting remainder
+		assert!(Currency::usable_balance(&claimer) >= 2932538_u32.into());
+	});
 }

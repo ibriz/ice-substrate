@@ -306,7 +306,7 @@ parameter_types! {
 
 /// Configure the pallet-template in pallets/airdrop
 impl pallet_airdrop::Config for Runtime {
-	type VerifiableAccountId = AccountId;
+	type AccountId = AccountId;
 	type Event = Event;
 	type Currency = Balances;
 	type FetchIconEndpoint = AirdropFetchIconEndpoint;
@@ -315,7 +315,9 @@ impl pallet_airdrop::Config for Runtime {
 	// Also ensure effect of (not)enabling full-crypto feature
 	type AuthorityId = pallet_airdrop::airdrop_crypto::AuthId;
 	type Creditor = AirdropCreditor;
-	type WeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
+	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
+	type VestingModule = Runtime;
+	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 }
 
 parameter_types! {
@@ -600,7 +602,7 @@ construct_runtime!(
 		Airdrop: pallet_airdrop::{Pallet, Call, Storage, Event<T>},
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
-		SimpleInflation: pallet_simple_inflation::{Pallet}
+		SimpleInflation: pallet_simple_inflation::{Pallet},
 	}
 );
 

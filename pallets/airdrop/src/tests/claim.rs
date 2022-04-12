@@ -7,13 +7,23 @@ fn claim_request_access() {
 	minimal_test_ext().execute_with(|| {
 		// Unsigned should not be able to call
 		assert_noop!(
-			AirdropModule::claim_request(Origin::none(), samples::ICON_ADDRESS[1], vec![], vec![]),
+			AirdropModule::claim_request(
+				Origin::none(),
+				samples::ICON_ADDRESS[1],
+				vec![],
+				[0u8; 65]
+			),
 			DispatchError::BadOrigin
 		);
 
 		// Root should not be able to call
 		assert_noop!(
-			AirdropModule::claim_request(Origin::root(), samples::ICON_ADDRESS[1], vec![], vec![]),
+			AirdropModule::claim_request(
+				Origin::root(),
+				samples::ICON_ADDRESS[1],
+				vec![],
+				[0u8; 65]
+			),
 			DispatchError::BadOrigin
 		);
 
@@ -22,7 +32,7 @@ fn claim_request_access() {
 			Origin::signed(samples::ACCOUNT_ID[0]),
 			samples::ICON_ADDRESS[1],
 			vec![],
-			vec![]
+			[0u8; 65],
 		));
 	});
 }
@@ -41,7 +51,7 @@ fn already_in_map() {
 				Origin::signed(samples::ACCOUNT_ID[0]),
 				claimer.clone(),
 				vec![],
-				vec![]
+				[0u8; 65],
 			),
 			PalletError::RequestAlreadyMade
 		);
@@ -57,7 +67,7 @@ fn valid_claim_request() {
 			Origin::signed(samples::ACCOUNT_ID[0]),
 			claimer.clone(),
 			vec![],
-			vec![]
+			[0u8; 65],
 		));
 
 		let expected_snapshot = types::SnapshotInfo::<Test> {
@@ -118,44 +128,6 @@ fn fail_on_non_existent_data() {
 }
 
 #[test]
-#[ignore]
-fn remove_on_zero_ice() {
-	let (mut test_ext, offchain_state, pool_state, ocw_pub) = offchain_test_ext();
-	let icon_address = samples::ICON_ADDRESS[1];
-	let mut server_response = samples::SERVER_DATA[1];
-	server_response.amount = 0_u32.into();
-
-	put_response(
-		&mut offchain_state.write(),
-		&icon_address,
-		&serde_json::to_string(&server_response).unwrap(),
-	);
-
-	test_ext.execute_with(|| {
-		let claimer = icon_address;
-		let bl_num: types::BlockNumberOf<Test> = 2_u32.into();
-
-		assert_ok!(AirdropModule::set_offchain_account(
-			Origin::root(),
-			ocw_pub.into_account()
-		));
-
-		assert_ok!(AirdropModule::process_claim_request((
-			bl_num,
-			claimer.clone()
-		)));
-
-		assert_tx_call(
-			&[&PalletCall::remove_from_pending_queue {
-				block_number: bl_num.clone(),
-				icon_address: claimer.clone(),
-			}],
-			&pool_state.read(),
-		)
-	});
-}
-
-#[test]
 fn valid_process_claim() {
 	let (mut test_ext, offchain_state, pool_state, ocw_pub) = offchain_test_ext();
 	let icon_address = samples::ICON_ADDRESS[0];
@@ -204,7 +176,7 @@ fn multi_ice_single_icon() {
 				Origin::signed(ice_address_one.clone()),
 				icon_address.clone(),
 				vec![],
-				vec![]
+				[0u8; 65]
 			));
 		}
 
@@ -215,7 +187,7 @@ fn multi_ice_single_icon() {
 					Origin::signed(ice_address_two.clone()),
 					icon_address.clone(),
 					vec![],
-					vec![],
+					[0u8; 65],
 				),
 				PalletError::RequestAlreadyMade
 			);
@@ -236,7 +208,7 @@ fn multi_icon_single_ice() {
 				Origin::signed(ice_address.clone()),
 				icon_address_first,
 				vec![],
-				vec![]
+				[0u8; 65]
 			));
 		}
 
@@ -246,7 +218,7 @@ fn multi_icon_single_ice() {
 				Origin::signed(ice_address.clone()),
 				icon_address_second,
 				vec![],
-				vec![]
+				[0u8; 65]
 			));
 		}
 	});
@@ -295,12 +267,15 @@ fn complete_flow() {
 			cleared_upto
 		));
 
+		// Put enough fund in creditor
+		credit_creditor(u32::MAX);
+
 		// Make a claim reqest
 		assert_ok!(AirdropModule::claim_request(
 			Origin::signed(claimer_ice_address.clone()),
 			claimer_icon_address.clone(),
 			b"any-messsage".to_vec(),
-			b"any-signature".to_vec()
+			[0u8; 65],
 		));
 
 		let current_block_number = inserted_in_bl_num + 2_u64;
@@ -336,8 +311,8 @@ fn complete_flow() {
 
 		// Make sure user got right balance
 		assert_eq!(
-			server_data.amount + server_data.omm + server_data.stake,
 			<Test as pallet_airdrop::Config>::Currency::free_balance(&claimer_ice_address),
+			(server_data.amount + server_data.omm + server_data.stake).into(),
 		);
 
 		// Make sure queue is cleared
