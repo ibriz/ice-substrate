@@ -79,8 +79,6 @@ pub const OFFCHAIN_WORKER_BLOCK_GAP: u32 = 3;
 // There is NO point of seeting this to high value
 pub const DEFAULT_RETRY_COUNT: u8 = 2;
 
-
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::types;
@@ -95,8 +93,6 @@ pub mod pallet {
 	use types::IconVerifiable;
 	use weights::WeightInfo;
 
-	
-
 	use sp_runtime::traits::Saturating;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -110,7 +106,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		type Currency: Currency<types::AccountIdOf<Self>>
-			+ ReservableCurrency<types::AccountIdOf<Self>> ;
+			+ ReservableCurrency<types::AccountIdOf<Self>>;
 
 		/// The overarching dispatch call type.
 		// type Call: From<Call<Self>>;
@@ -128,7 +124,6 @@ pub mod pallet {
 		/// This account should be credited enough to supply fund for all claim requests
 		#[pallet::constant]
 		type Creditor: Get<frame_support::PalletId>;
-
 	}
 
 	#[pallet::pallet]
@@ -142,7 +137,7 @@ pub mod pallet {
 		ClaimCancelled(types::IconAddress),
 
 		/// Emit when claim request was done successfully
-		ClaimRequestSucceeded{
+		ClaimRequestSucceeded {
 			ice_address: types::AccountIdOf<T>,
 			icon_address: types::IconAddress,
 			registered_in: types::BlockNumberOf<T>,
@@ -154,12 +149,9 @@ pub mod pallet {
 		/// An entry from queue was removed
 		RemovedFromQueue(types::IconAddress),
 
-		
-		
+		DonatedToCreditor(types::AccountIdOf<T>, types::BalanceOf<T>),
 
-		DonatedToCreditor(types::AccountIdOf<T>,types::BalanceOf<T>),
-
-		RegisteredFailedClaim(types::AccountIdOf<T>,types::BlockNumberOf<T>,u8),
+		RegisteredFailedClaim(types::AccountIdOf<T>, types::BlockNumberOf<T>, u8),
 
 		/// Same entry is processed by offchian worker for too many times
 		RetryExceed {
@@ -226,10 +218,7 @@ pub mod pallet {
 
 		/// When a same entry is being retried for too many times
 		RetryExceed,
-
-
 	}
-
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -275,17 +264,19 @@ pub mod pallet {
 			});
 
 			// make sure the validation is correct
-			<types::AccountIdOf<T> as Into<<T as Config>::VerifiableAccountId>>::into(ice_address.clone())
-				.verify_with_icon(&icon_address, &icon_signature, &message)
-				.map_err(|err| {
-					log::trace!(
-						"[Airdrop pallet] Address pair: {:?} was ignored. {}{:?}",
-						(&ice_address, &icon_address),
-						"Signature verification failed with error: ",
-						err
-					);
-					Error::<T>::InvalidSignature
-				})?;
+			<types::AccountIdOf<T> as Into<<T as Config>::VerifiableAccountId>>::into(
+				ice_address.clone(),
+			)
+			.verify_with_icon(&icon_address, &icon_signature, &message)
+			.map_err(|err| {
+				log::trace!(
+					"[Airdrop pallet] Address pair: {:?} was ignored. {}{:?}",
+					(&ice_address, &icon_address),
+					"Signature verification failed with error: ",
+					err
+				);
+				Error::<T>::InvalidSignature
+			})?;
 
 			Self::claim_request_unchecked(ice_address, icon_address);
 
@@ -307,7 +298,6 @@ pub mod pallet {
 				(&ice_address, &icon_address),
 			);
 
-			
 			// If it is already in map, even force_insert will fail
 			let is_already_on_map = <IceSnapshotMap<T>>::contains_key(&icon_address);
 			ensure!(!is_already_on_map, {
@@ -320,7 +310,6 @@ pub mod pallet {
 			});
 
 			Self::claim_request_unchecked(ice_address, icon_address);
-			
 
 			Ok(Pays::No.into())
 		}
@@ -372,14 +361,13 @@ pub mod pallet {
 			});
 
 			// Get snapshot from map and return with error if not present
-			let mut snapshot = Self::get_icon_snapshot_map(&receiver_icon).ok_or_else(||{
+			let mut snapshot = Self::get_icon_snapshot_map(&receiver_icon).ok_or_else(|| {
 				log::info!(
 					"[Airdrop pallet] There is no entry in SnapshotMap for {:?}",
 					receiver_icon
 				);
 				Error::<T>::IncompleteData
 			})?;
-
 
 			// Also make sure that claim_status of this snapshot is false
 			ensure!(!snapshot.claim_status, {
@@ -495,7 +483,7 @@ pub mod pallet {
 			Self::ensure_root_or_offchain(origin).map_err(|_| Error::<T>::DeniedOperation)?;
 
 			let ice_address = Self::get_icon_snapshot_map(&icon_address)
-				.ok_or_else(||{
+				.ok_or_else(|| {
 					log::info!(
 						"[Airdrop pallet] {}. {:?}",
 						"Cannot register as failed claim because was not in map",
@@ -504,8 +492,8 @@ pub mod pallet {
 					Error::<T>::IncompleteData
 				})?
 				.ice_address;
-			let retry_remaining =
-				Self::get_pending_claims(&block_number, &icon_address).ok_or_else(||{
+			let retry_remaining = Self::get_pending_claims(&block_number, &icon_address)
+				.ok_or_else(|| {
 					log::info!(
 						"[Airdrop pallet] {}. {:?}",
 						"Cannot register as failed claim because was not in queue",
@@ -553,13 +541,16 @@ pub mod pallet {
 				retry_remaining.saturating_sub(1),
 			);
 
-			
 			log::trace!(
 				"[Airdrop pallet] Register of pair {:?} in height {:?} succeed. Old retry: ",
 				(&ice_address, &icon_address),
 				new_block_number
 			);
-			Self::deposit_event(Event::<T>::RegisteredFailedClaim(ice_address.clone(),new_block_number,retry_remaining));
+			Self::deposit_event(Event::<T>::RegisteredFailedClaim(
+				ice_address.clone(),
+				new_block_number,
+				retry_remaining,
+			));
 			Ok(Pays::No.into())
 		}
 
@@ -580,7 +571,7 @@ pub mod pallet {
 			allow_death: bool,
 		) -> DispatchResult {
 			let sponser = ensure_signed(origin)?;
-			let amount =types::BalanceOf::<T>::from(amount);
+			let amount = types::BalanceOf::<T>::from(amount);
 
 			let creditor_account = Self::get_creditor_account();
 			let existance_req = if allow_death {
@@ -965,27 +956,28 @@ pub mod pallet {
 		pub fn get_current_block_number() -> types::BlockNumberOf<T> {
 			<frame_system::Pallet<T>>::block_number()
 		}
-		
 	}
-	
-    #[cfg(feature = "runtime-benchmarks")]
-	impl <T:Config> Pallet<T>{
-		
-		pub fn init_balance(account: &types::AccountIdOf<T>, free:u32){
-			T::Currency::make_free_balance_be(account,free.into());
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<T: Config> Pallet<T> {
+		pub fn init_balance(account: &types::AccountIdOf<T>, free: u32) {
+			T::Currency::make_free_balance_be(account, free.into());
 		}
 
-		pub fn setup_claimer(claimer: types::AccountIdOf<T>,bl_number:types::BlockNumberOf<T>,icon_address:types::IconAddress){
+		pub fn setup_claimer(
+			claimer: types::AccountIdOf<T>,
+			bl_number: types::BlockNumberOf<T>,
+			icon_address: types::IconAddress,
+		) {
+			T::Currency::make_free_balance_be(&claimer, 10_00_00_00u32.into());
 
-             T::Currency::make_free_balance_be(&claimer,10_00_00_00u32.into());
+			let mut snapshot = types::SnapshotInfo::<T>::default();
 
-			 let mut snapshot = types::SnapshotInfo::<T>::default();
+			snapshot = snapshot.ice_address(claimer.clone());
 
-			 snapshot = snapshot.ice_address(claimer.clone());
-        
-             <IceSnapshotMap<T>>::insert(&icon_address, snapshot);
+			<IceSnapshotMap<T>>::insert(&icon_address, snapshot);
 
-			 <PendingClaims<T>>::insert(bl_number, &icon_address, 2_u8);
+			<PendingClaims<T>>::insert(bl_number, &icon_address, 2_u8);
 		}
 	}
 }

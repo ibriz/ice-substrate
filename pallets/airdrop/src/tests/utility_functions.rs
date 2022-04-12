@@ -23,10 +23,10 @@ fn pool_dispatchable_from_offchain() {
 
 		assert_ok!(AirdropModule::make_signed_call(&calls[0]));
 		assert_tx_call(&calls[..1], &pool_state.read());
-		
+
 		assert_ok!(AirdropModule::make_signed_call(&calls[1]));
 		assert_tx_call(&calls[..2], &pool_state.read());
-		
+
 		assert_ok!(AirdropModule::make_signed_call(&calls[2]));
 		assert_tx_call(&calls[..3], &pool_state.read());
 	});
@@ -34,19 +34,28 @@ fn pool_dispatchable_from_offchain() {
 
 #[test]
 fn update_offchain_account() {
-	minimal_test_ext().execute_with(||{
+	minimal_test_ext().execute_with(|| {
 		assert_noop!(
 			AirdropModule::set_offchain_account(Origin::none(), samples::ACCOUNT_ID[1]),
 			PalletError::DeniedOperation
 		);
 
 		assert_noop!(
-			AirdropModule::set_offchain_account(Origin::signed(samples::ACCOUNT_ID[1]), samples::ACCOUNT_ID[2]),
+			AirdropModule::set_offchain_account(
+				Origin::signed(samples::ACCOUNT_ID[1]),
+				samples::ACCOUNT_ID[2]
+			),
 			PalletError::DeniedOperation
 		);
 
-		assert_ok!(AirdropModule::set_offchain_account(Origin::root(), samples::ACCOUNT_ID[1]));
-		assert_eq!(Some(samples::ACCOUNT_ID[1]), AirdropModule::get_offchain_account());
+		assert_ok!(AirdropModule::set_offchain_account(
+			Origin::root(),
+			samples::ACCOUNT_ID[1]
+		));
+		assert_eq!(
+			Some(samples::ACCOUNT_ID[1]),
+			AirdropModule::get_offchain_account()
+		);
 	});
 }
 
@@ -59,15 +68,27 @@ fn ensure_root_or_offchain() {
 		assert_ok!(AirdropModule::ensure_root_or_offchain(Origin::root()));
 
 		// Any signed other than offchian account should fail
-		assert_err!(AirdropModule::ensure_root_or_offchain(Origin::signed(not_offchain_account(samples::ACCOUNT_ID[1]))), BadOrigin);
+		assert_err!(
+			AirdropModule::ensure_root_or_offchain(Origin::signed(not_offchain_account(
+				samples::ACCOUNT_ID[1]
+			))),
+			BadOrigin
+		);
 
 		// Unsigned origin should fail
-		assert_err!(AirdropModule::ensure_root_or_offchain(Origin::none()), BadOrigin);
+		assert_err!(
+			AirdropModule::ensure_root_or_offchain(Origin::none()),
+			BadOrigin
+		);
 
 		// Signed with offchain account should work
-		assert_ok!(AirdropModule::set_offchain_account(Origin::root(), samples::ACCOUNT_ID[1]));
-		assert_ok!(AirdropModule::ensure_root_or_offchain(Origin::signed(samples::ACCOUNT_ID[1])));
-
+		assert_ok!(AirdropModule::set_offchain_account(
+			Origin::root(),
+			samples::ACCOUNT_ID[1]
+		));
+		assert_ok!(AirdropModule::ensure_root_or_offchain(Origin::signed(
+			samples::ACCOUNT_ID[1]
+		)));
 	});
 }
 
@@ -75,7 +96,7 @@ fn ensure_root_or_offchain() {
 fn making_correct_http_request() {
 	let icon_address = samples::ICON_ADDRESS[0];
 
-	let (mut test_ext, offchain_state,_,_) = offchain_test_ext();
+	let (mut test_ext, offchain_state, _, _) = offchain_test_ext();
 	put_response(
 		&mut offchain_state.write(),
 		&icon_address,
@@ -123,7 +144,10 @@ fn failed_entry_regestration() {
 				PalletError::DeniedOperation.into()
 			});
 
-			assert_ok!(AirdropModule::set_offchain_account(Origin::root(), samples::ACCOUNT_ID[2]));
+			assert_ok!(AirdropModule::set_offchain_account(
+				Origin::root(),
+				samples::ACCOUNT_ID[2]
+			));
 			assert_storage_noop!(assert_ne! {
 				AirdropModule::register_failed_claim(
 					Origin::signed(AirdropModule::get_offchain_account().unwrap()),
@@ -160,9 +184,11 @@ fn failed_entry_regestration() {
 
 		// When there are no more retry left in this entry
 		{
-			assert_ok!(
-				AirdropModule::register_failed_claim(Origin::root(), bl_num, claimer.clone())
-			);
+			assert_ok!(AirdropModule::register_failed_claim(
+				Origin::root(),
+				bl_num,
+				claimer.clone()
+			));
 			// Still entry should be removed from queue
 			assert_eq!(None, AirdropModule::get_pending_claims(bl_num, &claimer));
 		}
@@ -208,7 +234,7 @@ fn pending_claims_getter() {
 	};
 
 	let sample_entries: &[(types::BlockNumberOf<Test>, types::IconAddress)] = &[
-		(1_u32.into(),ICON_ADDRESS[0]),
+		(1_u32.into(), ICON_ADDRESS[0]),
 		(1_u32.into(), ICON_ADDRESS[1]),
 		(2_u32.into(), ICON_ADDRESS[3]),
 		(10_u32.into(), ICON_ADDRESS[2]),
@@ -237,10 +263,7 @@ fn pending_claims_getter() {
 			assert_eq!(EMPTY.to_vec(), entries);
 
 			let entries = get_flattened_vec(PendingClaimsOf::new(10_u32.into()..20_u32.into()));
-			assert_eq!(
-				vec![(10_u32.into(),ICON_ADDRESS[2])],
-				entries
-			);
+			assert_eq!(vec![(10_u32.into(), ICON_ADDRESS[2])], entries);
 		}
 
 		// Make sure out of range is always empty
