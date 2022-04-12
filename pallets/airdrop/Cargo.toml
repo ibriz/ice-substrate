@@ -23,7 +23,7 @@ scale-info = { version = "1.0", default-features = false, features = [
 serde = { version = '1.0', default-features = false, features = ['derive'] }
 serde_json = { version = '1.0', default-features = false, features = ['alloc'] }
 parking_lot = { version = "0.11", optional = true }
-hex-literal = { version = "*", default-features = false }
+hex-literal = { version = "0.3.4", optional = false }
 
 # substrate packages
 
@@ -36,6 +36,7 @@ default-features = false
 git = "https://github.com/paritytech/substrate"
 
 [dependencies.frame-benchmarking]
+optional = true
 default-features = false
 git = "https://github.com/paritytech/substrate"
 
@@ -106,5 +107,7 @@ std = [
 	"parking_lot",
 ]
 
-runtime-benchmarks = []
+runtime-benchmarks = [
+	"frame-benchmarking"
+]
 try-runtime = ["frame-support/try-runtime"]
