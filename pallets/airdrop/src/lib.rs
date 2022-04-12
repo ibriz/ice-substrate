@@ -236,11 +236,11 @@ pub mod pallet {
         /// Dispatchable to be called by server with privileged account
 		/// dispatch claim
 		#[pallet::weight((
-			T::WeightInfo::dispatch_claim(),
+			T::WeightInfo::dispatch_user_claim(),
 			DispatchClass::Normal,
 			Pays::No
 		))]
-		pub fn dispatch_claim(
+		pub fn dispatch_user_claim(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
 			ice_address: types::AccountIdOf<T>,
@@ -254,15 +254,7 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::DeniedOperation)?;
 
 			// First check if claim has already been processed
-			let is_already_on_map = <IceSnapshotMap<T>>::contains_key(&icon_address);
-			ensure!(!is_already_on_map, {
-				log::trace!(
-					"[Airdrop pallet] Address pair: {:?} was ignored. {}",
-					(&ice_address, &icon_address),
-					"Entry already exists in map"
-				);
-				Error::<T>::RequestAlreadyMade
-			});
+			Self::validate_unclaimed(&icon_address)?;
 			// check creditor balance
 
 
@@ -280,20 +272,7 @@ pub mod pallet {
 					Error::<T>::InvalidSignature
 				})?;
 			
-			let amount=Self::get_total_amount(&server_response)?;
-			let block_number =Self::get_current_block_number();
-			let mut new_snapshot = types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
-			new_snapshot.defi_user=server_response.defi_user;
-			new_snapshot.amount = amount;
-			new_snapshot.claim_status = true;
-
-			// transfer claim amount
-			T::Currency::transfer(
-				&Self::get_creditor_account(),
-				&ice_address,
-				amount,
-				ExistenceRequirement::KeepAlive,
-			)?;
+			let (block_number,new_snapshot) = Self::process_claim(ice_address,icon_address,server_response)?;
 
 			<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
 
@@ -307,6 +286,45 @@ pub mod pallet {
 			Ok(Pays::No.into())
 
 		}
+
+
+		#[pallet::weight((
+			T::WeightInfo::dispatch_exchange_claim(),
+			DispatchClass::Normal,
+			Pays::No
+		))]
+		pub fn dispatch_exchange_claim(
+			origin: OriginFor<T>,
+			icon_address: types::IconAddress,
+			ice_address: types::AccountIdOf<T>,
+			server_response: types::ServerResponse,
+		) -> DispatchResultWithPostInfo {
+			
+			// Make sure its callable by sudo or offchain
+			ensure_root(origin.clone())
+				.map_err(|_| Error::<T>::DeniedOperation)?;
+
+			// First check if claim has already been processed
+			Self::validate_unclaimed(&icon_address)?;
+			// check creditor balance
+
+			let (block_number,new_snapshot) = Self::process_claim(ice_address,icon_address,server_response)?;
+
+			<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
+
+			log::trace!(
+				"[Airdrop pallet] Transfer done for pair {:?}",
+				(&icon_address, &block_number)
+			);
+
+			Self::deposit_event(Event::<T>::ClaimSuccess(icon_address.clone()));
+			
+			Ok(Pays::No.into())
+
+		}
+
+
+
 
 		
 
@@ -1046,6 +1064,44 @@ pub mod pallet {
 		/// Return block height of Node from which this was called
 		pub fn get_current_block_number() -> types::BlockNumberOf<T> {
 			<frame_system::Pallet<T>>::block_number()
+		}
+
+		pub fn process_claim(ice_address:types::AccountIdOf<T>,icon_address:types::IconAddress,server_response:types::ServerResponse)->Result<(types::BlockNumberOf<T>,types::SnapshotInfo<T>),DispatchError>{
+			let amount=Self::get_total_amount(&server_response)?;
+			let block_number =Self::get_current_block_number();
+			let mut new_snapshot = types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
+			new_snapshot.defi_user=server_response.defi_user;
+			new_snapshot.amount = amount;
+			new_snapshot.claim_status = true;
+
+			// transfer claim amount
+			T::Currency::transfer(
+				&Self::get_creditor_account(),
+				&ice_address,
+				amount,
+				ExistenceRequirement::KeepAlive,
+			)?;
+
+			Ok((block_number,new_snapshot))
+
+		}
+
+		pub fn validate_unclaimed(icon_address: &types::IconAddress)-> Result<(),Error<T>>{
+			let is_already_on_map = <IceSnapshotMap<T>>::contains_key(icon_address);
+
+		    if  is_already_on_map {
+
+			log::trace!(
+						"[Airdrop pallet] Address : {:?} was ignored. {}",
+						(&icon_address),
+						"Entry already exists in map"
+					);
+             Err(Error::<T>::RequestAlreadyMade)
+
+			}else {
+               Ok(())
+			}
+
 		}
 		
 	}
