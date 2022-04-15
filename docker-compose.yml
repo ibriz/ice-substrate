@@ -1,0 +1,17 @@
+version: "3.2"
+
+services:
+  dev:
+    container_name: ice-node
+    image: paritytech/ci-linux:f203f298-20220415
+    working_dir: /var/www/ice-node
+    ports:
+      - "9944:9944"
+    environment:
+      - CARGO_HOME=/var/www/ice-node/.cargo
+    volumes:
+      - .:/var/www/ice-node
+      - type: bind
+        source: ./.local
+        target: /root/.local
+    command: bash -c "cargo build --release && ./target/release/ice-node --dev --ws-external"
