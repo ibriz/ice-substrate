@@ -184,11 +184,9 @@ fn failed_entry_regestration() {
 
 		// When there are no more retry left in this entry
 		{
-			assert_ok!(AirdropModule::register_failed_claim(
-				Origin::root(),
-				bl_num,
-				claimer.clone()
-			));
+			assert_ok!(
+				AirdropModule::register_failed_claim(Origin::root(), bl_num, claimer.clone())
+			);
 			// Still entry should be removed from queue
 			assert_eq!(None, AirdropModule::get_pending_claims(bl_num, &claimer));
 		}
@@ -264,6 +262,7 @@ fn pending_claims_getter() {
 
 			let entries = get_flattened_vec(PendingClaimsOf::new(10_u32.into()..20_u32.into()));
 			assert_eq!(vec![(10_u32.into(), ICON_ADDRESS[2])], entries);
+
 		}
 
 		// Make sure out of range is always empty

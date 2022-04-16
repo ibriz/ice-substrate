@@ -306,7 +306,7 @@ parameter_types! {
 
 /// Configure the pallet-template in pallets/airdrop
 impl pallet_airdrop::Config for Runtime {
-	type AccountId = AccountId;
+	type VerifiableAccountId = AccountId;
 	type Event = Event;
 	type Currency = Balances;
 	type FetchIconEndpoint = AirdropFetchIconEndpoint;
@@ -317,6 +317,7 @@ impl pallet_airdrop::Config for Runtime {
 	type Creditor = AirdropCreditor;
 	type VestingModule = Runtime;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
+	type WeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -599,9 +600,10 @@ construct_runtime!(
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Config<T>, Event<T>} = 32,
 		Assets: pallet_assets::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Airdrop: pallet_airdrop::{Pallet, Call, Storage, Event<T>},
-		  Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
 		SimpleInflation: pallet_simple_inflation::{Pallet},
+
 	}
 );
 
@@ -709,6 +711,11 @@ impl fp_self_contained::SelfContainedCall for Call {
 		}
 	}
 }
+
+#[cfg(feature = "runtime-benchmarks")]
+#[macro_use]
+extern crate frame_benchmarking;
+
 
 impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {
@@ -986,20 +993,52 @@ impl_runtime_apis! {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
+
+		fn benchmark_metadata(extra: bool) -> (
+			Vec<frame_benchmarking::BenchmarkList>,
+			Vec<frame_support::traits::StorageInfo>,
+		) {
+			use frame_benchmarking::{Benchmarking, BenchmarkList};
+			use frame_support::traits::StorageInfoTrait;
+			use frame_system_benchmarking::Pallet as SystemBench;
+			use pallet_airdrop::Pallet as AirdropBench;
+			// use frame_benchmarking::baseline::Pallet as BaselineBench;
+
+			let mut list = Vec::<BenchmarkList>::new();
+			list_benchmark!(list, extra,pallet_airdrop,AirdropBench::<Runtime>);
+
+			let storage_info = AllPalletsWithSystem::storage_info();
+
+			return (list, storage_info)
+		}
+
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
 			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
 			use pallet_evm::Module as PalletEvmBench;
+			use pallet_airdrop::Pallet as PalletAirdropBench;
 			impl frame_system_benchmarking::Config for Runtime {}
 
-			let whitelist: Vec<TrackedStorageKey> = vec![];
+			let whitelist: Vec<TrackedStorageKey> = vec![
+				// Block Number
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac").to_vec().into(),
+				// Total Issuance
+				hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80").to_vec().into(),
+				// Execution Phase
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a").to_vec().into(),
+				// Event Count
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850").to_vec().into(),
+				// System Events
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
+			];
 
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 
-			add_benchmark!(params, batches, pallet_evm, PalletEvmBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_vesting, Vesting);
+			add_benchmark !(params, batches, pallet_airdrop, PalletAirdropBench::<Runtime>);
+			// add_benchmark !(params, batches, pallet_evm, PalletEvmBench::<Runtime>);
+			// add_benchmark!(params, batches, pallet_vesting, Vesting);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
