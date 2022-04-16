@@ -1,7 +1,6 @@
 use super::prelude::*;
 use core::str::FromStr;
 use hex_literal::hex;
-use sp_core::bytes;
 use sp_runtime::AccountId32;
 use types::{IconVerifiable, SignatureValidationError};
 

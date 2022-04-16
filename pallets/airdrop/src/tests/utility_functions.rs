@@ -349,6 +349,14 @@ fn cook_vesting_schedule() {
 		}
 
 		{
+			let (schedule, remainder) =
+				utils::new_vesting_with_deadline::<Test, 0u32>(5u32.into(), 10u32.into());
+
+			assert_eq!(None, schedule);
+			assert_eq!(remainder, 5u32.into());
+		}
+
+		{
 			let (schedule, remainer) =
 				utils::new_vesting_with_deadline::<Test, 5u32>(12u32.into(), 10u32.into());
 
@@ -401,19 +409,133 @@ fn making_vesting_transfer() {
 		run_to_block(3);
 
 		let server_response = samples::SERVER_DATA[1];
-		let claimer = samples::ACCOUNT_ID[1];
 		type Currency = <Test as pallet_airdrop::Config>::Currency;
-
 		// Fund creditor
 		credit_creditor(u32::MAX);
+		credit_creditor(u32::MAX);
 
-		assert_ok!(AirdropModule::do_vested_transfer(claimer, &server_response));
+		{
+			let claimer = samples::ACCOUNT_ID[1];
+			let mut snapshot = types::SnapshotInfo::<Test> {
+				done_instant: false,
+				done_vesting: false,
+				..Default::default()
+			};
 
-		// Ensure all amount is being transferred
-		assert_eq!(9775129_u128, Currency::free_balance(&claimer));
+			assert_ok!(AirdropModule::do_transfer(
+				claimer,
+				&server_response,
+				&mut snapshot
+			));
 
-		// Make sure user is getting atleast of instant amount
-		// might get more due to vesting remainder
-		assert!(Currency::usable_balance(&claimer) >= 2932538_u32.into());
+			// Ensure all amount is being transferred
+			assert_eq!(9775129_u128, Currency::free_balance(&claimer));
+
+			// Make sure user is getting atleast of instant amount
+			// might get more due to vesting remainder
+			assert!(Currency::usable_balance(&claimer) >= 2932538_u32.into());
+
+			// Make sure flags are updated
+			assert!(snapshot.done_vesting && snapshot.done_instant);
+		}
+
+		// When instant transfer is true but not vesting
+		{
+			let claimer = samples::ACCOUNT_ID[2];
+			let mut snapshot = types::SnapshotInfo::<Test> {
+				done_instant: true,
+				done_vesting: false,
+				..Default::default()
+			};
+
+			assert_ok!(AirdropModule::do_transfer(
+				claimer,
+				&server_response,
+				&mut snapshot
+			));
+
+			// Ensure amount only accounting to vesting is transfererd
+			let expected_transfer = {
+				let vesting_amount: types::VestingBalanceOf<Test> =
+					AirdropModule::get_splitted_amounts(
+						utils::get_response_sum(&server_response).unwrap(),
+						server_response.defi_user,
+					)
+					.unwrap()
+					.1;
+				let schedule = utils::new_vesting_with_deadline::<Test, 100u32>(
+					vesting_amount,
+					10_000u32.into(),
+				)
+				.0
+				.unwrap();
+
+				schedule.locked()
+			};
+
+			assert_eq!(expected_transfer, Currency::free_balance(&claimer));
+
+			// Ensure flag is updates
+			assert!(snapshot.done_vesting && snapshot.done_instant);
+		}
+
+		// When vesting is true but not done_instant
+		{
+			let claimer = samples::ACCOUNT_ID[3];
+			let mut snapshot = types::SnapshotInfo::<Test> {
+				done_instant: false,
+				done_vesting: true,
+				..Default::default()
+			};
+
+			assert_ok!(AirdropModule::do_transfer(
+				claimer,
+				&server_response,
+				&mut snapshot
+			));
+
+			// Ensure amount only accounting to instant is transferred
+			let expected_transfer = {
+				let (instant_amount, vesting_amount) = AirdropModule::get_splitted_amounts(
+					utils::get_response_sum(&server_response).unwrap(),
+					server_response.defi_user,
+				)
+				.unwrap();
+				let remainder = utils::new_vesting_with_deadline::<Test, 100u32>(
+					vesting_amount,
+					10_000u32.into(),
+				)
+				.1;
+
+				instant_amount + remainder
+			};
+			assert_eq!(expected_transfer, Currency::free_balance(&claimer));
+
+			// Ensure flag is updated
+			assert!(snapshot.done_vesting && snapshot.done_instant);
+		}
+
+		// When both are false
+		// NOTE: such snapshot will not be passed in actual from complete_transfer
+		{
+			let claimer = samples::ACCOUNT_ID[4];
+			let mut snapshot = types::SnapshotInfo::<Test> {
+				done_instant: true,
+				done_vesting: true,
+				..Default::default()
+			};
+
+			assert_ok!(AirdropModule::do_transfer(
+				claimer,
+				&server_response,
+				&mut snapshot
+			));
+
+			// Ensure amount only accounting to instant is transfererd
+			assert_eq!(0_u128, Currency::free_balance(&claimer));
+
+			// Ensure flag is updates
+			assert!(snapshot.done_vesting && snapshot.done_instant);
+		}
 	});
 }

@@ -75,7 +75,8 @@ fn valid_claim_request() {
 			amount: 0_u32.into(),
 			defi_user: false,
 			vesting_percentage: 0_u32.into(),
-			claim_status: false,
+			done_instant: false,
+			done_vesting: false,
 		};
 
 		// Make sure correct data is inserted in map
@@ -225,6 +226,47 @@ fn multi_icon_single_ice() {
 }
 
 #[test]
+fn respect_state() {
+	minimal_test_ext().execute_with(|| {
+		assert_ok!(AirdropModule::update_airdrop_state(
+			Origin::root(),
+			types::AirdropState {
+				block_claim_request: true,
+				avoid_claim_processing: false,
+			},
+		));
+
+		assert_noop!(
+			AirdropModule::claim_request(
+				Origin::signed(samples::ACCOUNT_ID[1]),
+				[0u8; 20],
+				vec![],
+				[0u8; 65]
+			),
+			PalletError::NewClaimRequestBlocked
+		);
+
+		assert_ok!(AirdropModule::update_airdrop_state(
+			Origin::root(),
+			types::AirdropState {
+				block_claim_request: true,
+				avoid_claim_processing: true,
+			}
+		));
+
+		assert_noop!(
+			AirdropModule::complete_transfer(
+				Origin::root(),
+				2u32.into(),
+				[0u8; 20],
+				Default::default()
+			),
+			PalletError::ClaimProcessingBlocked
+		);
+	})
+}
+
+#[test]
 fn complete_flow() {
 	let claimer_ice_address = samples::ACCOUNT_ID[1];
 	let claimer_icon_address = samples::ICON_ADDRESS[1];
@@ -323,11 +365,8 @@ fn complete_flow() {
 		);
 
 		// Make sure claim_status is updated
-		assert!(
-			AirdropModule::get_icon_snapshot_map(&claimer_icon_address)
-				.expect("Should be in map")
-				.claim_status
-		);
+		let snapshot = AirdropModule::get_icon_snapshot_map(&claimer_icon_address).unwrap();
+		assert!(snapshot.done_vesting && snapshot.done_instant);
 
 		// Make sure processed upto is updated
 		assert_eq!(
