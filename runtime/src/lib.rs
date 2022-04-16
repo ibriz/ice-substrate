@@ -306,7 +306,7 @@ parameter_types! {
 
 /// Configure the pallet-template in pallets/airdrop
 impl pallet_airdrop::Config for Runtime {
-	type VerifiableAccountId = AccountId;
+	type AccountId = AccountId;
 	type Event = Event;
 	type Currency = Balances;
 	type FetchIconEndpoint = AirdropFetchIconEndpoint;
@@ -603,7 +603,6 @@ construct_runtime!(
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
 		SimpleInflation: pallet_simple_inflation::{Pallet},
-
 	}
 );
 
@@ -715,7 +714,6 @@ impl fp_self_contained::SelfContainedCall for Call {
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]
 extern crate frame_benchmarking;
-
 
 impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {

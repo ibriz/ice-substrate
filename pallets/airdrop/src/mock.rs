@@ -71,7 +71,7 @@ parameter_types! {
 
 impl pallet_airdrop::Config for Test {
 	type Event = Event;
-	type VerifiableAccountId = AccountId;
+	type AccountId = AccountId;
 	type Currency = Balances;
 	type FetchIconEndpoint = FetchIconEndpoint;
 	type AuthorityId = crate::airdrop_crypto::AuthId;
@@ -143,7 +143,6 @@ impl
 	type GenericSignature = sp_core::sr25519::Signature;
 	type GenericPublic = sp_core::sr25519::Public;
 }
-
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	system::GenesisConfig::default()

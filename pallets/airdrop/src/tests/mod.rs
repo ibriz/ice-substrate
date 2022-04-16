@@ -24,7 +24,6 @@ pub mod prelude {
 	pub type PalletEvent = pallet_airdrop::Event<Test>;
 	pub type PalletCall = pallet_airdrop::Call<Test>;
 	pub type BalanceError = pallet_balances::Error<Test>;
-
 }
 use mock::System;
 use prelude::*;

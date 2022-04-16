@@ -23,6 +23,7 @@ pub type ServerBalance = u64;
 
 /// Type that represent IconAddress
 pub type IconAddress = [u8; 20];
+
 /// Type that represent Icon signed message
 pub type IconSignature = [u8; 65];
 

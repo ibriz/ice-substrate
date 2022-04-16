@@ -36,8 +36,7 @@ pub const DEFAULT_RETRY_COUNT: u8 = 2;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use super::weights;
-	use super::{types, utils};
+	use super::{types, utils, weights};
 	use sp_runtime::traits::{CheckedAdd, Convert, Saturating};
 
 	use frame_support::pallet_prelude::*;
@@ -58,7 +57,7 @@ pub mod pallet {
 	{
 		/// AccountIf type that is same as frame_system's accountId also
 		/// extended to be verifable against icon data
-		type VerifiableAccountId: IconVerifiable + IsType<<Self as frame_system::Config>::AccountId>;
+		type AccountId: IconVerifiable + IsType<<Self as frame_system::Config>::AccountId>;
 
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -76,6 +75,7 @@ pub mod pallet {
 
 		/// The identifier type for an offchain worker.
 		type AuthorityId: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>;
+
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 
@@ -250,19 +250,17 @@ pub mod pallet {
 			);
 
 			// make sure the validation is correct
-			<types::AccountIdOf<T> as Into<<T as Config>::VerifiableAccountId>>::into(
-				ice_address.clone(),
-			)
-			.verify_with_icon(&icon_address, &icon_signature, &message)
-			.map_err(|err| {
-				log::trace!(
-					"[Airdrop pallet] Address pair: {:?} was ignored. {}{:?}",
-					(&ice_address, &icon_address),
-					"Signature verification failed with error: ",
-					err
-				);
-				Error::<T>::InvalidSignature
-			})?;
+			<types::AccountIdOf<T> as Into<<T as Config>::AccountId>>::into(ice_address.clone())
+				.verify_with_icon(&icon_address, &icon_signature, &message)
+				.map_err(|err| {
+					log::trace!(
+						"[Airdrop pallet] Address pair: {:?} was ignored. {}{:?}",
+						(&ice_address, &icon_address),
+						"Signature verification failed with error: ",
+						err
+					);
+					Error::<T>::InvalidSignature
+				})?;
 
 			Self::claim_request_unverified(ice_address, icon_address)
 		}
@@ -359,12 +357,7 @@ pub mod pallet {
 			}
 
 			// Apply all vesting
-			Self::do_transfer(
-				snapshot.ice_address.clone(),
-				&server_response,
-				&mut snapshot,
-			)
-			.map_err(|_| {
+			Self::do_transfer(&server_response, &mut snapshot).map_err(|_| {
 				Self::register_failed_claim(
 					frame_system::RawOrigin::Root.into(),
 					block_number,
@@ -1001,7 +994,6 @@ pub mod pallet {
 		}
 
 		pub fn do_transfer(
-			claimer: types::AccountIdOf<T>,
 			server_response: &types::ServerResponse,
 			snapshot: &mut types::SnapshotInfo<T>,
 		) -> Result<(), DispatchError> {
@@ -1010,6 +1002,7 @@ pub mod pallet {
 			// Block number after which enable to do vesting
 			const VESTING_APPLICABLE_FROM: u32 = 100u32;
 
+			let claimer = snapshot.ice_address.clone();
 			let creditor = Self::get_creditor_account();
 
 			let total_amount = utils::get_response_sum(&server_response).map_err(|e| {

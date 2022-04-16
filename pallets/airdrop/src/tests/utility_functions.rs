@@ -184,9 +184,11 @@ fn failed_entry_regestration() {
 
 		// When there are no more retry left in this entry
 		{
-			assert_ok!(
-				AirdropModule::register_failed_claim(Origin::root(), bl_num, claimer.clone())
-			);
+			assert_ok!(AirdropModule::register_failed_claim(
+				Origin::root(),
+				bl_num,
+				claimer.clone()
+			));
 			// Still entry should be removed from queue
 			assert_eq!(None, AirdropModule::get_pending_claims(bl_num, &claimer));
 		}
@@ -262,7 +264,6 @@ fn pending_claims_getter() {
 
 			let entries = get_flattened_vec(PendingClaimsOf::new(10_u32.into()..20_u32.into()));
 			assert_eq!(vec![(10_u32.into(), ICON_ADDRESS[2])], entries);
-
 		}
 
 		// Make sure out of range is always empty
@@ -419,14 +420,11 @@ fn making_vesting_transfer() {
 			let mut snapshot = types::SnapshotInfo::<Test> {
 				done_instant: false,
 				done_vesting: false,
+				ice_address: claimer.clone(),
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(
-				claimer,
-				&server_response,
-				&mut snapshot
-			));
+			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot));
 
 			// Ensure all amount is being transferred
 			assert_eq!(9775129_u128, Currency::free_balance(&claimer));
@@ -445,14 +443,11 @@ fn making_vesting_transfer() {
 			let mut snapshot = types::SnapshotInfo::<Test> {
 				done_instant: true,
 				done_vesting: false,
+				ice_address: claimer.clone(),
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(
-				claimer,
-				&server_response,
-				&mut snapshot
-			));
+			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot));
 
 			// Ensure amount only accounting to vesting is transfererd
 			let expected_transfer = {
@@ -485,14 +480,11 @@ fn making_vesting_transfer() {
 			let mut snapshot = types::SnapshotInfo::<Test> {
 				done_instant: false,
 				done_vesting: true,
+				ice_address: claimer.clone(),
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(
-				claimer,
-				&server_response,
-				&mut snapshot
-			));
+			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot));
 
 			// Ensure amount only accounting to instant is transferred
 			let expected_transfer = {
@@ -522,14 +514,11 @@ fn making_vesting_transfer() {
 			let mut snapshot = types::SnapshotInfo::<Test> {
 				done_instant: true,
 				done_vesting: true,
+				ice_address: claimer.clone(),
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(
-				claimer,
-				&server_response,
-				&mut snapshot
-			));
+			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot));
 
 			// Ensure amount only accounting to instant is transfererd
 			assert_eq!(0_u128, Currency::free_balance(&claimer));

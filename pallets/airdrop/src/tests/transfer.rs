@@ -198,7 +198,6 @@ fn insufficient_creditor_balance() {
 
 // Replicating the actual flow with context to sucessfully execute complete_transfer
 #[test]
-#[ignore]
 fn complete_transfer_valid_flow() {
 	minimal_test_ext().execute_with(|| {
 		run_to_block(2);
