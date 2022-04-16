@@ -20,10 +20,6 @@ pub mod prelude {
 	pub use sp_core::bytes;
 	pub use sp_runtime::traits::{Bounded, IdentifyAccount, Saturating};
 
-	pub use pallet_airdrop::types;
-	pub use sp_core::bytes;
-	pub use sp_runtime::traits::IdentifyAccount;
-
 	pub type PalletError = pallet_airdrop::Error<Test>;
 	pub type PalletEvent = pallet_airdrop::Event<Test>;
 	pub type PalletCall = pallet_airdrop::Call<Test>;

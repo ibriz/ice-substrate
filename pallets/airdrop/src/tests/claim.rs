@@ -353,7 +353,6 @@ fn complete_flow() {
 
 		// Make sure user got right balance
 		assert_eq!(
-			server_data.amount + server_data.omm + server_data.stake,
 			<Test as pallet_airdrop::Config>::Currency::free_balance(&claimer_ice_address),
 			(server_data.amount + server_data.omm + server_data.stake).into(),
 		);
