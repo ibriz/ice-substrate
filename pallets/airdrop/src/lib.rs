@@ -34,13 +34,11 @@ pub const OFFCHAIN_WORKER_BLOCK_GAP: u32 = 3;
 // There is NO point of seeting this to high value
 pub const DEFAULT_RETRY_COUNT: u8 = 2;
 
-
-
 #[frame_support::pallet]
 pub mod pallet {
+	use super::weights;
 	use super::{types, utils};
 	use sp_runtime::traits::{CheckedAdd, Convert, Saturating};
-  use super::weights;
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
@@ -52,8 +50,6 @@ pub mod pallet {
 	use frame_system::offchain::CreateSignedTransaction;
 	use types::IconVerifiable;
 	use weights::WeightInfo;
-
-	
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -97,7 +93,6 @@ pub mod pallet {
 		/// This account should be credited enough to supply fund for all claim requests
 		#[pallet::constant]
 		type Creditor: Get<frame_support::PalletId>;
-
 	}
 
 	#[pallet::pallet]
@@ -123,9 +118,9 @@ pub mod pallet {
 		/// An entry from queue was removed
 		RemovedFromQueue(types::IconAddress),
 
-		DonatedToCreditor(types::AccountIdOf<T>,types::BalanceOf<T>),
+		DonatedToCreditor(types::AccountIdOf<T>, types::BalanceOf<T>),
 
-		RegisteredFailedClaim(types::AccountIdOf<T>,types::BlockNumberOf<T>,u8),
+		RegisteredFailedClaim(types::AccountIdOf<T>, types::BlockNumberOf<T>, u8),
 
 		/// Same entry is processed by offchian worker for too many times
 		RetryExceed {
@@ -146,6 +141,9 @@ pub mod pallet {
 			old_state: types::AirdropState,
 			new_state: types::AirdropState,
 		},
+
+		/// Processed upto counter was updated to new value
+		ProcessedCounterSet(types::BlockNumberOf<T>),
 	}
 
 	#[pallet::storage]
@@ -214,7 +212,6 @@ pub mod pallet {
 		ClaimProcessingBlocked,
 	}
 
-
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Dispatchable to be called by user when they want to
@@ -229,7 +226,7 @@ pub mod pallet {
 		// this will filter the invalid call before that are kept in pool so
 		// allowing valid transaction to take over which inturn improve
 		// node performance
-		#[pallet::weight(T::WeightInfo::claim_request())]
+		#[pallet::weight(<T as Config>::WeightInfo::claim_request())]
 		pub fn claim_request(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
@@ -253,24 +250,26 @@ pub mod pallet {
 			);
 
 			// make sure the validation is correct
-			<types::AccountIdOf<T> as Into<<T as Config>::VerifiableAccountId>>::into(ice_address.clone())
-				.verify_with_icon(&icon_address, &icon_signature, &message)
-				.map_err(|err| {
-					log::trace!(
-						"[Airdrop pallet] Address pair: {:?} was ignored. {}{:?}",
-						(&ice_address, &icon_address),
-						"Signature verification failed with error: ",
-						err
-					);
-					Error::<T>::InvalidSignature
-				})?;
+			<types::AccountIdOf<T> as Into<<T as Config>::VerifiableAccountId>>::into(
+				ice_address.clone(),
+			)
+			.verify_with_icon(&icon_address, &icon_signature, &message)
+			.map_err(|err| {
+				log::trace!(
+					"[Airdrop pallet] Address pair: {:?} was ignored. {}{:?}",
+					(&ice_address, &icon_address),
+					"Signature verification failed with error: ",
+					err
+				);
+				Error::<T>::InvalidSignature
+			})?;
 
 			Self::claim_request_unverified(ice_address, icon_address)
 		}
 
 		// Means to push claim request force fully
 		// This skips signature verification
-		#[pallet::weight(T::WeightInfo::force_claim_request(0u32))]
+		#[pallet::weight(<T as Config>::WeightInfo::force_claim_request(0u32))]
 		pub fn force_claim_request(
 			origin: OriginFor<T>,
 			ice_address: types::AccountIdOf<T>,
@@ -307,7 +306,7 @@ pub mod pallet {
 		// If any of the step fails in this function,
 		// we pass the flow to register_failed_claim if needed to be retry again
 		// and cancel the request if it dont have to retried again
-		#[pallet::weight(T::WeightInfo::complete_transfer(
+		#[pallet::weight(<T as Config>::WeightInfo::complete_transfer(
 			types::block_number_to_u32::<T>(block_number.clone()),
 			receiver_icon.len() as u32)
 		)]
@@ -396,7 +395,7 @@ pub mod pallet {
 		/// We have to have a way that this signed call is from offchain so we can perform
 		/// critical operation. When offchain worker key and this storage have same account
 		/// then we have a way to ensure this call is from offchain worker
-		#[pallet::weight(T::WeightInfo::set_offchain_account())]
+		#[pallet::weight(<T as Config>::WeightInfo::set_offchain_account())]
 		pub fn set_offchain_account(
 			origin: OriginFor<T>,
 			new_account: types::AccountIdOf<T>,
@@ -445,7 +444,7 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-		#[pallet::weight(T::WeightInfo::remove_from_pending_queue(
+		#[pallet::weight(<T as Config>::WeightInfo::remove_from_pending_queue(
 			types::block_number_to_u32::<T>(block_number.clone()),
 			icon_address.len() as u32)
 		)]
@@ -473,7 +472,7 @@ pub mod pallet {
 		/// We move the entry to future block key so that another
 		/// offchain worker can process it again
 
-		#[pallet::weight(T::WeightInfo::register_failed_claim(
+		#[pallet::weight(<T as Config>::WeightInfo::register_failed_claim(
 			types::block_number_to_u32::<T>(block_number.clone()),
 			icon_address.len() as u32)
 		)]
@@ -550,7 +549,11 @@ pub mod pallet {
 				(&ice_address, &icon_address),
 				new_block_number
 			);
-			Self::deposit_event(Event::<T>::RegisteredFailedClaim(ice_address.clone(),new_block_number,retry_remaining));
+			Self::deposit_event(Event::<T>::RegisteredFailedClaim(
+				ice_address.clone(),
+				new_block_number,
+				retry_remaining,
+			));
 
 			Ok(Pays::No.into())
 		}
@@ -566,14 +569,14 @@ pub mod pallet {
 		/// This function can be used as a mean to credit our creditor if being donated from
 		/// any node operator owned account
 
-		#[pallet::weight(T::WeightInfo::donate_to_creditor(types::balance_to_u32::<T>(amount.clone())))]
+		#[pallet::weight(<T as Config>::WeightInfo::donate_to_creditor(types::balance_to_u32::<T>(amount.clone())))]
 		pub fn donate_to_creditor(
 			origin: OriginFor<T>,
 			amount: types::BalanceOf<T>,
 			allow_death: bool,
 		) -> DispatchResult {
 			let sponser = ensure_signed(origin)?;
-			let amount =types::BalanceOf::<T>::from(amount);
+			let amount = types::BalanceOf::<T>::from(amount);
 
 			let creditor_account = Self::get_creditor_account();
 			let existance_req = if allow_death {
@@ -589,8 +592,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-
-		#[pallet::weight(T::WeightInfo::update_processed_upto_counter(
+		#[pallet::weight(<T as Config>::WeightInfo::update_processed_upto_counter(
 			types::block_number_to_u32::<T>(new_value.clone()))
 		)]
 		pub fn update_processed_upto_counter(
@@ -601,7 +603,7 @@ pub mod pallet {
 
 			log::trace!("ProceedUpto Counter updating to value: {:?}", new_value);
 			<ProcessedUpto<T>>::set(new_value);
-      
+
 			Self::deposit_event(Event::<T>::ProcessedCounterSet(new_value));
 
 			Ok(Pays::No.into())
@@ -1137,27 +1139,29 @@ pub mod pallet {
 			}
 
 			Ok(())
-		
+		}
 	}
-	
-    #[cfg(feature = "runtime-benchmarks")]
-	impl <T:Config> Pallet<T>{
-		
-		pub fn init_balance(account: &types::AccountIdOf<T>, free:u32){
-			T::Currency::make_free_balance_be(account,free.into());
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<T: Config> Pallet<T> {
+		pub fn init_balance(account: &types::AccountIdOf<T>, free: u32) {
+			T::Currency::make_free_balance_be(account, free.into());
 		}
 
-		pub fn setup_claimer(claimer: types::AccountIdOf<T>,bl_number:types::BlockNumberOf<T>,icon_address:types::IconAddress){
+		pub fn setup_claimer(
+			claimer: types::AccountIdOf<T>,
+			bl_number: types::BlockNumberOf<T>,
+			icon_address: types::IconAddress,
+		) {
+			T::Currency::make_free_balance_be(&claimer, 10_00_00_00u32.into());
 
-             T::Currency::make_free_balance_be(&claimer,10_00_00_00u32.into());
+			let mut snapshot = types::SnapshotInfo::<T>::default();
 
-			 let mut snapshot = types::SnapshotInfo::<T>::default();
+			snapshot = snapshot.ice_address(claimer.clone());
 
-			 snapshot = snapshot.ice_address(claimer.clone());
-        
-             <IceSnapshotMap<T>>::insert(&icon_address, snapshot);
+			<IceSnapshotMap<T>>::insert(&icon_address, snapshot);
 
-			 <PendingClaims<T>>::insert(bl_number, &icon_address, 2_u8);
+			<PendingClaims<T>>::insert(bl_number, &icon_address, 2_u8);
 		}
 	}
 }

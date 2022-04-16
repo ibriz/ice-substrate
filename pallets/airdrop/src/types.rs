@@ -1,8 +1,8 @@
 use crate as airdrop;
 use airdrop::pallet::Config;
 use core::convert::Into;
+use frame_support::pallet_prelude::*;
 use frame_support::traits::Currency;
-use frame_support::{pallet_prelude::*};
 use frame_system;
 use scale_info::TypeInfo;
 use serde::Deserialize;
@@ -25,8 +25,6 @@ pub type ServerBalance = u64;
 pub type IconAddress = [u8; 20];
 /// Type that represent Icon signed message
 pub type IconSignature = [u8; 65];
-/// Type that represent IconAddress
-pub type IconAddress = [u8; 20];
 
 ///
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
@@ -96,8 +94,6 @@ impl<T: Config> Default for SnapshotInfo<T> {
 		}
 	}
 }
-
-
 
 /// Possible values of error that can occur when doing claim request from offchain worker
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -183,14 +179,13 @@ pub trait IconVerifiable {
 	) -> Result<(), SignatureValidationError>;
 }
 
-pub fn balance_to_u32<T: Config>(input:BalanceOf<T>) -> u32 {
+pub fn balance_to_u32<T: Config>(input: BalanceOf<T>) -> u32 {
 	TryInto::<u32>::try_into(input).ok().unwrap()
 }
 
 pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
 	TryInto::<u32>::try_into(input).ok().unwrap()
 }
-
 
 pub struct PendingClaimsOf<T: Config> {
 	pub range: core::ops::Range<BlockNumberOf<T>>,
