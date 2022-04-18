@@ -65,7 +65,12 @@ pub struct SnapshotInfo<T: Config> {
 	pub vesting_percentage: u32,
 
 	/// indicator wather the user have claimmed the balance
-	pub claim_status: bool,
+	/// which will be given through instant transfer
+	pub done_instant: bool,
+
+	/// Indicator weather vesting schedult have been applied
+	/// to this user
+	pub done_vesting: bool,
 }
 
 impl<T: Config> SnapshotInfo<T> {
@@ -85,7 +90,8 @@ impl<T: Config> Default for SnapshotInfo<T> {
 			amount: 0_u32.into(),
 			defi_user: false,
 			vesting_percentage: 0,
-			claim_status: false,
+			done_instant: false,
+			done_vesting: false,
 		}
 	}
 }
@@ -184,4 +190,26 @@ pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
 
 pub struct PendingClaimsOf<T: Config> {
 	pub range: core::ops::Range<BlockNumberOf<T>>,
+}
+
+/// Chain state
+#[derive(Deserialize, Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Debug))]
+#[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
+#[cfg_attr(test, derive(serde::Serialize))]
+pub struct AirdropState {
+	// Only receive claim request when this flag is true
+	pub block_claim_request: bool,
+
+	// Only process already received claim request when this flag is true
+	pub avoid_claim_processing: bool,
+}
+
+impl Default for AirdropState {
+	fn default() -> Self {
+		AirdropState {
+			block_claim_request: false,
+			avoid_claim_processing: false,
+		}
+	}
 }

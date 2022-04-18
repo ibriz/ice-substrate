@@ -12,11 +12,11 @@ mod benchmarking;
 /// All the types, traits defination and alises are inside this
 pub mod types;
 
-/// Weight information of this pallet
-pub mod weights;
-
 /// All independent utilities function are inside here
 pub mod utils;
+
+// Weight Information related to this palet
+pub mod weights;
 
 /// An identifier for a type of cryptographic key.
 /// For this pallet, account associated with this key must be same as
@@ -40,7 +40,7 @@ pub mod pallet {
 	use sp_runtime::traits::{CheckedAdd, Convert, Saturating};
 
 	use frame_support::pallet_prelude::*;
-	use frame_system::{ensure_signed, pallet_prelude::*};
+	use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 	use sp_std::prelude::*;
 
 	use frame_support::traits::{
@@ -136,6 +136,13 @@ pub mod pallet {
 			new_account: types::AccountIdOf<T>,
 		},
 
+		/// AirdropState have been updated
+		AirdropStateUpdated {
+			old_state: types::AirdropState,
+			new_state: types::AirdropState,
+		},
+
+		/// Processed upto counter was updated to new value
 		ProcessedCounterSet(types::BlockNumberOf<T>),
 	}
 
@@ -154,6 +161,10 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_processed_upto_counter)]
 	pub(super) type ProcessedUpto<T: Config> = StorageValue<_, types::BlockNumberOf<T>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_airdrop_state)]
+	pub(super) type AirdropChainState<T: Config> = StorageValue<_, types::AirdropState, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_icon_snapshot_map)]
@@ -190,6 +201,15 @@ pub mod pallet {
 
 		/// Some operation while applying vesting failed
 		CantApplyVesting,
+
+		/// Creditor have too low balance
+		CreditorOutOfFund,
+
+		/// Currently no new claim request is being accepted
+		NewClaimRequestBlocked,
+
+		/// Currently processing of claim request is blocked
+		ClaimProcessingBlocked,
 	}
 
 	#[pallet::call]
@@ -206,7 +226,7 @@ pub mod pallet {
 		// this will filter the invalid call before that are kept in pool so
 		// allowing valid transaction to take over which inturn improve
 		// node performance
-		#[pallet::weight(T::AirdropWeightInfo::claim_request())]
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::claim_request())]
 		pub fn claim_request(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
@@ -217,6 +237,11 @@ pub mod pallet {
 			// so that we can call verify_with_icon method
 
 			let ice_address: types::AccountIdOf<T> = ensure_signed(origin)?.into();
+
+			// Check that we are ok to receive new claim request
+			if Self::get_airdrop_state().block_claim_request {
+				return Err(Error::<T>::NewClaimRequestBlocked.into());
+			}
 
 			log::trace!(
 				"[Airdorp pallet] Claim_request called by user: {:?} with message: {:?} and sig: {:?}",
@@ -242,7 +267,7 @@ pub mod pallet {
 
 		// Means to push claim request force fully
 		// This skips signature verification
-		#[pallet::weight(T::AirdropWeightInfo::force_claim_request(0u32))]
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::force_claim_request(0u32))]
 		pub fn force_claim_request(
 			origin: OriginFor<T>,
 			ice_address: types::AccountIdOf<T>,
@@ -279,7 +304,7 @@ pub mod pallet {
 		// If any of the step fails in this function,
 		// we pass the flow to register_failed_claim if needed to be retry again
 		// and cancel the request if it dont have to retried again
-		#[pallet::weight(T::AirdropWeightInfo::complete_transfer(
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::complete_transfer(
 			types::block_number_to_u32::<T>(block_number.clone()),
 			receiver_icon.len() as u32)
 		)]
@@ -292,6 +317,15 @@ pub mod pallet {
 			// Make sure this is either sudo or root
 			Self::ensure_root_or_offchain(origin.clone())
 				.map_err(|_| Error::<T>::DeniedOperation)?;
+
+			// Make sure chain is ready to process new request
+			if Self::get_airdrop_state().avoid_claim_processing {
+				log::info!(
+					"[Airdrop pallet] Called complete_transfer for {:?} but avoided.",
+					receiver_icon
+				);
+				return Err(Error::<T>::ClaimProcessingBlocked.into());
+			}
 
 			// Check again if it is still in the pending queue
 			// Eg: If another node had processed the same request
@@ -307,7 +341,6 @@ pub mod pallet {
 			});
 
 			// Get snapshot from map and return with error if not present
-
 			let mut snapshot = Self::get_icon_snapshot_map(&receiver_icon)
 				.ok_or(())
 				.map_err(|_| {
@@ -318,31 +351,23 @@ pub mod pallet {
 					Error::<T>::IncompleteData
 				})?;
 
-			// Also make sure that claim_status of this snapshot is false
-			ensure!(!snapshot.claim_status, {
-				log::trace!(
-					"[Airdrop pallet] Claiming for pair {:?} ignored because claim_status was true",
-					(&receiver_icon, &block_number)
-				);
-				Error::<T>::ClaimAlreadyMade
-			});
+			// If both of transfer is done. return early
+			if snapshot.done_vesting && snapshot.done_instant {
+				return Err(Error::<T>::ClaimAlreadyMade.into());
+			}
 
 			// Apply all vesting
-			Self::do_vested_transfer(snapshot.ice_address.clone(), &server_response).map_err(
-				|_| {
-					Self::register_failed_claim(
-						frame_system::RawOrigin::Root.into(),
-						block_number,
-						receiver_icon.clone(),
-					)
-					.expect("Calling register_failed_claim should not have been failed...");
+			Self::do_transfer(&server_response, &mut snapshot).map_err(|_| {
+				Self::register_failed_claim(
+					frame_system::RawOrigin::Root.into(),
+					block_number,
+					receiver_icon.clone(),
+				)
+				.expect("Calling register_failed_claim should not have been failed...");
 
-					Error::<T>::CantApplyVesting
-				},
-			)?;
+				Error::<T>::CantApplyVesting
+			})?;
 
-			// Update claim_status to true and store it
-			snapshot.claim_status = true;
 			<IceSnapshotMap<T>>::insert(&receiver_icon, snapshot);
 
 			// Now we can remove this claim from queue
@@ -363,7 +388,7 @@ pub mod pallet {
 		/// We have to have a way that this signed call is from offchain so we can perform
 		/// critical operation. When offchain worker key and this storage have same account
 		/// then we have a way to ensure this call is from offchain worker
-		#[pallet::weight(T::AirdropWeightInfo::set_offchain_account())]
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::set_offchain_account())]
 		pub fn set_offchain_account(
 			origin: OriginFor<T>,
 			new_account: types::AccountIdOf<T>,
@@ -387,7 +412,32 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-		#[pallet::weight(T::AirdropWeightInfo::remove_from_pending_queue(
+		#[pallet::weight(10_000)]
+		pub fn update_airdrop_state(
+			origin: OriginFor<T>,
+			new_state: types::AirdropState,
+		) -> DispatchResultWithPostInfo {
+			// Only root can call this
+			ensure_root(origin).map_err(|_| Error::<T>::DeniedOperation)?;
+
+			let old_state = Self::get_airdrop_state();
+			<AirdropChainState<T>>::set(new_state.clone());
+
+			log::info!(
+				"[Airdrop pallet] AirdropState updated. (Old, New): {:?} in block number {:?}",
+				(&old_state, &new_state),
+				Self::get_current_block_number(),
+			);
+
+			Self::deposit_event(Event::AirdropStateUpdated {
+				old_state,
+				new_state,
+			});
+
+			Ok(Pays::No.into())
+		}
+
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::remove_from_pending_queue(
 			types::block_number_to_u32::<T>(block_number.clone()),
 			icon_address.len() as u32)
 		)]
@@ -414,7 +464,8 @@ pub mod pallet {
 		/// processing in offchain worker
 		/// We move the entry to future block key so that another
 		/// offchain worker can process it again
-		#[pallet::weight(T::AirdropWeightInfo::register_failed_claim(
+
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::register_failed_claim(
 			types::block_number_to_u32::<T>(block_number.clone()),
 			icon_address.len() as u32)
 		)]
@@ -510,7 +561,8 @@ pub mod pallet {
 		/// 		or cancel the donation
 		/// This function can be used as a mean to credit our creditor if being donated from
 		/// any node operator owned account
-		#[pallet::weight(T::AirdropWeightInfo::donate_to_creditor(types::balance_to_u32::<T>(amount.clone())))]
+
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::donate_to_creditor(types::balance_to_u32::<T>(amount.clone())))]
 		pub fn donate_to_creditor(
 			origin: OriginFor<T>,
 			amount: types::BalanceOf<T>,
@@ -533,7 +585,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(T::AirdropWeightInfo::update_processed_upto_counter(
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::update_processed_upto_counter(
 			types::block_number_to_u32::<T>(new_value.clone()))
 		)]
 		pub fn update_processed_upto_counter(
@@ -557,8 +609,19 @@ pub mod pallet {
 			// If this is not the block to start offchain worker
 			// print a log and early return
 			if !Self::should_run_on_this_block(block_number) {
-				log::trace!("Offchain worker skipped for block: {:?}", block_number);
+				log::trace!(
+					"[Airdrop pallet] Offchain worker skipped for block: {:?}",
+					block_number
+				);
 				return;
+			}
+
+			// If this network is no longer processing claim request
+			if Self::get_airdrop_state().avoid_claim_processing {
+				log::trace!(
+					"[Airdrop pallet] Offchain worker avoided for block {:?}",
+					block_number
+				);
 			}
 
 			log::info!(
@@ -930,15 +993,16 @@ pub mod pallet {
 			))
 		}
 
-		pub fn do_vested_transfer(
-			claimer: types::AccountIdOf<T>,
+		pub fn do_transfer(
 			server_response: &types::ServerResponse,
+			snapshot: &mut types::SnapshotInfo<T>,
 		) -> Result<(), DispatchError> {
 			// TODO: put more relaible value
 			const BLOCKS_IN_YEAR: u32 = 10_000u32;
 			// Block number after which enable to do vesting
 			const VESTING_APPLICABLE_FROM: u32 = 100u32;
 
+			let claimer = snapshot.ice_address.clone();
 			let creditor = Self::get_creditor_account();
 
 			let total_amount = utils::get_response_sum(&server_response).map_err(|e| {
@@ -948,6 +1012,24 @@ pub mod pallet {
 				);
 				e
 			})?;
+
+			// Check creditor have eough balance to handle this transaction
+			{
+				let total_amount = <T::BalanceTypeConversion as Convert<
+					types::ServerBalance,
+					types::BalanceOf<T>,
+				>>::convert(total_amount);
+				let crediotr_balance =
+					<T as Config>::Currency::free_balance(&Self::get_creditor_account());
+				if crediotr_balance <= total_amount {
+					log::error!(
+						"[Airdrop pallet] Creditor have too low balance to transfer {:?} to {:?}",
+						total_amount,
+						claimer
+					);
+					return Err(Error::<T>::CreditorOutOfFund.into());
+				}
+			}
 
 			let (mut instant_amount, vesting_amount) =
 				Self::get_splitted_amounts(total_amount, server_response.defi_user)?;
@@ -977,48 +1059,77 @@ pub mod pallet {
 			let claimer_origin =
 				<T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(claimer.clone());
 
-			// Apply Vesting schedule if applicable
-			if let Some(schedule) = transfer_shcedule {
-				let vest_res = pallet_vesting::Pallet::<T>::vested_transfer(
-					creditor_origin.clone(),
-					claimer_origin.clone(),
-					schedule,
-				);
+			match transfer_shcedule {
+				// Apply vesting
+				Some(schedule) if !snapshot.done_vesting => {
+					let vest_res = pallet_vesting::Pallet::<T>::vested_transfer(
+						creditor_origin.clone(),
+						claimer_origin.clone(),
+						schedule,
+					);
 
-				if let Err(err) = vest_res {
-					// TODO:
-					// Finalize error handeling or rollback here
+					match vest_res {
+						// Everything went ok. update flag
+						Ok(()) => {
+							snapshot.done_vesting = true;
+							log::info!("[Airdrop pallet] Vesting applied for {:?}", claimer);
+						}
+						// log error
+						Err(err) => {
+							log::info!(
+								"[Airdrop pallet] Applying vesting for {:?} failed with error: {:?}",
+								claimer,
+								err
+							);
+						}
+					}
+				}
 
-					log::info!(
-						"[Airdrop pallet] Applying vesting for {:?} failed with error: {:?}",
+				// Vesting was already done as snapshot.done_vesting is true
+				Some(_) => {
+					log::trace!(
+						"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
+						claimer,
+						Self::get_current_block_number()
+					);
+				}
+
+				// No schedule was created
+				None => {
+					log::trace!(
+						"[Airdrop pallet] Primary vesting not applicable for {:?}",
+						claimer_origin,
+					);
+				}
+			}
+
+			// if not done previously
+			// Transfer the amount user is expected to receiver instantly
+			if !snapshot.done_instant {
+				<T as Config>::Currency::transfer(
+					&creditor,
+					&claimer,
+					instant_amount,
+					ExistenceRequirement::KeepAlive,
+				)
+				.map_err(|err| {
+					log::error!(
+						"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
 						claimer,
 						err
 					);
+					err
+				})?;
 
-					return Err(Error::<T>::CantApplyVesting.into());
-				}
+				// Everything went ok. Update flag
+				snapshot.done_instant = true;
 			} else {
 				log::trace!(
-					"[Airdrop pallet] Primary vesting not applicable for {:?}",
-					claimer_origin,
+					"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
+					claimer,
+					Self::get_current_block_number()
 				);
 			}
-
-			// Transfer the amount user is expected to receiver instantly
-			<T as Config>::Currency::transfer(
-				&creditor,
-				&claimer,
-				instant_amount,
-				ExistenceRequirement::KeepAlive,
-			)
-			.map_err(|err| {
-				log::error!(
-					"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
-					claimer,
-					err
-				);
-				err
-			})?;
 
 			Ok(())
 		}

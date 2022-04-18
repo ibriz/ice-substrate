@@ -79,6 +79,7 @@ impl pallet_airdrop::Config for Test {
 	type VestingModule = Test;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Test>;
+
 }
 
 type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;

@@ -133,7 +133,8 @@ fn already_claimed() {
 		pallet_airdrop::IceSnapshotMap::<Test>::insert(
 			&receiver,
 			types::SnapshotInfo {
-				claim_status: true,
+				done_vesting: true,
+				done_instant: true,
 				..Default::default()
 			},
 		);
@@ -262,11 +263,8 @@ fn complete_transfer_valid_flow() {
 				None
 			);
 			// Make sure this function update the snapshot mapping
-			assert!(
-				AirdropModule::get_icon_snapshot_map(&claimer_icon)
-					.unwrap()
-					.claim_status
-			);
+			let snapshot = AirdropModule::get_icon_snapshot_map(&claimer_icon).unwrap();
+			assert!(snapshot.done_vesting && snapshot.done_instant);
 		}
 	});
 }
