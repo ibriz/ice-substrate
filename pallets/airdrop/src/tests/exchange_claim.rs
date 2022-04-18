@@ -86,10 +86,12 @@ fn already_claimed() {
 		let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
 				.unwrap_or_default();
-
+        let mut snapshot = types::SnapshotInfo::default();
+		snapshot.done_instant= true;
+		snapshot.done_vesting= true;
 		pallet_airdrop::IceSnapshotMap::<Test>::insert(
 			&icon_wallet,
-			types::SnapshotInfo::default(),
+		    snapshot,
 		);
 
 		assert_noop!(

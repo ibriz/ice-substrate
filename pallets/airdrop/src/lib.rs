@@ -1,52 +1,3 @@
-//! # Airdrop pallet
-//! This pallet is responsible to do airdropping to claimers of icon_address.
-//! - [`Config`]
-//! - [`Call`]
-//!
-//! ## Interface
-//!
-//! ### Disptachable function for end-user
-//!
-//! * [`claim_request`]
-//!
-//! Signed call that accepts set of ice data (icon signature, initial message, icon address).
-//! This maps the ice address with icon address ( if previously not done)
-//! and register this request in pending claims.
-//!
-//! * [`cancel_request`]
-//!
-//! Allows any user to cancel last claim request. This does so by just removing
-//! respective entry from pending queue. Only callable by the owner who
-//! first called `claim_request` or root account or palelt authorised account.
-//!
-//! * [`donateto_creditor`]
-//!
-//! Allows any user to donate funds to the pallet account. Pallet account is
-//! the account from which the airdrop funds will be transferred from.
-//! This dispatchable should be called to credit pallet with enough balance
-//! else every call to `complete_transfer` will fail. This should be done before any
-//! user arrives to node for claiming request
-//!
-//! ---
-//! ### Dispatchable calls for internal use
-//! * [`complete_transfer`]
-//!
-//! This transfer the fund to given ice address with given transaction details
-//! inside `ServerResponse` type. If transferring the fund succeed, it will also
-//! remove the queue from pendingClaims and update any snapshot info as needed.
-//! This is only callable by sudo/root account
-//!
-//! * [`register_failed_claim`]
-//! This dispatchable provides a mean to register that some entry was failed to process
-//! and this responsibility is to be taken by node operator.
-//!
-//! * [`update_processed_upto_counter`]
-//! To update the mark that records upto which block of claiming has been completed
-//!
-//! * [`remove_from_pending_claim`]
-//! To remove something from pending claim as it is no longer needed. For eg: when record
-//! claiming account of this icon address is 0 token
-
 #![cfg_attr(not(feature = "std"), no_std)]
 pub use pallet::*;
 #[cfg(test)]
@@ -58,9 +9,13 @@ pub mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-/// All the types and alises must be defined here
+/// All the types, traits defination and alises are inside this
 pub mod types;
 
+/// All independent utilities function are inside here
+pub mod utils;
+
+// Weight Information related to this palet
 pub mod weights;
 
 /// An identifier for a type of cryptographic key.
@@ -81,23 +36,26 @@ pub const DEFAULT_RETRY_COUNT: u8 = 2;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use super::types;
-	use super::weights;
+	use super::{types, utils, weights};
+	use sp_runtime::traits::{CheckedAdd, Convert, Saturating};
 
 	use frame_support::pallet_prelude::*;
-	use frame_system::{ensure_signed, pallet_prelude::*};
+	use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 	use sp_std::prelude::*;
 
-	use frame_support::traits::{Currency, ExistenceRequirement, Hooks, ReservableCurrency};
+	use frame_support::traits::{
+		Currency, ExistenceRequirement, Hooks, LockableCurrency, ReservableCurrency,
+	};
 	use frame_system::offchain::CreateSignedTransaction;
 	use types::IconVerifiable;
 	use weights::WeightInfo;
-
-	use sp_runtime::traits::Saturating;
+	use sp_runtime::ArithmeticError;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + CreateSignedTransaction<Call<Self>> {
+	pub trait Config:
+		frame_system::Config + CreateSignedTransaction<Call<Self>> + pallet_vesting::Config
+	{
 		/// AccountIf type that is same as frame_system's accountId also
 		/// extended to be verifable against icon data
 		type VerifiableAccountId: IconVerifiable + IsType<<Self as frame_system::Config>::AccountId>;
@@ -106,15 +64,27 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		type Currency: Currency<types::AccountIdOf<Self>>
-			+ ReservableCurrency<types::AccountIdOf<Self>>;
+			+ ReservableCurrency<types::AccountIdOf<Self>>
+			+ LockableCurrency<types::AccountIdOf<Self>>
+			+ IsType<<Self as pallet_vesting::Config>::Currency>;
+
+		#[deprecated(note = "Do tight coupling or expanded loose coupling of vesting_pallet")]
+		type VestingModule: pallet_vesting::Config + IsType<Self>;
 
 		/// The overarching dispatch call type.
 		// type Call: From<Call<Self>>;
 
 		/// The identifier type for an offchain worker.
 		type AuthorityId: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>;
+
 		/// Weight information for extrinsics in this pallet.
-		type WeightInfo: WeightInfo;
+		type AirdropWeightInfo: WeightInfo;
+
+		/// Type that allows back and forth conversion
+		/// Server Balance type <==> Airdrop Balance <==> Vesting Balance
+		type BalanceTypeConversion: Convert<types::ServerBalance, types::BalanceOf<Self>>
+			+ Convert<types::ServerBalance, types::VestingBalanceOf<Self>>
+			+ Convert<types::VestingBalanceOf<Self>, types::BalanceOf<Self>>;
 
 		/// Endpoint on where to send request url
 		#[pallet::constant]
@@ -137,7 +107,7 @@ pub mod pallet {
 		ClaimCancelled(types::IconAddress),
 
 		/// Emit when claim request was done successfully
-		ClaimRequestSucceeded {
+		ClaimRequestSucced {
 			ice_address: types::AccountIdOf<T>,
 			icon_address: types::IconAddress,
 			registered_in: types::BlockNumberOf<T>,
@@ -167,6 +137,13 @@ pub mod pallet {
 			new_account: types::AccountIdOf<T>,
 		},
 
+		/// AirdropState have been updated
+		AirdropStateUpdated {
+			old_state: types::AirdropState,
+			new_state: types::AirdropState,
+		},
+
+		/// Processed upto counter was updated to new value
 		ProcessedCounterSet(types::BlockNumberOf<T>),
 
 		CreditorBalanceLow,
@@ -187,6 +164,10 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_processed_upto_counter)]
 	pub(super) type ProcessedUpto<T: Config> = StorageValue<_, types::BlockNumberOf<T>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_airdrop_state)]
+	pub(super) type AirdropChainState<T: Config> = StorageValue<_, types::AirdropState, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_icon_snapshot_map)]
@@ -224,6 +205,21 @@ pub mod pallet {
 		FailedConversion,
 
 		InsufficientCreditorBalance,
+	
+
+		/// Some operation while applying vesting failed
+		CantApplyVesting,
+
+		/// Creditor have too low balance
+		CreditorOutOfFund,
+
+		/// Currently no new claim request is being accepted
+		NewClaimRequestBlocked,
+
+		/// Currently processing of claim request is blocked
+		ClaimProcessingBlocked,
+
+		ArithmeticError,
 	}
 
 	#[pallet::call]
@@ -231,7 +227,7 @@ pub mod pallet {
 		/// Dispatchable to be called by server with privileged account
 		/// dispatch claim
 		#[pallet::weight((
-			T::WeightInfo::dispatch_user_claim(),
+			T::AirdropWeightInfo::dispatch_user_claim(),
 			DispatchClass::Normal,
 			Pays::No
 		))]
@@ -240,19 +236,19 @@ pub mod pallet {
 			icon_address: types::IconAddress,
 			ice_address: types::AccountIdOf<T>,
 			message: Vec<u8>,
-			icon_signature: Vec<u8>,
+			icon_signature: types::IconSignature,
 			server_response: types::ServerResponse,
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			Self::ensure_root_or_offchain(origin.clone())
 				.map_err(|_| Error::<T>::DeniedOperation)?;
+			
 
 			// First check if claim has already been processed
-			Self::validate_unclaimed(&icon_address)?;
-			// check creditor balance
-			let amount = Self::get_total_amount(&server_response)?;
+			let mut snapshot = Self::validate_unclaimed(&icon_address,&ice_address,&server_response)?;
+			
+			let amount = server_response.get_total_balance::<T>()?;
 			Self::validate_creditor_fund(amount)?;
-
 			// validate that the icon signature is valid
 			<types::AccountIdOf<T> as Into<<T as Config>::VerifiableAccountId>>::into(
 				ice_address.clone(),
@@ -268,15 +264,7 @@ pub mod pallet {
 				Error::<T>::InvalidSignature
 			})?;
 
-			let (block_number, new_snapshot) =
-				Self::process_claim(ice_address, icon_address, server_response)?;
-
-			<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
-
-			log::trace!(
-				"[Airdrop pallet] Transfer done for pair {:?}",
-				(&icon_address, &block_number)
-			);
+			Self::do_transfer( &server_response,&mut snapshot)?;
 
 			Self::deposit_event(Event::<T>::ClaimSuccess(icon_address.clone()));
 
@@ -284,7 +272,7 @@ pub mod pallet {
 		}
 
 		#[pallet::weight((
-			T::WeightInfo::dispatch_exchange_claim(),
+			T::AirdropWeightInfo::dispatch_exchange_claim(),
 			DispatchClass::Normal,
 			Pays::No
 		))]
@@ -297,21 +285,16 @@ pub mod pallet {
 			// Make sure its callable by sudo or offchain
 			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
 
+			
+
 			// First check if claim has already been processed
-			Self::validate_unclaimed(&icon_address)?;
+			let mut snapshot = Self::validate_unclaimed(&icon_address,&ice_address,&server_response)?;
+			
 			// check creditor balance
-			let amount = Self::get_total_amount(&server_response)?;
+			let amount = server_response.get_total_balance::<T>()?;
 			Self::validate_creditor_fund(amount)?;
 
-			let (block_number, new_snapshot) =
-				Self::process_claim(ice_address, icon_address, server_response)?;
-
-			<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
-
-			log::trace!(
-				"[Airdrop pallet] Transfer done for pair {:?}",
-				(&icon_address, &block_number)
-			);
+			Self::do_transfer(&server_response,&mut snapshot)?;
 
 			Self::deposit_event(Event::<T>::ClaimSuccess(icon_address.clone()));
 
@@ -330,17 +313,22 @@ pub mod pallet {
 		// this will filter the invalid call before that are kept in pool so
 		// allowing valid transaction to take over which inturn improve
 		// node performance
-		#[pallet::weight(T::WeightInfo::claim_request())]
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::claim_request())]
 		pub fn claim_request(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
 			message: Vec<u8>,
-			icon_signature: Vec<u8>,
+			icon_signature: types::IconSignature,
 		) -> DispatchResult {
 			// Take signed address compatible with airdrop_pallet::Config::AccountId type
 			// so that we can call verify_with_icon method
 
 			let ice_address: types::AccountIdOf<T> = ensure_signed(origin)?.into();
+
+			// Check that we are ok to receive new claim request
+			if Self::get_airdrop_state().block_claim_request {
+				return Err(Error::<T>::NewClaimRequestBlocked.into());
+			}
 
 			log::trace!(
 				"[Airdorp pallet] Claim_request called by user: {:?} with message: {:?} and sig: {:?}",
@@ -348,40 +336,25 @@ pub mod pallet {
 				message, icon_signature
 			);
 
-			// We check the claim status before hand
-			let is_already_on_map = <IceSnapshotMap<T>>::contains_key(&icon_address);
-			ensure!(!is_already_on_map, {
-				log::trace!(
-					"[Airdrop pallet] Address pair: {:?} was ignored. {}",
-					(&ice_address, &icon_address),
-					"Entry already exists in map"
-				);
-				Error::<T>::RequestAlreadyMade
-			});
-
 			// make sure the validation is correct
-			<types::AccountIdOf<T> as Into<<T as Config>::VerifiableAccountId>>::into(
-				ice_address.clone(),
-			)
-			.verify_with_icon(&icon_address, &icon_signature, &message)
-			.map_err(|err| {
-				log::trace!(
-					"[Airdrop pallet] Address pair: {:?} was ignored. {}{:?}",
-					(&ice_address, &icon_address),
-					"Signature verification failed with error: ",
-					err
-				);
-				Error::<T>::InvalidSignature
-			})?;
+			<types::AccountIdOf<T> as Into<<T as Config>::VerifiableAccountId>>::into(ice_address.clone())
+				.verify_with_icon(&icon_address, &icon_signature, &message)
+				.map_err(|err| {
+					log::trace!(
+						"[Airdrop pallet] Address pair: {:?} was ignored. {}{:?}",
+						(&ice_address, &icon_address),
+						"Signature verification failed with error: ",
+						err
+					);
+					Error::<T>::InvalidSignature
+				})?;
 
-			Self::claim_request_unchecked(ice_address, icon_address);
-
-			Ok(())
+			Self::claim_request_unverified(ice_address, icon_address)
 		}
 
 		// Means to push claim request force fully
 		// This skips signature verification
-		#[pallet::weight(T::WeightInfo::force_claim_request(0u32))]
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::force_claim_request(0u32))]
 		pub fn force_claim_request(
 			origin: OriginFor<T>,
 			ice_address: types::AccountIdOf<T>,
@@ -394,18 +367,7 @@ pub mod pallet {
 				(&ice_address, &icon_address),
 			);
 
-			// If it is already in map, even force_insert will fail
-			let is_already_on_map = <IceSnapshotMap<T>>::contains_key(&icon_address);
-			ensure!(!is_already_on_map, {
-				log::trace!(
-					"[Airdrop pallet] Address pair: {:?} was ignored. {}",
-					(&ice_address, &icon_address),
-					"Entry already exists in map"
-				);
-				Error::<T>::RequestAlreadyMade
-			});
-
-			Self::claim_request_unchecked(ice_address, icon_address);
+			Self::claim_request_unverified(ice_address, icon_address)?;
 
 			Ok(Pays::No.into())
 		}
@@ -429,7 +391,7 @@ pub mod pallet {
 		// If any of the step fails in this function,
 		// we pass the flow to register_failed_claim if needed to be retry again
 		// and cancel the request if it dont have to retried again
-		#[pallet::weight(T::WeightInfo::complete_transfer(
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::complete_transfer(
 			types::block_number_to_u32::<T>(block_number.clone()),
 			receiver_icon.len() as u32)
 		)]
@@ -442,6 +404,15 @@ pub mod pallet {
 			// Make sure this is either sudo or root
 			Self::ensure_root_or_offchain(origin.clone())
 				.map_err(|_| Error::<T>::DeniedOperation)?;
+
+			// Make sure chain is ready to process new request
+			if Self::get_airdrop_state().avoid_claim_processing {
+				log::info!(
+					"[Airdrop pallet] Called complete_transfer for {:?} but avoided.",
+					receiver_icon
+				);
+				return Err(Error::<T>::ClaimProcessingBlocked.into());
+			}
 
 			// Check again if it is still in the pending queue
 			// Eg: If another node had processed the same request
@@ -457,45 +428,33 @@ pub mod pallet {
 			});
 
 			// Get snapshot from map and return with error if not present
-			let mut snapshot = Self::get_icon_snapshot_map(&receiver_icon).ok_or_else(|| {
-				log::info!(
-					"[Airdrop pallet] There is no entry in SnapshotMap for {:?}",
-					receiver_icon
-				);
-				Error::<T>::IncompleteData
+			let mut snapshot = Self::get_icon_snapshot_map(&receiver_icon)
+				.ok_or(())
+				.map_err(|_| {
+					log::info!(
+						"[Airdrop pallet] There is no entry in SnapshotMap for {:?}",
+						receiver_icon
+					);
+					Error::<T>::IncompleteData
+				})?;
+
+			// If both of transfer is done. return early
+			if snapshot.done_vesting && snapshot.done_instant {
+				return Err(Error::<T>::ClaimAlreadyMade.into());
+			}
+
+			// Apply all vesting
+			Self::do_transfer(&server_response, &mut snapshot).map_err(|_| {
+				Self::register_failed_claim(
+					frame_system::RawOrigin::Root.into(),
+					block_number,
+					receiver_icon.clone(),
+				)
+				.expect("Calling register_failed_claim should not have been failed...");
+
+				Error::<T>::CantApplyVesting
 			})?;
 
-			// Also make sure that claim_status of this snapshot is false
-			ensure!(!snapshot.claim_status, {
-				log::trace!(
-					"[Airdrop pallet] Claiming for pair {:?} ignored because claim_status was true",
-					(&receiver_icon, &block_number)
-				);
-				Error::<T>::ClaimAlreadyMade
-			});
-
-			let amount = Self::get_total_amount(&server_response).map_err(|e| {
-				log::error!("[Airdrop pallet] While getting total amount: {}", e);
-				DispatchError::Other("Cannot calculate total amount from server_response")
-			})?;
-
-			// Transfer the amount to this reciver keeping creditor alive
-			T::Currency::transfer(
-				&Self::get_creditor_account(),
-				&snapshot.ice_address,
-				amount,
-				ExistenceRequirement::KeepAlive,
-			)
-			.map_err(|err| {
-				// This is also error from our side. We keep it for next retry
-				Self::register_failed_claim(origin.clone(), block_number, receiver_icon.clone()).expect("Calling register failed_claim from currency::transfer. This call should not have failed..");
-
-				log::info!("Currency transfer failed with error: {:?}", err);
-				err
-			})?;
-
-			// Update claim_status to true and store it
-			snapshot.claim_status = true;
 			<IceSnapshotMap<T>>::insert(&receiver_icon, snapshot);
 
 			// Now we can remove this claim from queue
@@ -516,7 +475,7 @@ pub mod pallet {
 		/// We have to have a way that this signed call is from offchain so we can perform
 		/// critical operation. When offchain worker key and this storage have same account
 		/// then we have a way to ensure this call is from offchain worker
-		#[pallet::weight(T::WeightInfo::set_offchain_account())]
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::set_offchain_account())]
 		pub fn set_offchain_account(
 			origin: OriginFor<T>,
 			new_account: types::AccountIdOf<T>,
@@ -540,7 +499,32 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-		#[pallet::weight(T::WeightInfo::remove_from_pending_queue(
+		#[pallet::weight(10_000)]
+		pub fn update_airdrop_state(
+			origin: OriginFor<T>,
+			new_state: types::AirdropState,
+		) -> DispatchResultWithPostInfo {
+			// Only root can call this
+			ensure_root(origin).map_err(|_| Error::<T>::DeniedOperation)?;
+
+			let old_state = Self::get_airdrop_state();
+			<AirdropChainState<T>>::set(new_state.clone());
+
+			log::info!(
+				"[Airdrop pallet] AirdropState updated. (Old, New): {:?} in block number {:?}",
+				(&old_state, &new_state),
+				Self::get_current_block_number(),
+			);
+
+			Self::deposit_event(Event::AirdropStateUpdated {
+				old_state,
+				new_state,
+			});
+
+			Ok(Pays::No.into())
+		}
+
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::remove_from_pending_queue(
 			types::block_number_to_u32::<T>(block_number.clone()),
 			icon_address.len() as u32)
 		)]
@@ -567,7 +551,8 @@ pub mod pallet {
 		/// processing in offchain worker
 		/// We move the entry to future block key so that another
 		/// offchain worker can process it again
-		#[pallet::weight(T::WeightInfo::register_failed_claim(
+
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::register_failed_claim(
 			types::block_number_to_u32::<T>(block_number.clone()),
 			icon_address.len() as u32)
 		)]
@@ -579,7 +564,8 @@ pub mod pallet {
 			Self::ensure_root_or_offchain(origin).map_err(|_| Error::<T>::DeniedOperation)?;
 
 			let ice_address = Self::get_icon_snapshot_map(&icon_address)
-				.ok_or_else(|| {
+				.ok_or(())
+				.map_err(|_| {
 					log::info!(
 						"[Airdrop pallet] {}. {:?}",
 						"Cannot register as failed claim because was not in map",
@@ -589,7 +575,8 @@ pub mod pallet {
 				})?
 				.ice_address;
 			let retry_remaining = Self::get_pending_claims(&block_number, &icon_address)
-				.ok_or_else(|| {
+				.ok_or(())
+				.map_err(|_| {
 					log::info!(
 						"[Airdrop pallet] {}. {:?}",
 						"Cannot register as failed claim because was not in queue",
@@ -660,7 +647,8 @@ pub mod pallet {
 		/// 		or cancel the donation
 		/// This function can be used as a mean to credit our creditor if being donated from
 		/// any node operator owned account
-		#[pallet::weight(T::WeightInfo::donate_to_creditor(types::balance_to_u32::<T>(amount.clone())))]
+
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::donate_to_creditor(types::balance_to_u32::<T>(amount.clone())))]
 		pub fn donate_to_creditor(
 			origin: OriginFor<T>,
 			amount: types::BalanceOf<T>,
@@ -676,14 +664,14 @@ pub mod pallet {
 				ExistenceRequirement::KeepAlive
 			};
 
-			T::Currency::transfer(&sponser, &creditor_account, amount, existance_req)?;
+			<T as Config>::Currency::transfer(&sponser, &creditor_account, amount, existance_req)?;
 
 			Self::deposit_event(Event::<T>::DonatedToCreditor(sponser, amount));
 
 			Ok(())
 		}
 
-		#[pallet::weight(T::WeightInfo::update_processed_upto_counter(
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::update_processed_upto_counter(
 			types::block_number_to_u32::<T>(new_value.clone()))
 		)]
 		pub fn update_processed_upto_counter(
@@ -707,8 +695,19 @@ pub mod pallet {
 			// If this is not the block to start offchain worker
 			// print a log and early return
 			if !Self::should_run_on_this_block(block_number) {
-				log::trace!("Offchain worker skipped for block: {:?}", block_number);
+				log::trace!(
+					"[Airdrop pallet] Offchain worker skipped for block: {:?}",
+					block_number
+				);
 				return;
+			}
+
+			// If this network is no longer processing claim request
+			if Self::get_airdrop_state().avoid_claim_processing {
+				log::trace!(
+					"[Airdrop pallet] Offchain worker avoided for block {:?}",
+					block_number
+				);
 			}
 
 			log::info!(
@@ -937,25 +936,7 @@ pub mod pallet {
 				return Err(ClaimError::HttpError);
 			}
 
-			// first try to deserialize into expected ok struct
-			// then try to deserialize into known error
-			// else error an invalid format
-			let deserialize_response_res =
-				serde_json::from_slice::<types::ServerResponse>(response_bytes.as_slice());
-
-			match deserialize_response_res {
-				Ok(response) => Ok(response),
-
-				Err(_) => {
-					let deserialize_error_res =
-						serde_json::from_slice::<types::ServerError>(response_bytes.as_slice());
-
-					match deserialize_error_res {
-						Ok(server_error) => Err(ClaimError::ServerError(server_error)),
-						Err(_) => Err(ClaimError::InvalidResponse),
-					}
-				}
-			}
+			utils::unpack_server_response(response_bytes.as_slice())
 		}
 
 		/// Return an indicater (bool) on weather the offchain worker
@@ -964,31 +945,31 @@ pub mod pallet {
 			block_number % crate::OFFCHAIN_WORKER_BLOCK_GAP.into() == 0_u32.into()
 		}
 
-		/// Returns the amount to be transferred from given serverResponse
-		pub fn get_total_amount(
-			server_response: &types::ServerResponse,
-		) -> Result<types::BalanceOf<T>, &'static str> {
-			use sp_runtime::traits::CheckedAdd;
+		// /// Returns the amount to be transferred from given serverResponse
+		// pub fn get_total_amount(
+		// 	server_response: &types::ServerResponse,
+		// ) -> Result<types::BalanceOf<T>, &'static str> {
+		// 	use sp_runtime::traits::CheckedAdd;
 
-			let amount: types::BalanceOf<T> = server_response
-				.amount
-				.try_into()
-				.map_err(|_| "Failed to convert server_response.amount to balance type")?;
-			let stake: types::BalanceOf<T> = server_response
-				.stake
-				.try_into()
-				.map_err(|_| "Failed to convert server_response.stake to balance type")?;
-			let omm: types::BalanceOf<T> = server_response
-				.omm
-				.try_into()
-				.map_err(|_| "Failed to convert server_response.oom to balance type")?;
+		// 	let amount: types::BalanceOf<T> = server_response
+		// 		.amount
+		// 		.try_into()
+		// 		.map_err(|_| "Failed to convert server_response.amount to balance type")?;
+		// 	let stake: types::BalanceOf<T> = server_response
+		// 		.stake
+		// 		.try_into()
+		// 		.map_err(|_| "Failed to convert server_response.stake to balance type")?;
+		// 	let omm: types::BalanceOf<T> = server_response
+		// 		.omm
+		// 		.try_into()
+		// 		.map_err(|_| "Failed to convert server_response.oom to balance type")?;
 
-			amount
-				.checked_add(&stake)
-				.ok_or("Adding server_response(amount+stake) overflowed")?
-				.checked_add(&omm)
-				.ok_or("Adding server_response(amount+stake+omm) overflowed")
-		}
+		// 	amount
+		// 		.checked_add(&stake)
+		// 		.ok_or("Adding server_response(amount+stake) overflowed")?
+		// 		.checked_add(&omm)
+		// 		.ok_or("Adding server_response(amount+stake+omm) overflowed")
+		// }
 	}
 
 	// implement all the helper function that are called from pallet dispatchable
@@ -1002,10 +983,21 @@ pub mod pallet {
 		/// Do claim request withing checking for anything.
 		/// This is seperated as a means to share logic
 		/// And always should be called only after doing proper check before hand
-		pub fn claim_request_unchecked(
+		pub fn claim_request_unverified(
 			ice_address: types::AccountIdOf<T>,
 			icon_address: types::IconAddress,
-		) {
+		) -> DispatchResult {
+			// We check the claim status before hand
+			let is_already_on_map = <IceSnapshotMap<T>>::contains_key(&icon_address);
+			ensure!(!is_already_on_map, {
+				log::trace!(
+					"[Airdrop pallet] Address pair: {:?} was ignored. {}",
+					(&ice_address, &icon_address),
+					"Entry already exists in map"
+				);
+				Error::<T>::RequestAlreadyMade
+			});
+
 			// Get the current block number. This is the number where user asked for claim
 			// and we store it in PencingClaims to preserve FIFO
 			let current_block_number = Self::get_current_block_number();
@@ -1028,11 +1020,13 @@ pub mod pallet {
 				current_block_number
 			);
 
-			Self::deposit_event(Event::<T>::ClaimRequestSucceeded {
+			Self::deposit_event(Event::<T>::ClaimRequestSucced {
 				registered_in: current_block_number,
 				ice_address,
 				icon_address,
 			});
+
+			Ok(())
 		}
 
 		/// Helper function to create similar interface like `ensure_root`
@@ -1053,53 +1047,177 @@ pub mod pallet {
 			<frame_system::Pallet<T>>::block_number()
 		}
 
-		pub fn process_claim(
-			ice_address: types::AccountIdOf<T>,
-			icon_address: types::IconAddress,
-			server_response: types::ServerResponse,
-		) -> Result<(types::BlockNumberOf<T>, types::SnapshotInfo<T>), DispatchError> {
-			let amount = Self::get_total_amount(&server_response)?;
-			let block_number = Self::get_current_block_number();
-			let mut new_snapshot =
-				types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
+		pub fn validate_unclaimed(icon_address: &types::IconAddress,ice_address: &types::AccountIdOf<T>, server_response:&types::ServerResponse) -> Result<types::SnapshotInfo<T>, Error<T>> {
+			 let snapshot= Self::get_icon_snapshot_map(icon_address);
+			 if let Some(saved) =snapshot {
+				if saved.done_vesting && saved.done_instant {
+					return Err(Error::<T>::ClaimAlreadyMade.into());
+				}
+			 }
+			let mut new_snapshot = types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
+			let amount = server_response.get_total_balance::<T>()?;
 			new_snapshot.defi_user = server_response.defi_user;
 			new_snapshot.amount = amount;
-			new_snapshot.claim_status = true;
 
-			// transfer claim amount
-			T::Currency::transfer(
-				&Self::get_creditor_account(),
-				&ice_address,
-				amount,
-				ExistenceRequirement::KeepAlive,
-			)?;
+			<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
 
-			Ok((block_number, new_snapshot))
-		}
-
-		pub fn validate_unclaimed(icon_address: &types::IconAddress) -> Result<(), Error<T>> {
-			if <IceSnapshotMap<T>>::contains_key(icon_address) {
-				log::trace!(
-					"[Airdrop pallet] Address : {:?} already exists in map.",
-					(&icon_address)
-				);
-
-				return Err(Error::<T>::ClaimAlreadyMade);
-			}
-
-			Ok(())
+			 Ok(new_snapshot)
 		}
 
 		pub fn validate_creditor_fund(amount: types::BalanceOf<T>) -> Result<(), Error<T>> {
-			use core::cmp::Ord;
 			use sp_std::cmp::Ordering;
-
-			let creditor = Self::get_creditor_account();
-			let creditor_balance = T::Currency::free_balance(&creditor);
+			let creditor_balance = <T as Config>::Currency::free_balance(&Self::get_creditor_account());
 			let ordering = creditor_balance.cmp(&amount);
 			if let Ordering::Less = ordering {
 				Self::deposit_event(Event::<T>::CreditorBalanceLow);
 				return Err(Error::<T>::InsufficientCreditorBalance);
+			}
+			Ok(())
+		}
+		/// Split total amount to chunk of 3 amount
+		/// These are the amounts that are to be vested in next
+		/// 3 lot.
+		pub fn get_splitted_amounts(
+			total_amount: types::ServerBalance,
+			is_defi_user: bool,
+		) -> Result<(types::BalanceOf<T>, types::VestingBalanceOf<T>), DispatchError> {
+			const DEFI_INSTANT_PER: u32 = 40_u32;
+			const NORMAL_INSTANT_PER: u32 = 30_u32;
+
+			let percentage = if is_defi_user {
+				DEFI_INSTANT_PER
+			} else {
+				NORMAL_INSTANT_PER
+			};
+
+			let instant_amount = total_amount
+				.checked_mul(percentage.into())
+				.ok_or(sp_runtime::ArithmeticError::Overflow)?
+				.checked_div(100_u32.into())
+				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
+
+			let vesting_amount = total_amount
+				.checked_sub(instant_amount)
+				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
+
+			Ok((
+				<T::BalanceTypeConversion as Convert<_, _>>::convert(instant_amount),
+				<T::BalanceTypeConversion as Convert<_, _>>::convert(vesting_amount),
+			))
+		}
+
+		pub fn do_transfer(
+			server_response: &types::ServerResponse,
+			snapshot: &mut types::SnapshotInfo<T>,
+		) -> Result<(), DispatchError> {
+			// TODO: put more relaible value
+			const BLOCKS_IN_YEAR: u32 = 10_000u32;
+			// Block number after which enable to do vesting
+			const VESTING_APPLICABLE_FROM: u32 = 100u32;
+
+			let claimer = snapshot.ice_address.clone();
+			let creditor = Self::get_creditor_account();
+
+			let total_amount = server_response.get_total()?;
+
+			let (mut instant_amount, vesting_amount) =
+				Self::get_splitted_amounts(total_amount, server_response.defi_user)?;
+
+			let (transfer_shcedule, remainding_amount) = utils::new_vesting_with_deadline::<
+				T,
+				VESTING_APPLICABLE_FROM,
+			>(vesting_amount, BLOCKS_IN_YEAR.into());
+
+			// Amount to be transferred is:
+			// x% of totoal amount
+			// + remainding amount which was not perfectly divisible
+			instant_amount = {
+				let remainding_amount = <T::BalanceTypeConversion as Convert<
+					types::VestingBalanceOf<T>,
+					types::BalanceOf<T>,
+				>>::convert(remainding_amount);
+
+				instant_amount
+					.checked_add(&remainding_amount)
+					.ok_or(sp_runtime::ArithmeticError::Overflow)?
+			};
+
+			let creditor_origin = <T as frame_system::Config>::Origin::from(
+				frame_system::RawOrigin::Signed(creditor.clone()),
+			);
+			let claimer_origin =
+				<T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(claimer.clone());
+
+			match transfer_shcedule {
+				// Apply vesting
+				Some(schedule) if !snapshot.done_vesting => {
+					let vest_res = pallet_vesting::Pallet::<T>::vested_transfer(
+						creditor_origin.clone(),
+						claimer_origin.clone(),
+						schedule,
+					);
+
+					match vest_res {
+						// Everything went ok. update flag
+						Ok(()) => {
+							snapshot.done_vesting = true;
+							log::info!("[Airdrop pallet] Vesting applied for {:?}", claimer);
+						}
+						// log error
+						Err(err) => {
+							log::info!(
+								"[Airdrop pallet] Applying vesting for {:?} failed with error: {:?}",
+								claimer,
+								err
+							);
+						}
+					}
+				}
+
+				// Vesting was already done as snapshot.done_vesting is true
+				Some(_) => {
+					log::trace!(
+						"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
+						claimer,
+						Self::get_current_block_number()
+					);
+				}
+
+				// No schedule was created
+				None => {
+					log::trace!(
+						"[Airdrop pallet] Primary vesting not applicable for {:?}",
+						claimer_origin,
+					);
+				}
+			}
+
+			// if not done previously
+			// Transfer the amount user is expected to receiver instantly
+			if !snapshot.done_instant {
+				<T as Config>::Currency::transfer(
+					&creditor,
+					&claimer,
+					instant_amount,
+					ExistenceRequirement::KeepAlive,
+				)
+				.map_err(|err| {
+					log::error!(
+						"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
+						claimer,
+						err
+					);
+					err
+				})?;
+
+				// Everything went ok. Update flag
+				snapshot.done_instant = true;
+			} else {
+				log::trace!(
+					"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
+					claimer,
+					Self::get_current_block_number()
+				);
 			}
 
 			Ok(())
@@ -1128,6 +1246,8 @@ pub mod pallet {
 			<PendingClaims<T>>::insert(bl_number, &icon_address, 2_u8);
 		}
 	}
+
+	
 }
 
 pub mod airdrop_crypto {
@@ -1147,114 +1267,5 @@ pub mod airdrop_crypto {
 		type RuntimeAppPublic = Public;
 		type GenericSignature = sp_core::sr25519::Signature;
 		type GenericPublic = sp_core::sr25519::Public;
-	}
-}
-
-/// Implement IconVerifiable for Anything that can be decoded into Vec<u8>
-// However not that
-impl types::IconVerifiable for sp_runtime::AccountId32 {
-	/// Function to make sure that icon_address, ice_address and message are in sync
-	/// On a high level, it does so by checking for these two verification
-	/// * Make sure that icon_signature is equal to or greater than 65
-	/// * Make sure that the ice_address encoded in the message and passed
-	///    in this function (i.e dispatchable from where this function is called)
-	///    are same
-	/// * Make sure that this message is signed by the same icon_address
-	///    that is being passed to this function (i.e caller for this function)
-	///
-	/// @return:
-	/// verbose error type which point exactly where the process failed
-	///
-	/// @parameter:
-	/// * ice_address: ss58 encoded bytes of origin of parent dispatchable
-	/// * icon_address: icon_address
-	/// * icon_signature: icon signature
-	/// * message: raw message
-	fn verify_with_icon(
-		&self,
-		icon_wallet: &types::IconAddress,
-		icon_signature: &[u8],
-		message: &[u8],
-	) -> Result<(), types::SignatureValidationError> {
-		use codec::Encode;
-		use fp_evm::LinearCostPrecompile;
-		use frame_support::ensure;
-		use pallet_evm_precompile_sha3fips::Sha3FIPS256;
-		use pallet_evm_precompile_simple::ECRecoverPublicKey;
-		use types::SignatureValidationError;
-
-		const COST: u64 = 1;
-		const PADDING_FOR_V: [u8; 31] = [0; 31];
-
-		let ice_address = hex::encode(self.encode());
-		let ice_address = ice_address.as_bytes();
-
-		/* =======================================
-				Validate the icon_signature length
-		*/
-		ensure!(
-			icon_signature.len() == 65,
-			SignatureValidationError::InvalidIconSignature
-		);
-		// === verified the length of icon_signature
-
-		/* ======================================================
-			Verify that the message constains the same ice_address
-			as being passed to this function
-		*/
-		let extracted_ice_address = {
-			// TODO:
-			// make sure that message will always be in expected format
-			const PREFIX_LEN: usize =
-				b"ice_sendTransaction.data.{method.transfer.params.{wallet.".len();
-			let address_len = ice_address.len();
-			&message[PREFIX_LEN..PREFIX_LEN + address_len]
-		};
-
-		ensure!(
-			&ice_address == &extracted_ice_address,
-			SignatureValidationError::InvalidIceAddress
-		);
-		// ==== Verfiied that ice_address in encoded message
-		// and recived in function parameterare same
-
-		/* ================================================
-			verify thet this message is being signed by same
-			icon_address as passed in this function
-		*/
-		let (_exit_status, message_hash) = Sha3FIPS256::execute(&message, COST)
-			.map_err(|_| SignatureValidationError::Sha3Execution)?;
-		let formatted_icon_signature = {
-			let sig_r = &icon_signature[..32];
-			let sig_s = &icon_signature[32..64];
-			let sig_v = &icon_signature[64..];
-
-			// Sig final is in the format of:
-			// object hash + 31 byte padding + 1 byte v + 32 byte r + 32 byte s
-			message_hash
-				.iter()
-				.chain(&PADDING_FOR_V)
-				.chain(sig_v)
-				.chain(sig_r)
-				.chain(sig_s)
-				.cloned()
-				.collect::<sp_std::vec::Vec<u8>>()
-		};
-
-		let (_exit_status, icon_pub_key) =
-			ECRecoverPublicKey::execute(&formatted_icon_signature, COST)
-				.map_err(|_| SignatureValidationError::InvalidIconSignature)?;
-
-		let (_exit_status, computed_icon_address) = Sha3FIPS256::execute(&icon_pub_key, COST)
-			.map_err(|_| SignatureValidationError::Sha3Execution)?;
-
-		ensure!(
-			&computed_icon_address[computed_icon_address.len() - 20..] == icon_wallet.as_slice(),
-			SignatureValidationError::InvalidIconAddress
-		);
-		// ===== It is now verified that the message is signed by same icon address
-		// as passed in this function
-
-		Ok(())
 	}
 }

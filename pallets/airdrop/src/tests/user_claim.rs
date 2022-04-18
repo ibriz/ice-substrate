@@ -2,7 +2,7 @@ use super::prelude::*;
 use codec::Decode;
 use frame_support::traits::Hooks;
 use sp_runtime::DispatchError;
-const VALID_ICON_SIGNATURE: &str = "0x628af708622383d60e1d9d95763cf4be64d0bafa8daebb87847f14fde0db40013105586f0c937ddf0e8913251bf01cf8e0ed82e4f631b666453e15e50d69f3b900";
+const VALID_ICON_SIGNATURE:types::IconSignature= decode_hex!("628af708622383d60e1d9d95763cf4be64d0bafa8daebb87847f14fde0db40013105586f0c937ddf0e8913251bf01cf8e0ed82e4f631b666453e15e50d69f3b900");
 const VALID_MESSAGE: &str = "icx_sendTransaction.data.{method.transfer.params.{wallet.da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c}}.dataType.call.from.hxdd9ecb7d3e441d25e8c4f03cd20a80c502f0c374.nid.0x1.nonce.0x1..timestamp.0x5d56f3231f818.to.cx8f87a4ce573a2e1377545feabac48a960e8092bb.version.0x3";
 const VALID_ICON_WALLET: types::IconAddress =
 	decode_hex!("ee1448f0867b90e6589289a4b9c06ac4516a75a9");
@@ -17,7 +17,7 @@ fn claim_success() {
 			ocw_pub.into_account()
 		));
 
-		let icon_signature = bytes::from_hex(VALID_ICON_SIGNATURE).unwrap();
+		let icon_signature = VALID_ICON_SIGNATURE.clone();
 		let message = VALID_MESSAGE.as_bytes();
 		let icon_wallet = VALID_ICON_WALLET;
 		let ice_bytes =
@@ -57,7 +57,7 @@ fn insufficient_balance() {
 			ocw_pub.into_account()
 		));
 
-		let icon_signature = bytes::from_hex(VALID_ICON_SIGNATURE).unwrap();
+		let icon_signature = VALID_ICON_SIGNATURE.clone();
 		let message = VALID_MESSAGE.as_bytes();
 		let icon_wallet = VALID_ICON_WALLET;
 		let ice_bytes =
@@ -104,15 +104,18 @@ fn already_claimed() {
 		let icon_wallet = VALID_ICON_WALLET;
 		let ice_bytes =
 			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
-		let icon_signature = bytes::from_hex(VALID_ICON_SIGNATURE).unwrap();
+		let icon_signature = VALID_ICON_SIGNATURE.clone();
 		let message = VALID_MESSAGE.as_bytes();
 		let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
 				.unwrap_or_default();
+		let mut snapshot = types::SnapshotInfo::default();
+		snapshot.done_instant= true;
+		snapshot.done_vesting= true;
 
 		pallet_airdrop::IceSnapshotMap::<Test>::insert(
 			&icon_wallet,
-			types::SnapshotInfo::default(),
+			snapshot,
 		);
 
 		assert_noop!(

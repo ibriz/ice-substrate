@@ -26,6 +26,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		AirdropModule: pallet_airdrop::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>},
 	}
 );
 
@@ -65,6 +66,7 @@ parameter_types! {
 	pub const MaxLocks: u32 = 50;
 	pub const FetchIconEndpoint: &'static str = "http://35.175.202.72:5000/claimDetails?address=";
 	pub const CreditorAccount: frame_support::PalletId = frame_support::PalletId(*b"t-aidrop");
+	pub const VestingMinTransfer: Balance = 256 * 2;
 }
 
 impl pallet_airdrop::Config for Test {
@@ -74,7 +76,10 @@ impl pallet_airdrop::Config for Test {
 	type FetchIconEndpoint = FetchIconEndpoint;
 	type AuthorityId = crate::airdrop_crypto::AuthId;
 	type Creditor = CreditorAccount;
-	type WeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Test>;
+	type VestingModule = Test;
+	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
+	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Test>;
+
 }
 
 type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
@@ -118,6 +123,15 @@ impl pallet_balances::Config for Test {
 	type WeightInfo = ();
 }
 
+impl pallet_vesting::Config for Test {
+	type Event = Event;
+	type Currency = <Test as pallet_airdrop::Config>::Currency;
+	type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
+	type MinVestedTransfer = VestingMinTransfer;
+	type WeightInfo = ();
+	const MAX_VESTING_SCHEDULES: u32 = u32::MAX;
+}
+
 /// Implement AppCrypto with airdrop_pallet::AuthId
 /// to enable Keystore with mock accounts (sr25519) pair
 impl
@@ -130,7 +144,6 @@ impl
 	type GenericSignature = sp_core::sr25519::Signature;
 	type GenericPublic = sp_core::sr25519::Public;
 }
-
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	system::GenesisConfig::default()

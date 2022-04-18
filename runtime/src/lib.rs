@@ -23,8 +23,8 @@ use sp_core::{
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdLookup, BlakeTwo256, Block as BlockT, Dispatchable, IdentifyAccount, NumberFor,
-		PostDispatchInfoOf, Verify, ConvertInto
+		AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto, Dispatchable, IdentifyAccount,
+		NumberFor, PostDispatchInfoOf, Verify,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
 	ApplyExtrinsicResult, MultiSignature, SaturatedConversion,
@@ -35,8 +35,8 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 use frame_support::inherent::Vec;
-use sp_std::boxed::Box;
 use sp_core::u32_trait::{_1, _2, _5};
+use sp_std::boxed::Box;
 
 use crate::currency::{ICY, MILLIICY};
 
@@ -315,7 +315,9 @@ impl pallet_airdrop::Config for Runtime {
 	// Also ensure effect of (not)enabling full-crypto feature
 	type AuthorityId = pallet_airdrop::airdrop_crypto::AuthId;
 	type Creditor = AirdropCreditor;
-	type WeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
+	type VestingModule = Runtime;
+	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
+	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -352,7 +354,6 @@ impl pallet_grandpa::Config for Runtime {
 parameter_types! {
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
 }
-
 
 impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
@@ -453,11 +454,11 @@ pub const CENTS: Balance = 1_000 * MILLICENTS; // assume this is worth about a c
 pub const DOLLARS: Balance = 100 * CENTS;
 
 frame_support::parameter_types! {
-    pub const AssetDeposit: Balance = 500 ;
+	pub const AssetDeposit: Balance = 500 ;
 	pub const AssetAccountDeposit: Balance = 500 ;
 	pub const MetadataDepositBase: Balance = 500 ;
-    pub const MetaDataDepositPerByte: Balance = 500 ;
-    pub const ApprovalDeposit: Balance = 500 ;
+	pub const MetaDataDepositPerByte: Balance = 500 ;
+	pub const ApprovalDeposit: Balance = 500 ;
 	pub const StringLimit: u32 = 50;
 }
 
@@ -523,8 +524,10 @@ parameter_types! {
 
 impl pallet_treasury::Config for Runtime {
 	type Currency = Balances;
-	type ApproveOrigin = pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>;
-	type RejectOrigin = pallet_collective::EnsureProportionMoreThan<_1, _5, AccountId, CouncilCollective>;
+	type ApproveOrigin =
+		pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>;
+	type RejectOrigin =
+		pallet_collective::EnsureProportionMoreThan<_1, _5, AccountId, CouncilCollective>;
 	type Event = Event;
 	type OnSlash = ();
 	type ProposalBond = ProposalBond;
@@ -538,10 +541,7 @@ impl pallet_treasury::Config for Runtime {
 	type MaxApprovals = MaxApprovals;
 }
 
-impl pallet_simple_inflation::Config for Runtime {
-
-}
-
+impl pallet_simple_inflation::Config for Runtime {}
 
 frame_support::parameter_types! {
 	pub BoundDivision: U256 = U256::from(1024);
@@ -600,9 +600,9 @@ construct_runtime!(
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Config<T>, Event<T>} = 32,
 		Assets: pallet_assets::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Airdrop: pallet_airdrop::{Pallet, Call, Storage, Event<T>},
-	    Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
-		SimpleInflation: pallet_simple_inflation::{Pallet}
+		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
+		SimpleInflation: pallet_simple_inflation::{Pallet},
 	}
 );
 
@@ -714,7 +714,6 @@ impl fp_self_contained::SelfContainedCall for Call {
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]
 extern crate frame_benchmarking;
-
 
 impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {

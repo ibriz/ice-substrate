@@ -65,6 +65,10 @@ optional = true
 default-features = false
 git = 'https://github.com/paritytech/substrate'
 
+[dependencies.pallet-vesting]
+default-features = false
+git = 'https://github.com/paritytech/substrate'
+
 # frontier packages
 
 [dependencies.pallet-evm-precompile-sha3fips]
@@ -98,6 +102,7 @@ std = [
 	"sp-runtime/std",
 	"sp-std/std",
 	"pallet-balances/std",
+	"pallet-vesting/std",
 	"sp-keystore",
 	"parking_lot",
 ]

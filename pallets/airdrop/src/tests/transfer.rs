@@ -1,5 +1,4 @@
 use super::prelude::*;
-type BalanceError = pallet_balances::pallet::Error<Test>;
 
 #[test]
 fn complete_transfer_access() {
@@ -134,7 +133,8 @@ fn already_claimed() {
 		pallet_airdrop::IceSnapshotMap::<Test>::insert(
 			&receiver,
 			types::SnapshotInfo {
-				claim_status: true,
+				done_vesting: true,
+				done_instant: true,
 				..Default::default()
 			},
 		);
@@ -178,7 +178,7 @@ fn insufficient_creditor_balance() {
 				claimer.clone(),
 				samples::SERVER_DATA[0]
 			),
-			BalanceError::InsufficientBalance
+			PalletError::CantApplyVesting
 		);
 
 		// Behavioural expectation on this type of failure
@@ -198,16 +198,17 @@ fn insufficient_creditor_balance() {
 
 // Replicating the actual flow with context to sucessfully execute complete_transfer
 #[test]
-#[ignore]
 fn complete_transfer_valid_flow() {
 	minimal_test_ext().execute_with(|| {
+		run_to_block(2);
+
 		let claimer_icon = samples::ICON_ADDRESS[0];
 		let claimer_ice = samples::ACCOUNT_ID[0];
 		let bl_num: types::BlockNumberOf<Test> = 1_u32.into();
 		let server_response = samples::SERVER_DATA[0];
 
 		// Set some balance to creditor account first
-		credit_creditor(10_00_000_u32);
+		credit_creditor(u32::MAX);
 
 		// Simulate we have done claim_request by actually adding it to
 		// both snapshot map and pending queue
@@ -240,14 +241,14 @@ fn complete_transfer_valid_flow() {
 
 		// Bhavioural expectation after complete_transfer is called
 		{
+			let total_amount: types::BalanceOf<Test> =
+				(server_response.amount + server_response.omm + server_response.stake).into();
+
 			// Make sure user got right amount of money
-			assert_eq!(post_user_balance, server_response.amount.into());
+			assert_eq!(post_user_balance, total_amount);
 
 			// System balance is only redueced by balance transferred only as fee is 0 for this call
-			assert_eq!(
-				post_system_balance,
-				pre_system_balance - server_response.amount
-			);
+			assert_eq!(post_system_balance, pre_system_balance - total_amount);
 
 			// Make sure that net sum of node remains same.
 			// i.e fund is not lost anywhere
@@ -262,11 +263,8 @@ fn complete_transfer_valid_flow() {
 				None
 			);
 			// Make sure this function update the snapshot mapping
-			assert!(
-				AirdropModule::get_icon_snapshot_map(&claimer_icon)
-					.unwrap()
-					.claim_status
-			);
+			let snapshot = AirdropModule::get_icon_snapshot_map(&claimer_icon).unwrap();
+			assert!(snapshot.done_vesting && snapshot.done_instant);
 		}
 	});
 }
@@ -308,19 +306,6 @@ fn donate_to_creditor() {
 			);
 		}
 	});
-}
-
-fn credit_creditor(balance: u32) {
-	let creditor_account = AirdropModule::get_creditor_account();
-	let deposit_res = <Test as pallet_airdrop::Config>::Currency::set_balance(
-		mock::Origin::root(),
-		creditor_account,
-		balance.into(),
-		10_000_u32.into(),
-	);
-
-	assert_ok!(deposit_res);
-	assert_eq!(get_free_balance(&creditor_account), balance.into());
 }
 
 fn get_free_balance(account: &types::AccountIdOf<Test>) -> types::BalanceOf<Test> {
