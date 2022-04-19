@@ -61,7 +61,7 @@ fn insufficient_balance() {
 		)
 		.unwrap();
 
-		assert_noop!(
+		assert_err!(
 			AirdropModule::dispatch_exchange_claim(
 				Origin::root(),
 				icon_wallet,
@@ -93,6 +93,14 @@ fn already_claimed() {
 			&icon_wallet,
 		    snapshot,
 		);
+		let creditor_account = AirdropModule::get_creditor_account();
+		<Test as pallet_airdrop::Config>::Currency::set_balance(
+			mock::Origin::root(),
+			creditor_account,
+			10_000_0000_u32.into(),
+			10_000_00_u32.into(),
+		)
+		.unwrap();
 
 		assert_noop!(
 			AirdropModule::dispatch_exchange_claim(

@@ -74,6 +74,11 @@ pub struct SnapshotInfo<T: Config> {
 	/// Indicator weather vesting schedult have been applied
 	/// to this user
 	pub done_vesting: bool,
+
+	// blocknumber that started vesting
+	pub vesting_block_number: Option<BlockNumberOf<T>>,
+
+	pub initial_transfer: BalanceOf<T>,
 }
 
 impl<T: Config> SnapshotInfo<T> {
@@ -95,6 +100,8 @@ impl<T: Config> Default for SnapshotInfo<T> {
 			vesting_percentage: 0,
 			done_instant: false,
 			done_vesting: false,
+			vesting_block_number:None,
+			initial_transfer: BalanceOf::<T>::from(0u32)
 		}
 	}
 }

@@ -12,6 +12,7 @@ pub trait WeightInfo {
 	fn force_claim_request(_u: u32, ) -> Weight;
 	fn dispatch_user_claim()->Weight;
 	fn dispatch_exchange_claim()->Weight;
+	fn update_airdrop_state()->Weight;
 }
 
 /// Weight functions for `pallet_airdrop`.
@@ -77,6 +78,10 @@ impl<T: frame_system::Config> WeightInfo for AirDropWeightInfo<T> {
 	}
 
 	fn dispatch_exchange_claim()->Weight{
+		return 10000 as Weight;
+	}
+
+	fn update_airdrop_state()->Weight {
 		return 10000 as Weight;
 	}
 
