@@ -1,7 +1,7 @@
 use hex_literal::hex;
 use ice_runtime::{
 	currency::ICY, AccountId, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig,
-	GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY,
+	GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY,AirdropConfig
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
