@@ -256,6 +256,7 @@ fn making_vesting_transfer() {
 		run_to_block(3);
 
 		let server_response = samples::SERVER_DATA[1];
+		let icon_address =samples::ICON_ADDRESS[0];
 		type Currency = <Test as pallet_airdrop::Config>::Currency;
 		// Fund creditor
 		credit_creditor(u32::MAX);
@@ -270,7 +271,7 @@ fn making_vesting_transfer() {
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot));
+			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot,&icon_address));
 
 			// Ensure all amount is being transferred
 			assert_eq!(9775129_u128, Currency::free_balance(&claimer));
@@ -293,7 +294,7 @@ fn making_vesting_transfer() {
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot));
+			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot,&icon_address));
 
 			// Ensure amount only accounting to vesting is transfererd
 			let expected_transfer = {
@@ -330,7 +331,7 @@ fn making_vesting_transfer() {
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot));
+			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot,&icon_address));
 
 			// Ensure amount only accounting to instant is transferred
 			let expected_transfer = {
@@ -364,7 +365,7 @@ fn making_vesting_transfer() {
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot));
+			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot,&icon_address));
 
 			// Ensure amount only accounting to instant is transfererd
 			assert_eq!(0_u128, Currency::free_balance(&claimer));

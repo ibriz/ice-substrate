@@ -102,13 +102,11 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-
 		/// Emit when an claim request was successful and fund have been transferred
 		ClaimSuccess(types::IconAddress),
 
 		/// Emit when an claim request was partially successful
 		ClaimPartialSuccess(types::IconAddress),
-
 
 		DonatedToCreditor(types::AccountIdOf<T>, types::BalanceOf<T>),
 
@@ -154,6 +152,11 @@ pub mod pallet {
 	pub(super) type OffchainAccount<T: Config> =
 		StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn get_exchange_account)]
+	pub type ExchangeAccountsMap<T: Config> =
+		StorageMap<_, Twox64Concat, types::IconAddress, bool, OptionQuery>;
+
 	#[pallet::error]
 	pub enum Error<T> {
 		/// This error will occur when signature validation failed.
@@ -165,14 +168,13 @@ pub mod pallet {
 		/// Not all data required are supplied with
 		IncompleteData,
 
-
 		/// Claim has already been made so can't be made again at this time
 		ClaimAlreadyMade,
 
 		FailedConversion,
 
 		InsufficientCreditorBalance,
-	
+
 		/// Some operation while applying vesting failed
 		CantApplyVesting,
 
@@ -205,9 +207,9 @@ pub mod pallet {
 			// Make sure its callable by sudo or offchain
 			Self::ensure_root_or_offchain(origin.clone())
 				.map_err(|_| Error::<T>::DeniedOperation)?;
-						
+
 			let amount = server_response.get_total_balance::<T>()?;
-			
+
 			// validate that the icon signature is valid
 			<types::AccountIdOf<T> as Into<<T as Config>::VerifiableAccountId>>::into(
 				ice_address.clone(),
@@ -222,13 +224,15 @@ pub mod pallet {
 				);
 				Error::<T>::InvalidSignature
 			})?;
-			
+
 			Self::validate_creditor_fund(amount)?;
 			// write starts from here
 
-			let mut snapshot = Self::validate_unclaimed(&icon_address,&ice_address,&server_response)?;
-			let transfer_result= Self::do_transfer( &server_response,&mut snapshot);
-			Self::consolidate_transfer(transfer_result,icon_address,snapshot);
+			let mut snapshot =
+				Self::validate_unclaimed(&icon_address, &ice_address, &server_response)?;
+			Self::do_transfer(&server_response, &mut snapshot, &icon_address)?;
+			Self::deposit_event(Event::ClaimSuccess(icon_address));
+
 			Ok(Pays::No.into())
 		}
 
@@ -245,19 +249,20 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
+			Self::validate_whitelisted(&icon_address)?;
 
 			// check creditor balance
 			let amount = server_response.get_total_balance::<T>()?;
 			Self::validate_creditor_fund(amount)?;
 
 			// check if claim has already been processed
-			let mut snapshot = Self::validate_unclaimed(&icon_address,&ice_address,&server_response)?;
-			let transfer_result =Self::do_transfer(&server_response,&mut snapshot);
-			Self::consolidate_transfer(transfer_result,icon_address,snapshot);
+			let mut snapshot =
+				Self::validate_unclaimed(&icon_address, &ice_address, &server_response)?;
+			Self::do_transfer(&server_response, &mut snapshot, &icon_address)?;
+			Self::deposit_event(Event::ClaimSuccess(icon_address));
 			Ok(Pays::No.into())
 		}
 
-		
 		#[pallet::weight(<T as Config>::AirdropWeightInfo::set_offchain_account())]
 		pub fn set_offchain_account(
 			origin: OriginFor<T>,
@@ -281,7 +286,6 @@ pub mod pallet {
 
 			Ok(Pays::No.into())
 		}
-
 
 		#[pallet::weight(10_000)]
 		pub fn update_airdrop_state(
@@ -307,8 +311,6 @@ pub mod pallet {
 
 			Ok(Pays::No.into())
 		}
-
-		
 
 		/// Public function to deposit some fund for our creditor
 		/// @parameter:
@@ -345,8 +347,6 @@ pub mod pallet {
 		}
 	}
 
-	
-
 	// implement all the helper function that are called from pallet dispatchable
 	impl<T: Config> Pallet<T> {
 		pub fn get_creditor_account() -> types::AccountIdOf<T> {
@@ -373,26 +373,32 @@ pub mod pallet {
 			<frame_system::Pallet<T>>::block_number()
 		}
 
-		pub fn validate_unclaimed(icon_address: &types::IconAddress,ice_address: &types::AccountIdOf<T>, server_response:&types::ServerResponse) -> Result<types::SnapshotInfo<T>, Error<T>> {
-			 let snapshot= Self::get_icon_snapshot_map(icon_address);
-			 if let Some(saved) =snapshot {
+		pub fn validate_unclaimed(
+			icon_address: &types::IconAddress,
+			ice_address: &types::AccountIdOf<T>,
+			server_response: &types::ServerResponse,
+		) -> Result<types::SnapshotInfo<T>, Error<T>> {
+			let snapshot = Self::get_icon_snapshot_map(icon_address);
+			if let Some(saved) = snapshot {
 				if saved.done_vesting && saved.done_instant {
 					return Err(Error::<T>::ClaimAlreadyMade.into());
 				}
-			 }
-			let mut new_snapshot = types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
+			}
+			let mut new_snapshot =
+				types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
 			let amount = server_response.get_total_balance::<T>()?;
 			new_snapshot.defi_user = server_response.defi_user;
 			new_snapshot.amount = amount;
 
 			<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
 
-			 Ok(new_snapshot)
+			Ok(new_snapshot)
 		}
 
 		pub fn validate_creditor_fund(amount: types::BalanceOf<T>) -> Result<(), Error<T>> {
 			use sp_std::cmp::Ordering;
-			let creditor_balance = <T as Config>::Currency::free_balance(&Self::get_creditor_account());
+			let creditor_balance =
+				<T as Config>::Currency::free_balance(&Self::get_creditor_account());
 			let ordering = creditor_balance.cmp(&amount);
 			if let Ordering::Less = ordering {
 				Self::deposit_event(Event::<T>::CreditorBalanceLow);
@@ -401,19 +407,10 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn consolidate_transfer(transfer_result:Result<(),DispatchError>,icon_address:types::IconAddress, snapshot:types::SnapshotInfo<T>){
-			match transfer_result{
-				Ok(())=>{
-				 Self::deposit_event(Event::<T>::ClaimSuccess(icon_address.clone()));
-				},
-				Err(e)=>{
-					log::error!("[Airdrop Pallet] Error In Vesting {:?}",e);
-					Self::deposit_event(Event::<T>::ClaimPartialSuccess(icon_address.clone()));
-				}
-			}
-			<IceSnapshotMap<T>>::insert(&icon_address, snapshot);
-
+		pub fn validate_whitelisted(icon_address: &types::IconAddress) -> Result<bool, Error<T>> {
+			Self::get_exchange_account(icon_address).ok_or_else(|| Error::<T>::DeniedOperation)
 		}
+
 		/// Split total amount to chunk of 3 amount
 		/// These are the amounts that are to be vested in next
 		/// 3 lot.
@@ -449,6 +446,7 @@ pub mod pallet {
 		pub fn do_transfer(
 			server_response: &types::ServerResponse,
 			snapshot: &mut types::SnapshotInfo<T>,
+			icon_address: &types::IconAddress,
 		) -> Result<(), DispatchError> {
 			// TODO: put more relaible value
 			const BLOCKS_IN_YEAR: u32 = 10_000u32;
@@ -501,7 +499,8 @@ pub mod pallet {
 						// Everything went ok. update flag
 						Ok(()) => {
 							snapshot.done_vesting = true;
-							snapshot.vesting_block_number= Some(Self::get_current_block_number());
+							snapshot.vesting_block_number = Some(Self::get_current_block_number());
+							<IceSnapshotMap<T>>::insert(&icon_address, snapshot.clone());
 							log::info!("[Airdrop pallet] Vesting applied for {:?}", claimer);
 						}
 						// log error
@@ -554,6 +553,7 @@ pub mod pallet {
 				// Everything went ok. Update flag
 				snapshot.done_instant = true;
 				snapshot.initial_transfer = instant_amount;
+				<IceSnapshotMap<T>>::insert(&icon_address, snapshot.clone());
 			} else {
 				log::trace!(
 					"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
@@ -589,7 +589,30 @@ pub mod pallet {
 		}
 	}
 
-	
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub exchange_accounts: Vec<types::IconAddress>,
+		pub phantom:PhantomData<T>
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self {
+				exchange_accounts: Vec::new(),
+				phantom: PhantomData::default(),
+			}
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			for account in &self.exchange_accounts {
+				<ExchangeAccountsMap<T>>::insert(account, true);
+			}
+		}
+	}
 }
 
 pub mod airdrop_crypto {

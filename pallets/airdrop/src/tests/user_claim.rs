@@ -126,7 +126,7 @@ fn already_claimed() {
 		)
 		.unwrap();
 
-		assert_noop!(
+		assert_err!(
 			AirdropModule::dispatch_user_claim(
 				Origin::signed(AirdropModule::get_offchain_account().unwrap()),
 				icon_wallet,

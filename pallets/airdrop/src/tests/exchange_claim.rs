@@ -20,6 +20,7 @@ fn claim_success() {
 				.unwrap_or_default();
 
 		let creditor_account = AirdropModule::get_creditor_account();
+		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(icon_wallet,true);
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
 			creditor_account,
@@ -53,6 +54,7 @@ fn insufficient_balance() {
 				.unwrap_or_default();
 
 		let creditor_account = AirdropModule::get_creditor_account();
+		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet,true);
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
 			creditor_account,
@@ -89,6 +91,49 @@ fn already_claimed() {
         let mut snapshot = types::SnapshotInfo::default();
 		snapshot.done_instant= true;
 		snapshot.done_vesting= true;
+
+		pallet_airdrop::IceSnapshotMap::<Test>::insert(
+			&icon_wallet,
+		    snapshot,
+		);
+		let creditor_account = AirdropModule::get_creditor_account();
+		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet,true);
+		<Test as pallet_airdrop::Config>::Currency::set_balance(
+			mock::Origin::root(),
+			creditor_account,
+			10_000_0000_u32.into(),
+			10_000_00_u32.into(),
+		)
+		.unwrap();
+
+		assert_err!(
+			AirdropModule::dispatch_exchange_claim(
+				Origin::root(),
+				icon_wallet,
+				ice_address.clone(),
+				server_data.clone()
+			),
+			PalletError::ClaimAlreadyMade
+		);
+	});
+}
+
+#[test]
+fn only_whitelisted_claim() {
+	use codec::Decode;
+
+	let server_data = samples::SERVER_DATA[0];
+	let mut test_ext = minimal_test_ext();
+	test_ext.execute_with(|| {
+		let icon_wallet = VALID_ICON_WALLET;
+		let ice_bytes =
+			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
+
+		let ice_address =
+			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
+				.unwrap_or_default();
+        let snapshot = types::SnapshotInfo::default();
+
 		pallet_airdrop::IceSnapshotMap::<Test>::insert(
 			&icon_wallet,
 		    snapshot,
@@ -102,14 +147,14 @@ fn already_claimed() {
 		)
 		.unwrap();
 
-		assert_noop!(
+		assert_err!(
 			AirdropModule::dispatch_exchange_claim(
 				Origin::root(),
 				icon_wallet,
 				ice_address.clone(),
 				server_data.clone()
 			),
-			PalletError::ClaimAlreadyMade
+			PalletError::DeniedOperation
 		);
 	});
 }

@@ -79,6 +79,7 @@ benchmarks! {
         let ice_address = T::AccountId::decode(&mut &ice_bytes[..]).unwrap_or_default();
 
         let icon_address:[u8; 20] = hex_literal::hex!("ee1448f0867b90e6589289a4b9c06ac4516a75a9");
+        pallet_airdrop::ExchangeAccountsMap::<T>::insert(&icon_address,true);
 
         let server_data =types::ServerResponse {
             omm: 123_u32.into(),
@@ -98,8 +99,22 @@ benchmarks! {
         assert_last_event::<T>(Event::ClaimSuccess(icon_address.clone()).into());
     }
 
+	set_offchain_account {
+		let old_account: types::AccountIdOf<T> = frame_benchmarking::whitelisted_caller();
+
+		let new_account: types::AccountIdOf<T> = frame_benchmarking::whitelisted_caller();
+
+		<OffchainAccount<T>>::set(Some(old_account.clone()));
+
+	}: set_offchain_account(RawOrigin::Root,new_account.clone())
+	verify {
+		assert_last_event::<T>(Event::OffchainAccountChanged{
+			old_account:Some(old_account.clone()),
+			new_account:new_account.clone()
+		}.into());
+	}
+
 	update_airdrop_state {
-        let x in 10 .. 100;
 		let old_state= Pallet::<T>::get_airdrop_state();
 		let new_state = types::AirdropState::default();
 
