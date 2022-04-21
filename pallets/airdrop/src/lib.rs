@@ -127,18 +127,6 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn get_pending_claims)]
-	pub(super) type PendingClaims<T: Config> = StorageDoubleMap<
-		_,
-		Twox64Concat,
-		T::BlockNumber,
-		Twox64Concat,
-		types::IconAddress,
-		u8,
-		OptionQuery,
-	>;
-
-	#[pallet::storage]
 	#[pallet::getter(fn get_airdrop_state)]
 	pub(super) type AirdropChainState<T: Config> = StorageValue<_, types::AirdropState, ValueQuery>;
 
@@ -156,6 +144,10 @@ pub mod pallet {
 	#[pallet::getter(fn get_exchange_account)]
 	pub type ExchangeAccountsMap<T: Config> =
 		StorageMap<_, Twox64Concat, types::IconAddress, bool, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn creditor_account)]
+	pub(super) type CreditorAccount<T: Config> = StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -370,9 +362,7 @@ pub mod pallet {
 	// implement all the helper function that are called from pallet dispatchable
 	impl<T: Config> Pallet<T> {
 		pub fn get_creditor_account() -> types::AccountIdOf<T> {
-			use sp_runtime::traits::AccountIdConversion;
-
-			T::Creditor::get().into_account()
+			Self::creditor_account().expect("Creditor Account Not Set")
 		}
 
 		/// Helper function to create similar interface like `ensure_root`
@@ -612,16 +602,19 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub exchange_accounts: Vec<types::IconAddress>,
-		pub phantom:PhantomData<T>
+		pub creditor_account: Option<types::AccountIdOf<T>>,
 	}
+	
+
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self {
 				exchange_accounts: Vec::new(),
-				phantom: PhantomData::default(),
+				creditor_account: None
 			}
+			
 		}
 	}
 
@@ -630,6 +623,9 @@ pub mod pallet {
 		fn build(&self) {
 			for account in &self.exchange_accounts {
 				<ExchangeAccountsMap<T>>::insert(account, true);
+			}
+			if let Some(ref key) = self.creditor_account {
+				CreditorAccount::<T>::put(key);
 			}
 		}
 	}

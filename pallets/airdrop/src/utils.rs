@@ -42,39 +42,39 @@ where
 	(vesting, remainding_amount)
 }
 
-// Return the iterator that resolves to iterator which in turn resolves to item
-// stored in PendingClaims of On-chain storage
-impl<T: Config> core::iter::Iterator for types::PendingClaimsOf<T> {
-	// This iterator returns a block number and an iterator to entiries
-	// in PendingClaims under same block number
-	type Item = (
-		types::BlockNumberOf<T>,
-		frame_support::storage::KeyPrefixIterator<types::IconAddress>,
-	);
+// // Return the iterator that resolves to iterator which in turn resolves to item
+// // stored in PendingClaims of On-chain storage
+// impl<T: Config> core::iter::Iterator for types::PendingClaimsOf<T> {
+// 	// This iterator returns a block number and an iterator to entiries
+// 	// in PendingClaims under same block number
+// 	type Item = (
+// 		types::BlockNumberOf<T>,
+// 		frame_support::storage::KeyPrefixIterator<types::IconAddress>,
+// 	);
 
-	fn next(&mut self) -> Option<Self::Item> {
-		// Take the block to process
-		let this_block = self.range.start;
-		// Increment start by one
-		self.range.start = this_block + 1_u32.into();
+// 	fn next(&mut self) -> Option<Self::Item> {
+// 		// Take the block to process
+// 		let this_block = self.range.start;
+// 		// Increment start by one
+// 		self.range.start = this_block + 1_u32.into();
 
-		// Check if range is valid
-		if self.range.start > self.range.end {
-			return None;
-		}
+// 		// Check if range is valid
+// 		if self.range.start > self.range.end {
+// 			return None;
+// 		}
 
-		// Get the actual iterator result
-		let this_block_iter = <crate::PendingClaims<T>>::iter_key_prefix(this_block);
+// 		// Get the actual iterator result
+// 		let this_block_iter = <crate::PendingClaims<T>>::iter_key_prefix(this_block);
 
-		Some((this_block, this_block_iter))
-	}
-}
+// 		Some((this_block, this_block_iter))
+// 	}
+// }
 
-impl<T: Config> types::PendingClaimsOf<T> {
-	pub fn new(range: core::ops::Range<types::BlockNumberOf<T>>) -> Self {
-		types::PendingClaimsOf::<T> { range }
-	}
-}
+// impl<T: Config> types::PendingClaimsOf<T> {
+// 	pub fn new(range: core::ops::Range<types::BlockNumberOf<T>>) -> Self {
+// 		types::PendingClaimsOf::<T> { range }
+// 	}
+// }
 
 /// Returns total sum of amount returned from server
 pub fn get_response_sum(

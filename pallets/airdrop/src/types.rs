@@ -228,9 +228,9 @@ pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
 	TryInto::<u32>::try_into(input).ok().unwrap()
 }
 
-pub struct PendingClaimsOf<T: Config> {
-	pub range: core::ops::Range<BlockNumberOf<T>>,
-}
+// pub struct PendingClaimsOf<T: Config> {
+// 	pub range: core::ops::Range<BlockNumberOf<T>>,
+// }
 
 /// Chain state
 #[derive(Deserialize, Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
