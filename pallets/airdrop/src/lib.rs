@@ -187,6 +187,18 @@ pub mod pallet {
 		ArithmeticError,
 	}
 
+
+	/*     User Claim
+	        origin: OriginFor<T>,
+			icon_address: types::IconAddress,
+			message: Vec<u8>,(H160)
+			icon_signature: types::IconSignature,
+			metamask_signature: types::IceSignature
+			total_amount : u128,
+			defi_user: bool
+	
+	*/
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Dispatchable to be called by server with privileged account
@@ -199,7 +211,7 @@ pub mod pallet {
 		pub fn dispatch_user_claim(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
-			ice_address: types::AccountIdOf<T>,
+			ice_address: types::AccountIdOf<T>,// can be extracted from message
 			message: Vec<u8>,
 			icon_signature: types::IconSignature,
 			server_response: types::ServerResponse,
@@ -235,6 +247,14 @@ pub mod pallet {
 
 			Ok(Pays::No.into())
 		}
+
+		/*  Exchange Claim
+		    origin: OriginFor<T>,(sudo)
+			icon_address: types::IconAddress,(h160)
+            metamask_address: types::AccountIdOf<T>,(h160)
+			total_amount : u128,
+			defi_user: bool
+		 */
 
 		#[pallet::weight((
 			T::AirdropWeightInfo::dispatch_exchange_claim(),
