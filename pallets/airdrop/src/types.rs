@@ -10,6 +10,7 @@ use frame_system;
 use scale_info::TypeInfo;
 use serde::Deserialize;
 use sp_std::prelude::*;
+use sp_core::H160;
 
 /// AccountId of anything that implements frame_system::Config
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -27,8 +28,12 @@ pub type ServerBalance = u64;
 /// Type that represent IconAddress
 pub type IconAddress = [u8; 20];
 
+pub type IceEvmAddress = H160;
+
 /// Type that represent Icon signed message
 pub type IconSignature = [u8; 65];
+
+pub type IceEvmSignature = [u8; 65];
 
 ///
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;

@@ -1,7 +1,10 @@
 use crate as airdrop;
 use airdrop::types;
-use airdrop::Config;
-use sp_runtime::traits::{Bounded, CheckedDiv, Convert, Saturating};
+use sp_core::H160;
+use sp_runtime::{
+	traits::{BlakeTwo256, Bounded, CheckedDiv, Convert, Saturating},
+	AccountId32,
+};
 
 /// Reuturns an optional vesting schedule which when applied release given amount
 /// which will be complete in given block. If
@@ -221,5 +224,91 @@ pub fn unpack_server_response(
 				Err(_) => Err(types::ClaimError::InvalidResponse),
 			}
 		}
+	}
+}
+
+pub fn recover_address(
+	signature: &[u8],
+	payload: &[u8],
+) -> Result<Vec<u8>, types::SignatureValidationError> {
+	use fp_evm::LinearCostPrecompile;
+	use pallet_evm_precompile_sha3fips::Sha3FIPS256;
+	use pallet_evm_precompile_simple::ECRecoverPublicKey;
+	use types::SignatureValidationError;
+
+	const COST: u64 = 1;
+	const PADDING_FOR_V: [u8; 31] = [0; 31];
+
+	let (_exit_status, message_hash) =
+		Sha3FIPS256::execute(payload, COST).map_err(|_| SignatureValidationError::Sha3Execution)?;
+	let formatted_signature = {
+		let sig_r = &signature[..32];
+		let sig_s = &signature[32..64];
+		let sig_v = &signature[64..];
+
+		// Sig final is in the format of:
+		// object hash + 31 byte padding + 1 byte v + 32 byte r + 32 byte s
+		message_hash
+			.iter()
+			.chain(&PADDING_FOR_V)
+			.chain(sig_v)
+			.chain(sig_r)
+			.chain(sig_s)
+			.cloned()
+			.collect::<sp_std::vec::Vec<u8>>()
+	};
+
+	let (_exit_status, recovered_pub_key) = ECRecoverPublicKey::execute(&formatted_signature, COST)
+		.map_err(|_| SignatureValidationError::InvalidIconSignature)?;
+
+	let (_exit_status, computed_address) = Sha3FIPS256::execute(&recovered_pub_key, COST)
+		.map_err(|_| SignatureValidationError::Sha3Execution)?;
+	let address = computed_address[computed_address.len() - 20..].to_vec();
+
+	Ok(address)
+}
+
+pub fn into_account_id(address: H160) -> AccountId32 {
+	let mut data = [0u8; 24];
+	data[0..4].copy_from_slice(b"evm:");
+	data[4..24].copy_from_slice(&address[..]);
+	let hash = <BlakeTwo256 as sp_runtime::traits::Hash>::hash(&data);
+	AccountId32::from(Into::<[u8; 32]>::into(hash))
+}
+
+fn hash_personal(what: &[u8], extra: &[u8]) -> Vec<u8> {
+	let mut v = b"\x19Ethereum Signed Message:\n65".to_vec();
+	v.extend_from_slice(what);
+	v.extend_from_slice(extra);
+	v
+}
+
+pub fn eth_recover(s: &[u8; 65], what: &[u8], extra: &[u8]) -> Option<Vec<u8>> {
+	use sp_io::{
+		crypto::secp256k1_ecdsa_recover, crypto::secp256k1_ecdsa_recover_compressed,
+		hashing::keccak_256,
+	};
+	let msg = keccak_256(&hash_personal(&what,&extra));
+	let mut res = [0; 20];
+	// res.copy_from_slice(&keccak_256(&secp256k1_ecdsa_recover(&s, &msg).ok()?[..])[12..]);
+	// let res =recover_address(s,&msg).ok()?;
+	let res = secp256k1_ecdsa_recover_compressed(s, &msg).ok().unwrap();
+	Some(res.to_vec())
+}
+
+pub fn eth_recover_compressed() {
+	use sp_core::{ecdsa, keccak_256, Pair};
+	use sp_io::crypto::secp256k1_ecdsa_recover_compressed;
+
+	let pair = ecdsa::Pair::from_string(&format!("//{}", 1), None).unwrap();
+	let hash = keccak_256(b"Hello");
+	let signature = pair.sign_prehashed(&hash);
+
+	if let Ok(recovered_raw) = secp256k1_ecdsa_recover_compressed(&signature.0, &hash) {
+		let recovered = ecdsa::Public::from_raw(recovered_raw);
+		// Assert that we recovered the correct PK.
+		assert_eq!(pair.public(), recovered);
+	} else {
+		panic!("recovery failed ...!");
 	}
 }
