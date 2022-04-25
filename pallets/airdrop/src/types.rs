@@ -12,6 +12,7 @@ use serde::Deserialize;
 use sp_std::prelude::*;
 use sp_core::H160;
 
+
 /// AccountId of anything that implements frame_system::Config
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -61,7 +62,7 @@ pub struct SnapshotInfo<T: Config> {
 	/// Icon address of this snapshot
 	// TODO:
 	// change this to [u8; _]
-	pub ice_address: AccountIdOf<T>,
+	pub ice_address: H160,
 
 	/// Total airdroppable-amount this icon_address hold
 	pub amount: BalanceOf<T>,
@@ -89,7 +90,7 @@ pub struct SnapshotInfo<T: Config> {
 impl<T: Config> SnapshotInfo<T> {
 	/// Helper function to set ice_address in builder-pattern way
 	/// so that initilisation can be done in single line
-	pub fn ice_address(mut self, val: AccountIdOf<T>) -> Self {
+	pub fn ice_address(mut self, val: H160) -> Self {
 		self.ice_address = val;
 		self
 	}
@@ -99,7 +100,7 @@ impl<T: Config> SnapshotInfo<T> {
 impl<T: Config> Default for SnapshotInfo<T> {
 	fn default() -> Self {
 		Self {
-			ice_address: AccountIdOf::<T>::default(),
+			ice_address: H160::default(),
 			amount: 0_u32.into(),
 			defi_user: false,
 			vesting_percentage: 0,
@@ -186,6 +187,19 @@ impl<T:Config> From<ArithmeticError> for Error<T>{
 
 }
 
+impl<T:Config> From<SignatureValidationError> for Error<T>{
+
+	fn from(_:SignatureValidationError)-> Self {
+		Error::<T>::InvalidSignature
+	}
+
+}
+
+
+pub fn to_balance<T:Config>(amount:ServerBalance)->BalanceOf<T>{
+	<T::BalanceTypeConversion as Convert<ServerBalance,BalanceOf<T>>>::convert(amount)
+}
+
 /// Known error server might respond with
 #[derive(Deserialize, Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Copy)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -258,3 +272,4 @@ impl Default for AirdropState {
 		}
 	}
 }
+

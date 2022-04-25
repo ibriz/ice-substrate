@@ -18,6 +18,8 @@ pub mod utils;
 // Weight Information related to this palet
 pub mod weights;
 
+pub mod merkle;
+
 /// An identifier for a type of cryptographic key.
 /// For this pallet, account associated with this key must be same as
 /// Key stored in pallet_sudo. So that the calls made from offchain worker
@@ -49,6 +51,7 @@ pub mod pallet {
 	use frame_system::offchain::CreateSignedTransaction;
 	use types::IconVerifiable;
 	use weights::WeightInfo;
+	use sp_core::H160;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -177,19 +180,9 @@ pub mod pallet {
 		ClaimProcessingBlocked,
 
 		ArithmeticError,
+
+		FailedMappingAccount,
 	}
-
-
-	/*     User Claim
-	        origin: OriginFor<T>,
-			icon_address: types::IconAddress,
-			message: Vec<u8>,(H160)
-			icon_signature: types::IconSignature,
-			metamask_signature: types::IceSignature
-			total_amount : u128,
-			defi_user: bool
-	
-	*/
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -203,50 +196,26 @@ pub mod pallet {
 		pub fn dispatch_user_claim(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
-			ice_address: types::AccountIdOf<T>,// can be extracted from message
 			message: Vec<u8>,
 			icon_signature: types::IconSignature,
-			server_response: types::ServerResponse,
+			ice_evm_signature: types::IceEvmSignature,
+			total_amount : types::ServerBalance,
+			defi_user: bool
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			Self::ensure_root_or_offchain(origin.clone())
 				.map_err(|_| Error::<T>::DeniedOperation)?;
-
-			let amount = server_response.get_total_balance::<T>()?;
-
-			// validate that the icon signature is valid
-			<types::AccountIdOf<T> as Into<<T as Config>::VerifiableAccountId>>::into(
-				ice_address.clone(),
-			)
-			.verify_with_icon(&icon_address, &icon_signature, &message)
-			.map_err(|err| {
-				log::trace!(
-					"[Airdrop pallet] Address pair: {:?} was ignored. {}{:?}",
-					(&ice_address, &icon_address),
-					"Signature verification failed with error: ",
-					err
-				);
-				Error::<T>::InvalidSignature
-			})?;
-
-			Self::validate_creditor_fund(amount)?;
-			// write starts from here
-
+			Self::validate_creditor_fund(total_amount)?;
+			Self::validate_icon_address(&icon_address,&icon_signature,&message)?;
+			let ice_evm_address=Self::validate_ice_evm_address()?;
+			let ice_evm_address= H160(ice_evm_address);
 			let mut snapshot =
-				Self::validate_unclaimed(&icon_address, &ice_address, &server_response)?;
-			Self::do_transfer(&server_response, &mut snapshot, &icon_address)?;
+				Self::validate_unclaimed(&icon_address, &ice_evm_address, total_amount,defi_user)?;
+			Self::do_transfer(&mut snapshot, &icon_address,total_amount,defi_user)?;
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
 
 			Ok(Pays::No.into())
 		}
-
-		/*  Exchange Claim
-		    origin: OriginFor<T>,(sudo)
-			icon_address: types::IconAddress,(h160)
-            metamask_address: types::AccountIdOf<T>,(h160)
-			total_amount : u128,
-			defi_user: bool
-		 */
 
 		#[pallet::weight((
 			T::AirdropWeightInfo::dispatch_exchange_claim(),
@@ -256,21 +225,18 @@ pub mod pallet {
 		pub fn dispatch_exchange_claim(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
-			ice_address: types::AccountIdOf<T>,
-			server_response: types::ServerResponse,
+            ice_evm_address: types::IceEvmAddress,
+			total_amount : types::ServerBalance,
+			defi_user: bool
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
-			Self::validate_whitelisted(&icon_address)?;
-
-			// check creditor balance
-			let amount = server_response.get_total_balance::<T>()?;
-			Self::validate_creditor_fund(amount)?;
+			Self::validate_whitelisted(&ice_evm_address.0)?;
+			Self::validate_creditor_fund(total_amount)?;
 
 			// check if claim has already been processed
-			let mut snapshot =
-				Self::validate_unclaimed(&icon_address, &ice_address, &server_response)?;
-			Self::do_transfer(&server_response, &mut snapshot, &icon_address)?;
+			let mut snapshot =Self::validate_unclaimed(&icon_address, &ice_evm_address,total_amount,defi_user)?;
+			Self::do_transfer(&mut snapshot, &icon_address,total_amount,defi_user)?;
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
 			Ok(Pays::No.into())
 		}
@@ -385,8 +351,9 @@ pub mod pallet {
 
 		pub fn validate_unclaimed(
 			icon_address: &types::IconAddress,
-			ice_address: &types::AccountIdOf<T>,
-			server_response: &types::ServerResponse,
+			ice_address: &H160,
+			amount: types::ServerBalance,
+			defi_user:bool,
 		) -> Result<types::SnapshotInfo<T>, Error<T>> {
 			let snapshot = Self::get_icon_snapshot_map(icon_address);
 			if let Some(saved) = snapshot {
@@ -396,19 +363,20 @@ pub mod pallet {
 			}
 			let mut new_snapshot =
 				types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
-			let amount = server_response.get_total_balance::<T>()?;
-			new_snapshot.defi_user = server_response.defi_user;
-			new_snapshot.amount = amount;
+			
+			new_snapshot.defi_user = defi_user;
+			new_snapshot.amount = types::to_balance::<T>(amount);
 
 			<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
 
 			Ok(new_snapshot)
 		}
 
-		pub fn validate_creditor_fund(amount: types::BalanceOf<T>) -> Result<(), Error<T>> {
+		pub fn validate_creditor_fund(amount: types::ServerBalance) -> Result<(), Error<T>> {
 			use sp_std::cmp::Ordering;
 			let creditor_balance =
 				<T as Config>::Currency::free_balance(&Self::get_creditor_account());
+			let amount = types::to_balance::<T>(amount);
 			let ordering = creditor_balance.cmp(&amount);
 			if let Ordering::Less = ordering {
 				Self::deposit_event(Event::<T>::CreditorBalanceLow);
@@ -419,6 +387,20 @@ pub mod pallet {
 
 		pub fn validate_whitelisted(icon_address: &types::IconAddress) -> Result<bool, Error<T>> {
 			Self::get_exchange_account(icon_address).ok_or_else(|| Error::<T>::DeniedOperation)
+		}
+
+		pub fn validate_icon_address(icon_address:&types::IconAddress,signature:&types::IconSignature,payload:&[u8])->Result<(),Error<T>>{
+			let recovered_key = utils::recover_address(signature, payload)?;
+			ensure!(
+				recovered_key == icon_address.as_slice(),
+				Error::<T>::InvalidSignature
+			);
+			Ok(())
+
+		}
+
+		pub fn validate_ice_evm_address()->Result<[u8;20],Error<T>>{
+			return Ok([0;20])
 		}
 
 		/// Split total amount to chunk of 3 amount
@@ -454,22 +436,23 @@ pub mod pallet {
 		}
 
 		pub fn do_transfer(
-			server_response: &types::ServerResponse,
 			snapshot: &mut types::SnapshotInfo<T>,
 			icon_address: &types::IconAddress,
+			total_amount:types::ServerBalance,
+			defi_user:bool,
 		) -> Result<(), DispatchError> {
 			// TODO: put more relaible value
 			const BLOCKS_IN_YEAR: u32 = 10_000u32;
 			// Block number after which enable to do vesting
 			const VESTING_APPLICABLE_FROM: u32 = 100u32;
-
-			let claimer = snapshot.ice_address.clone();
+            let mut account_id  = utils::into_account_id(snapshot.ice_address.clone());
+			let account_bytes:[u8;32] =*account_id.as_mut();
+			let claimer = types::AccountIdOf::<T>::decode(&mut &account_bytes[..])
+			             .map_err(|_|Error::<T>::FailedMappingAccount)?;
 			let creditor = Self::get_creditor_account();
 
-			let total_amount = server_response.get_total()?;
-
 			let (mut instant_amount, vesting_amount) =
-				Self::get_splitted_amounts(total_amount, server_response.defi_user)?;
+				Self::get_splitted_amounts(total_amount, defi_user)?;
 
 			let (transfer_shcedule, remainding_amount) = utils::new_vesting_with_deadline::<
 				T,
@@ -629,6 +612,8 @@ pub mod pallet {
 			}
 		}
 	}
+
+	
 }
 
 pub mod airdrop_crypto {

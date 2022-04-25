@@ -5,6 +5,8 @@ use sp_runtime::{
 	traits::{BlakeTwo256, Bounded, CheckedDiv, Convert, Saturating},
 	AccountId32,
 };
+use sp_std::vec::Vec;
+use codec::alloc::string::String;
 
 /// Reuturns an optional vesting schedule which when applied release given amount
 /// which will be complete in given block. If
@@ -296,19 +298,139 @@ pub fn eth_recover(s: &[u8; 65], what: &[u8], extra: &[u8]) -> Option<Vec<u8>> {
 	Some(res.to_vec())
 }
 
-pub fn eth_recover_compressed() {
-	use sp_core::{ecdsa, keccak_256, Pair};
-	use sp_io::crypto::secp256k1_ecdsa_recover_compressed;
+// pub fn byte_to_hex(byte:&u8)->String{
+	
+// 	let hex= format!("{:02x}", byte);
+// 	hex
 
-	let pair = ecdsa::Pair::from_string(&format!("//{}", 1), None).unwrap();
-	let hash = keccak_256(b"Hello");
-	let signature = pair.sign_prehashed(&hash);
+// }
+pub fn to_hex_string<T: Clone + Into<Vec<u8>>>(bytes: &T) -> String {
+   let vec:Vec<u8>= bytes.clone().into();
+   hex::encode(&vec)
+	
+}
 
-	if let Ok(recovered_raw) = secp256k1_ecdsa_recover_compressed(&signature.0, &hash) {
-		let recovered = ecdsa::Public::from_raw(recovered_raw);
-		// Assert that we recovered the correct PK.
-		assert_eq!(pair.public(), recovered);
-	} else {
-		panic!("recovery failed ...!");
-	}
+
+// pub fn eth_recover_compressed() {
+// 	use sp_core::{ecdsa, keccak_256, Pair};
+// 	use sp_io::crypto::secp256k1_ecdsa_recover_compressed;
+
+// 	let pair = ecdsa::Pair::from_string(&format!("//{}", 1), None).unwrap();
+// 	let hash = keccak_256(b"Hello");
+// 	let signature = pair.sign_prehashed(&hash);
+
+// 	if let Ok(recovered_raw) = secp256k1_ecdsa_recover_compressed(&signature.0, &hash) {
+// 		let recovered = ecdsa::Public::from_raw(recovered_raw);
+// 		// Assert that we recovered the correct PK.
+// 		assert_eq!(pair.public(), recovered);
+// 	} else {
+// 		panic!("recovery failed ...!");
+// 	}
+// }
+
+// function to verify proof of merkel path
+
+
+pub mod indices {
+use codec::alloc::collections::BTreeMap;
+use sp_std::vec::Vec;
+
+pub fn is_left_index(index: usize) -> bool {
+    index % 2 == 0
+}
+
+pub fn get_sibling_index(index: usize) -> usize {
+    if is_left_index(index) {
+        // Right sibling index
+        return index + 1;
+    }
+    // Left sibling index
+    index - 1
+}
+
+pub fn sibling_indices(indices: &[usize]) -> Vec<usize> {
+    indices.iter().cloned().map(get_sibling_index).collect()
+}
+
+pub fn parent_index(index: usize) -> usize {
+    if is_left_index(index) {
+        return index / 2;
+    }
+    get_sibling_index(index) / 2
+}
+
+pub fn parent_indices(indices: &[usize]) -> Vec<usize> {
+    let mut parents: Vec<usize> = indices.iter().cloned().map(parent_index).collect();
+    parents.dedup();
+    parents
+}
+
+pub fn tree_depth(leaves_count: usize) -> usize {
+    if leaves_count == 1 {
+        1
+    } else {
+        let val = micromath::F32(leaves_count as f32);
+        val.log2().ceil().0 as usize
+    }
+}
+
+pub fn uneven_layers(tree_leaves_count: usize) -> BTreeMap<usize, usize> {
+    let mut leaves_count = tree_leaves_count;
+    let depth = tree_depth(tree_leaves_count);
+
+    let mut uneven_layers = BTreeMap::new();
+
+    for index in 0..depth {
+        let uneven_layer = leaves_count % 2 != 0;
+        if uneven_layer {
+            uneven_layers.insert(index, leaves_count);
+        }
+        leaves_count = div_ceil(leaves_count, 2);
+    }
+
+    uneven_layers
+}
+
+/// Returns layered proof indices
+pub fn proof_indices_by_layers(
+    sorted_leaf_indices: &[usize],
+    leaves_count: usize,
+) -> Vec<Vec<usize>> {
+    let depth = tree_depth(leaves_count);
+    let uneven_layers = uneven_layers(leaves_count);
+
+    let mut layer_nodes = sorted_leaf_indices.to_vec();
+    let mut proof_indices: Vec<Vec<usize>> = Vec::new();
+
+    for layer_index in 0..depth {
+        let mut sibling_indices = sibling_indices(&layer_nodes);
+        // The last node of that layer doesn't have another hash to the right, so no need to include
+        // that index
+        if let Some(leaves_count) = uneven_layers.get(&layer_index) {
+            if let Some(layer_last_node_index) = layer_nodes.last() {
+                if *layer_last_node_index == leaves_count - 1 {
+                    sibling_indices.pop();
+                }
+            }
+        }
+
+        // Figuring out indices that are already siblings and do not require additional hash
+        // to calculate the parent
+        let proof_nodes_indices = difference(&sibling_indices, &layer_nodes);
+
+        proof_indices.push(proof_nodes_indices);
+        // Passing parent nodes indices to the next iteration cycle
+        layer_nodes = parent_indices(&layer_nodes);
+    }
+
+    proof_indices
+}
+
+pub fn div_ceil(x: usize, y: usize) -> usize {
+    x / y + if x % y != 0 { 1 } else { 0 }
+}
+pub fn difference<T: Clone + PartialEq>(a: &[T], b: &[T]) -> Vec<T> {
+    a.iter().cloned().filter(|x| !b.contains(x)).collect()
+}
+
 }
