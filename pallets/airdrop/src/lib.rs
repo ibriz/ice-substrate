@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 pub use pallet::*;
+
 #[cfg(test)]
 pub mod mock;
 
@@ -20,6 +21,8 @@ pub mod weights;
 
 pub mod merkle;
 
+use hex_literal::hex;
+
 /// An identifier for a type of cryptographic key.
 /// For this pallet, account associated with this key must be same as
 /// Key stored in pallet_sudo. So that the calls made from offchain worker
@@ -35,6 +38,10 @@ pub const OFFCHAIN_WORKER_BLOCK_GAP: u32 = 3;
 // Maximum number of time to retry a failed processing of claim entry
 // There is NO point of seeting this to high value
 pub const DEFAULT_RETRY_COUNT: u8 = 2;
+
+pub const MERKLE_ROOT: [u8;32] =hex!("1b0e542a750f8cbdc5fe4a1b75999a0e9a2caa15a88798dc24ee123e742c2ce1");
+
+pub const MERKLE_LEAF_COUNT: usize =100000;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -52,6 +59,7 @@ pub mod pallet {
 	use types::IconVerifiable;
 	use weights::WeightInfo;
 	use sp_core::H160;
+	use crate::merkle::{Blake2bAlgorithm,MerkleProof};
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -182,6 +190,8 @@ pub mod pallet {
 		ArithmeticError,
 
 		FailedMappingAccount,
+
+		InvalidMerkleProof,
 	}
 
 	#[pallet::call]
@@ -401,6 +411,20 @@ pub mod pallet {
 
 		pub fn validate_ice_evm_address()->Result<[u8;20],Error<T>>{
 			return Ok([0;20])
+		}
+
+		pub fn validate_merkle_proof(proof_hashes:types::MerkleProofs,leaf_index:u32,leaf_hash:types::MerkleHash)-> Result<bool,Error<T>> {
+			use crate::MERKLE_ROOT;
+			use crate::MERKLE_LEAF_COUNT;
+			let merkle_proof =MerkleProof::<Blake2bAlgorithm>::new(proof_hashes.to_vec());
+			let root = MERKLE_ROOT.clone();
+			let leaf_index: usize=leaf_index.try_into().map_err(|_e| Error::<T>::FailedConversion)?;
+			let is_valid= merkle_proof.verify(root,&[leaf_index],&[leaf_hash],MERKLE_LEAF_COUNT);
+			if !is_valid{
+				return Err(Error::<T>::InvalidMerkleProof);
+			}
+		    Ok(true)
+
 		}
 
 		/// Split total amount to chunk of 3 amount
