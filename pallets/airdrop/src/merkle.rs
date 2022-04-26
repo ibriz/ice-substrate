@@ -4,12 +4,11 @@ use core::fmt::{Debug};
 
 use crate::utils;
 use codec::alloc::string::String;
-use sha2::{Digest, Sha256};
+
 use sp_std::vec::Vec;
 use sp_runtime::traits::Convert;
 use frame_support::pallet_prelude::*;
 use sp_std::prelude::*;
-use sp_core::Blake2Hasher;
 
 #[derive(Eq, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -328,9 +327,8 @@ impl Hasher for Blake2bAlgorithm {
     type Hash = [u8;32];
 
     fn hash(data: &[u8]) -> [u8;32] {
-        use sp_core::Hasher;
-        let val= Blake2Hasher::hash(data);
-        let val= val.0;
+        use sp_io::hashing::blake2_256;
+        let val= blake2_256(data);
         return val
         
     }
@@ -354,20 +352,21 @@ impl Hasher for Blake2bAlgorithm {
 }
 
 
-#[derive(Clone)]
-pub struct Sha256Algorithm {}
+// #[derive(Clone)]
+// pub struct Sha256Algorithm {}
 
-impl Hasher for Sha256Algorithm{
-    type Hash=[u8;32];
+// impl Hasher for Sha256Algorithm{
+//     type Hash=[u8;32];
 
-    fn hash(data: &[u8]) -> Self::Hash {
-        let mut hasher = Sha256::new();
-	  hasher.update(data);
-	  let mut output = [0u8; 32];
-	  output.copy_from_slice(&hasher.finalize());
-	  output
-    }
-}
+//     fn hash(data: &[u8]) -> Self::Hash {
+  //   use sha2::{Digest, Sha256};
+//         let mut hasher = Sha256::new();
+// 	  hasher.update(data);
+// 	  let mut output = [0u8; 32];
+// 	  output.copy_from_slice(&hasher.finalize());
+// 	  output
+//     }
+// }
 
 
 
@@ -377,18 +376,48 @@ mod tests {
 
     use super::*;
 
+    // #[test]
+    // fn test_tree_sha256(){
+    //     let leaf_values = ["a", "b", "c", "d", "e", "f"];
+    //     let expected_root_hex = "1f7379539707bcaea00564168d1d4d626b09b73f8a2a365234c62d763f854da2";
+    //     let leaf_hashes = leaf_values
+    //         .iter()
+    //         .map(|x| Sha256Algorithm::hash(x.as_bytes()))
+    //         .collect::<Vec<[u8;32]>>();
+
+    //     let tree=PartialTree::<Sha256Algorithm>::from_leaves(&leaf_hashes).unwrap();
+    //     let root_val=tree.root().unwrap();
+    //     assert_eq!(expected_root_hex,hex::encode(root_val));
+    // }
+
     #[test]
-    fn test_tree_sha256(){
+    fn test_tree_blake2b(){
         let leaf_values = ["a", "b", "c", "d", "e", "f"];
-        let expected_root_hex = "1f7379539707bcaea00564168d1d4d626b09b73f8a2a365234c62d763f854da2";
+        let expected_root_hex = "1b0e542a750f8cbdc5fe4a1b75999a0e9a2caa15a88798dc24ee123e742c2ce1";
         let leaf_hashes = leaf_values
             .iter()
-            .map(|x| Sha256Algorithm::hash(x.as_bytes()))
+            .map(|x| Blake2bAlgorithm::hash(x.as_bytes()))
             .collect::<Vec<[u8;32]>>();
 
-        let tree=PartialTree::<Sha256Algorithm>::from_leaves(&leaf_hashes).unwrap();
+        let tree=PartialTree::<Blake2bAlgorithm>::from_leaves(&leaf_hashes).unwrap();
         let root_val=tree.root().unwrap();
         assert_eq!(expected_root_hex,hex::encode(root_val));
+        let proof_hashes=[
+            "00d116515f37a4c0ac872096c8b7412c80693cc5cee2e99e83a7e760dc1ece91",
+            "43145816c4f1efa1c8bda6dc342028e63cec088c591dfebac0ef70b4825b3c71",
+            "435d24700be0e3213ed5d4ce231438541fb421292ffbec3916e6c9e79eec17e5"
+          ].into_iter().map(|h|{
+              let mut bytes:[u8;32]=[0u8;32];
+            hex::decode_to_slice(h,&mut bytes as &mut [u8]).unwrap();
+            bytes
+          }).collect::<Vec<[u8;32]>>();
+
+        // verify proof for "c" index 2
+       let proof =MerkleProof::<Blake2bAlgorithm>::new(proof_hashes);
+       let is_valid= proof.verify(root_val.clone(), &[2], &[leaf_hashes[2]], leaf_hashes.len());
+       assert_eq!(is_valid,true);
+
+
     }
 }
 
