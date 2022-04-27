@@ -8,7 +8,7 @@ mod user_claim;
 pub mod prelude {
 	pub use super::{
 		assert_tx_call, credit_creditor, get_last_event, minimal_test_ext, not_offchain_account,
-		offchain_test_ext, put_response, run_to_block, samples,
+		put_response, run_to_block, samples,
 	};
 	pub use crate as pallet_airdrop;
 	pub use crate::tests;
@@ -97,38 +97,6 @@ pub fn minimal_test_ext() -> sp_io::TestExternalities {
 		t.into()
 }
 
-pub fn offchain_test_ext() -> (
-	sp_io::TestExternalities,
-	std::sync::Arc<parking_lot::RwLock<sp_core::offchain::testing::OffchainState>>,
-	std::sync::Arc<parking_lot::RwLock<sp_core::offchain::testing::PoolState>>,
-	<Test as frame_system::offchain::SigningTypes>::Public,
-) {
-	use sp_core::offchain::TransactionPoolExt;
-	use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
-	use sp_runtime::RuntimeAppPublic;
-	use std::sync::Arc;
-
-	const PHRASE: &str =
-		"news slush supreme milk chapter athlete soap sausage put clutch what kitten";
-	let keystore = KeyStore::new();
-	let public_key = SyncCryptoStore::sr25519_generate_new(
-		&keystore,
-		crate::airdrop_crypto::Public::ID,
-		Some(&format!("{}/abcdefg", PHRASE)),
-	)
-	.unwrap();
-
-	let mut test_ext = minimal_test_ext();// sp_io::TestExternalities::default();
-	let (pool, pool_state) = sp_core::offchain::testing::TestTransactionPoolExt::new();
-	let (offchain, offchain_state) = sp_core::offchain::testing::TestOffchainExt::new();
-
-	test_ext.register_extension(sp_core::offchain::OffchainWorkerExt::new(offchain));
-	test_ext.register_extension(TransactionPoolExt::new(pool));
-	test_ext.register_extension(KeystoreExt(Arc::new(keystore)));
-
-	(test_ext, offchain_state, pool_state, public_key)
-}
-
 // Return the same address if it is not sudo
 pub fn not_offchain_account(account: types::AccountIdOf<Test>) -> types::AccountIdOf<Test> {
 	if account != AirdropModule::get_offchain_account().unwrap_or_default() {
@@ -207,13 +175,13 @@ pub fn assert_tx_call(expected_call: &[&PalletCall], pool_state: &testing::PoolS
 	assert_eq!(expected_call_encoded, all_calls_in_pool);
 }
 
-pub fn credit_creditor(balance: u32) {
+pub fn credit_creditor(balance: u64) {
 	let creditor_account = AirdropModule::get_creditor_account();
 	let deposit_res = <Test as pallet_airdrop::Config>::Currency::set_balance(
 		mock::Origin::root(),
 		creditor_account,
 		balance.into(),
-		10_000_u32.into(),
+		0u32.into(),
 	);
 
 	assert_ok!(deposit_res);

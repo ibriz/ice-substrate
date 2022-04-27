@@ -34,8 +34,6 @@ pub type IceEvmAddress = H160;
 /// Type that represent Icon signed message
 pub type IconSignature = [u8; 65];
 
-pub type IceEvmSignature = [u8; 65];
-
 ///
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
 
@@ -66,7 +64,7 @@ pub struct SnapshotInfo<T: Config> {
 	/// Icon address of this snapshot
 	// TODO:
 	// change this to [u8; _]
-	pub ice_address: H160,
+	pub ice_address: AccountIdOf<T>,
 
 	/// Total airdroppable-amount this icon_address hold
 	pub amount: BalanceOf<T>,
@@ -94,7 +92,7 @@ pub struct SnapshotInfo<T: Config> {
 impl<T: Config> SnapshotInfo<T> {
 	/// Helper function to set ice_address in builder-pattern way
 	/// so that initilisation can be done in single line
-	pub fn ice_address(mut self, val: H160) -> Self {
+	pub fn ice_address(mut self, val:AccountIdOf<T>) -> Self {
 		self.ice_address = val;
 		self
 	}
@@ -104,7 +102,7 @@ impl<T: Config> SnapshotInfo<T> {
 impl<T: Config> Default for SnapshotInfo<T> {
 	fn default() -> Self {
 		Self {
-			ice_address: H160::default(),
+			ice_address: AccountIdOf::<T>::default(),
 			amount: 0_u32.into(),
 			defi_user: false,
 			vesting_percentage: 0,

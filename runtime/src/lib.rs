@@ -313,7 +313,7 @@ impl pallet_airdrop::Config for Runtime {
 	// TODO:
 	// Ensure that using app_crypto! generated pairs are safe to use
 	// Also ensure effect of (not)enabling full-crypto feature
-	type AuthorityId = pallet_airdrop::airdrop_crypto::AuthId;
+	// type AuthorityId = pallet_airdrop::airdrop_crypto::AuthId;
 	type Creditor = AirdropCreditor;
 	type VestingModule = Runtime;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;

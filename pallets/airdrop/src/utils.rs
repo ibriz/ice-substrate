@@ -278,57 +278,13 @@ pub fn into_account_id(address: H160) -> AccountId32 {
 	AccountId32::from(Into::<[u8; 32]>::into(hash))
 }
 
-fn hash_personal(what: &[u8], extra: &[u8]) -> Vec<u8> {
-	let mut v = b"\x19Ethereum Signed Message:\n65".to_vec();
-	v.extend_from_slice(what);
-	v.extend_from_slice(extra);
-	v
-}
 
-pub fn eth_recover(s: &[u8; 65], what: &[u8], extra: &[u8]) -> Option<Vec<u8>> {
-	use sp_io::{
-		crypto::secp256k1_ecdsa_recover, crypto::secp256k1_ecdsa_recover_compressed,
-		hashing::keccak_256,
-	};
-	let msg = keccak_256(&hash_personal(&what,&extra));
-	let mut res = [0; 20];
-	// res.copy_from_slice(&keccak_256(&secp256k1_ecdsa_recover(&s, &msg).ok()?[..])[12..]);
-	// let res =recover_address(s,&msg).ok()?;
-	let res = secp256k1_ecdsa_recover_compressed(s, &msg).ok().unwrap();
-	Some(res.to_vec())
-}
 
-// pub fn byte_to_hex(byte:&u8)->String{
-	
-// 	let hex= format!("{:02x}", byte);
-// 	hex
-
-// }
 pub fn to_hex_string<T: Clone + Into<Vec<u8>>>(bytes: &T) -> String {
    let vec:Vec<u8>= bytes.clone().into();
    hex::encode(&vec)
 	
 }
-
-
-// pub fn eth_recover_compressed() {
-// 	use sp_core::{ecdsa, keccak_256, Pair};
-// 	use sp_io::crypto::secp256k1_ecdsa_recover_compressed;
-
-// 	let pair = ecdsa::Pair::from_string(&format!("//{}", 1), None).unwrap();
-// 	let hash = keccak_256(b"Hello");
-// 	let signature = pair.sign_prehashed(&hash);
-
-// 	if let Ok(recovered_raw) = secp256k1_ecdsa_recover_compressed(&signature.0, &hash) {
-// 		let recovered = ecdsa::Public::from_raw(recovered_raw);
-// 		// Assert that we recovered the correct PK.
-// 		assert_eq!(pair.public(), recovered);
-// 	} else {
-// 		panic!("recovery failed ...!");
-// 	}
-// }
-
-// function to verify proof of merkel path
 
 
 pub mod indices {

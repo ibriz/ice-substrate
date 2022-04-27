@@ -74,7 +74,7 @@ impl pallet_airdrop::Config for Test {
 	type VerifiableAccountId = AccountId;
 	type Currency = Balances;
 	type FetchIconEndpoint = FetchIconEndpoint;
-	type AuthorityId = crate::airdrop_crypto::AuthId;
+	// type AuthorityId = crate::airdrop_crypto::AuthId;
 	type Creditor = CreditorAccount;
 	type VestingModule = Test;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
@@ -134,16 +134,16 @@ impl pallet_vesting::Config for Test {
 
 /// Implement AppCrypto with airdrop_pallet::AuthId
 /// to enable Keystore with mock accounts (sr25519) pair
-impl
-	frame_system::offchain::AppCrypto<
-		<sp_core::sr25519::Signature as sp_runtime::traits::Verify>::Signer,
-		sp_core::sr25519::Signature,
-	> for crate::airdrop_crypto::AuthId
-{
-	type RuntimeAppPublic = crate::airdrop_crypto::Public;
-	type GenericSignature = sp_core::sr25519::Signature;
-	type GenericPublic = sp_core::sr25519::Public;
-}
+// impl
+// 	frame_system::offchain::AppCrypto<
+// 		<sp_core::sr25519::Signature as sp_runtime::traits::Verify>::Signer,
+// 		sp_core::sr25519::Signature,
+// 	> for crate::airdrop_crypto::AuthId
+// {
+// 	type RuntimeAppPublic = crate::airdrop_crypto::Public;
+// 	type GenericSignature = sp_core::sr25519::Signature;
+// 	type GenericPublic = sp_core::sr25519::Public;
+// }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	system::GenesisConfig::default()

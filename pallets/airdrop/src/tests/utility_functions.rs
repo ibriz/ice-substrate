@@ -60,79 +60,6 @@ fn ensure_root_or_offchain() {
 	});
 }
 
-
-
-//#[test]
-// fn pending_claims_getter() {
-// 	type PendingClaimsOf = types::PendingClaimsOf<Test>;
-// 	use samples::ICON_ADDRESS;
-
-// 	let get_flattened_vec = |mut walker: PendingClaimsOf| {
-// 		let mut res: Vec<(types::BlockNumberOf<Test>, types::IconAddress)> = vec![];
-
-// 		while let Some((bl_num, mut inner_walker)) = walker.next() {
-// 			while let Some(entry) = inner_walker.next() {
-// 				res.push((bl_num, entry));
-// 			}
-// 		}
-
-// 		res
-// 	};
-
-// 	let sample_entries: &[(types::BlockNumberOf<Test>, types::IconAddress)] = &[
-// 		(1_u32.into(), ICON_ADDRESS[0]),
-// 		(1_u32.into(), ICON_ADDRESS[1]),
-// 		(2_u32.into(), ICON_ADDRESS[3]),
-// 		(10_u32.into(), ICON_ADDRESS[2]),
-// 	];
-
-// 	const EMPTY: [(types::BlockNumberOf<Test>, types::IconAddress); 0] = [];
-
-// 	minimal_test_ext().execute_with(|| {
-// 		// When there is nothing in storage it should always return empty entry
-// 		{
-// 			let entries = get_flattened_vec(PendingClaimsOf::new(1_u32.into()..5_u32.into()));
-// 			assert_eq!(EMPTY.to_vec(), entries);
-// 		}
-
-// 		// Make some data entry with dummy retry count
-// 		for (k1, k2) in sample_entries {
-// 			pallet_airdrop::PendingClaims::<Test>::insert(k1, k2, 1_u8);
-// 		}
-
-// 		// Make sure range is treated as exclusive
-// 		{
-// 			let entries = get_flattened_vec(PendingClaimsOf::new(0_u32.into()..1_u32.into()));
-// 			assert_eq!(EMPTY.to_vec(), entries);
-
-// 			let entries = get_flattened_vec(PendingClaimsOf::new(10_u32.into()..10_u32.into()));
-// 			assert_eq!(EMPTY.to_vec(), entries);
-
-// 			let entries = get_flattened_vec(PendingClaimsOf::new(10_u32.into()..20_u32.into()));
-// 			assert_eq!(vec![(10_u32.into(), ICON_ADDRESS[2])], entries);
-// 		}
-
-// 		// Make sure out of range is always empty
-// 		{
-// 			let entries = get_flattened_vec(PendingClaimsOf::new(20_u32.into()..30_u32.into()));
-// 			assert_eq!(EMPTY.to_vec(), entries);
-// 		}
-
-// 		// Make sure correct data is returned
-// 		{
-// 			let entries = get_flattened_vec(PendingClaimsOf::new(1_u32.into()..3_u32.into()));
-// 			assert_eq!(
-// 				vec![
-// 					(1_u32.into(), ICON_ADDRESS[0]),
-// 					(1_u32.into(), ICON_ADDRESS[1]),
-// 					(2_u32.into(), ICON_ADDRESS[3])
-// 				],
-// 				entries
-// 			);
-// 		}
-// 	})
-// }
-
 #[test]
 fn get_vesting_amounts_splitted() {
 	minimal_test_ext().execute_with(|| {
@@ -250,128 +177,131 @@ fn cook_vesting_schedule() {
 	});
 }
 
-//#[test]
-// fn making_vesting_transfer() {
-// 	minimal_test_ext().execute_with(|| {
-// 		run_to_block(3);
+#[test]
+fn making_vesting_transfer() {
+	minimal_test_ext().execute_with(|| {
+		run_to_block(3);
+		let defi_user=true;
+        let amount= 9775129_u64;
+		let icon_address =samples::ICON_ADDRESS[0];
+		type Currency = <Test as pallet_airdrop::Config>::Currency;
+		// Fund creditor
+		credit_creditor(u64::MAX);
+		credit_creditor(u64::MAX);
 
-// 		let server_response = samples::SERVER_DATA[1];
-// 		let icon_address =samples::ICON_ADDRESS[0];
-// 		type Currency = <Test as pallet_airdrop::Config>::Currency;
-// 		// Fund creditor
-// 		credit_creditor(u32::MAX);
-// 		credit_creditor(u32::MAX);
+		{
+			let claimer = samples::ACCOUNT_ID[1];
+			let mut snapshot = types::SnapshotInfo::<Test> {
+				done_instant: false,
+				done_vesting: false,
+				ice_address: claimer.clone(),
+				..Default::default()
+			};
 
-// 		{
-// 			let claimer = samples::ACCOUNT_ID[1];
-// 			let mut snapshot = types::SnapshotInfo::<Test> {
-// 				done_instant: false,
-// 				done_vesting: false,
-// 				ice_address: claimer.clone(),
-// 				..Default::default()
-// 			};
+			assert_ok!(AirdropModule::do_transfer(&mut snapshot,&icon_address,amount,defi_user));
 
-// 			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot,&icon_address));
+			// Ensure all amount is being transferred
+			assert_eq!(9775129_u128, Currency::free_balance(&claimer));
 
-// 			// Ensure all amount is being transferred
-// 			assert_eq!(9775129_u128, Currency::free_balance(&claimer));
+			// Make sure user is getting atleast of instant amount
+			// might get more due to vesting remainder
+			assert!(Currency::usable_balance(&claimer) >= 2932538_u32.into());
 
-// 			// Make sure user is getting atleast of instant amount
-// 			// might get more due to vesting remainder
-// 			assert!(Currency::usable_balance(&claimer) >= 2932538_u32.into());
+			// Make sure flags are updated
+			assert!(snapshot.done_vesting && snapshot.done_instant);
+		}
 
-// 			// Make sure flags are updated
-// 			assert!(snapshot.done_vesting && snapshot.done_instant);
-// 		}
+		// When instant transfer is true but not vesting
+		{
+			let claimer = samples::ACCOUNT_ID[2];
+			let mut snapshot = types::SnapshotInfo::<Test> {
+				done_instant: true,
+				done_vesting: false,
+				ice_address: claimer.clone(),
+				..Default::default()
+			};
 
-// 		// When instant transfer is true but not vesting
-// 		{
-// 			let claimer = samples::ACCOUNT_ID[2];
-// 			let mut snapshot = types::SnapshotInfo::<Test> {
-// 				done_instant: true,
-// 				done_vesting: false,
-// 				ice_address: claimer.clone(),
-// 				..Default::default()
-// 			};
+			assert_ok!(AirdropModule::do_transfer(&mut snapshot,&icon_address,amount,defi_user));
 
-// 			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot,&icon_address));
+			// Ensure amount only accounting to vesting is transfererd
 
-// 			// Ensure amount only accounting to vesting is transfererd
-// 			let expected_transfer = {
-// 				let vesting_amount: types::VestingBalanceOf<Test> =
-// 					AirdropModule::get_splitted_amounts(
-// 						utils::get_response_sum(&server_response).unwrap(),
-// 						server_response.defi_user,
-// 					)
-// 					.unwrap()
-// 					.1;
-// 				let schedule = utils::new_vesting_with_deadline::<Test, 100u32>(
-// 					vesting_amount,
-// 					10_000u32.into(),
-// 				)
-// 				.0
-// 				.unwrap();
+			let expected_transfer = {
+				let vesting_amount: types::VestingBalanceOf<Test> =
+					AirdropModule::get_splitted_amounts(
+						amount,
+						defi_user,
+					)
+					.unwrap()
+					.1;
+				let schedule = utils::new_vesting_with_deadline::<Test, 1u32>(
+					vesting_amount,
+					5256000u32.into(),
+				)
+				.0
+				.unwrap();
 
-// 				schedule.locked()
-// 			};
+				schedule.locked()
+			};
+			let user_balance=Currency::free_balance(&claimer);
+			assert_eq!(expected_transfer, user_balance);
 
-// 			assert_eq!(expected_transfer, Currency::free_balance(&claimer));
+			// Ensure flag is updates
+			assert!(snapshot.done_vesting && snapshot.done_instant);
+		}
 
-// 			// Ensure flag is updates
-// 			assert!(snapshot.done_vesting && snapshot.done_instant);
-// 		}
+		// When vesting is true but not done_instant
+		{
+			let claimer = samples::ACCOUNT_ID[3];
+			let mut snapshot = types::SnapshotInfo::<Test> {
+				done_instant: false,
+				done_vesting: true,
+				ice_address: claimer.clone(),
+				..Default::default()
+			};
 
-// 		// When vesting is true but not done_instant
-// 		{
-// 			let claimer = samples::ACCOUNT_ID[3];
-// 			let mut snapshot = types::SnapshotInfo::<Test> {
-// 				done_instant: false,
-// 				done_vesting: true,
-// 				ice_address: claimer.clone(),
-// 				..Default::default()
-// 			};
+			assert_ok!(AirdropModule::do_transfer(&mut snapshot,&icon_address,amount,defi_user));
 
-// 			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot,&icon_address));
+			// Ensure amount only accounting to instant is transferred
+			let expected_transfer = {
+				let (instant_amount, vesting_amount) = AirdropModule::get_splitted_amounts(
+					amount,
+					defi_user,
+				)
+				.unwrap();
+				let remainder = utils::new_vesting_with_deadline::<Test, 1u32>(
+					vesting_amount,
+					5256000u32.into(),
+				)
+				.1;
 
-// 			// Ensure amount only accounting to instant is transferred
-// 			let expected_transfer = {
-// 				let (instant_amount, vesting_amount) = AirdropModule::get_splitted_amounts(
-// 					utils::get_response_sum(&server_response).unwrap(),
-// 					server_response.defi_user,
-// 				)
-// 				.unwrap();
-// 				let remainder = utils::new_vesting_with_deadline::<Test, 100u32>(
-// 					vesting_amount,
-// 					10_000u32.into(),
-// 				)
-// 				.1;
+				instant_amount + remainder
+			};
+			let user_balance=Currency::free_balance(&claimer);
 
-// 				instant_amount + remainder
-// 			};
-// 			assert_eq!(expected_transfer, Currency::free_balance(&claimer));
+			assert_eq!(expected_transfer, user_balance);
 
-// 			// Ensure flag is updated
-// 			assert!(snapshot.done_vesting && snapshot.done_instant);
-// 		}
+			// Ensure flag is updated
+			assert!(snapshot.done_vesting && snapshot.done_instant);
+		}
 
-// 		// When both are false
-// 		// NOTE: such snapshot will not be passed in actual from complete_transfer
-// 		{
-// 			let claimer = samples::ACCOUNT_ID[4];
-// 			let mut snapshot = types::SnapshotInfo::<Test> {
-// 				done_instant: true,
-// 				done_vesting: true,
-// 				ice_address: claimer.clone(),
-// 				..Default::default()
-// 			};
+		// When both are false
+		// NOTE: such snapshot will not be passed in actual from complete_transfer
+		{
+			let claimer = samples::ACCOUNT_ID[4];
+			let mut snapshot = types::SnapshotInfo::<Test> {
+				done_instant: true,
+				done_vesting: true,
+				ice_address: claimer.clone(),
+				..Default::default()
+			};
 
-// 			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot,&icon_address));
+			assert_ok!(AirdropModule::do_transfer(&mut snapshot,&icon_address,amount,defi_user));
 
-// 			// Ensure amount only accounting to instant is transfererd
-// 			assert_eq!(0_u128, Currency::free_balance(&claimer));
+			// Ensure amount only accounting to instant is transfererd
+			assert_eq!(0_u128, Currency::free_balance(&claimer));
 
-// 			// Ensure flag is updates
-// 			assert!(snapshot.done_vesting && snapshot.done_instant);
-// 		}
-// 	});
-// }
+			// Ensure flag is updates
+			assert!(snapshot.done_vesting && snapshot.done_instant);
+		}
+	});
+}

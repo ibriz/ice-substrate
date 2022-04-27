@@ -59,6 +59,7 @@ pub mod pallet {
 	use types::IconVerifiable;
 	use weights::WeightInfo;
 	use sp_core::H160;
+	use sp_core::sr25519;
 	use crate::merkle::{Blake2bAlgorithm,MerkleProof};
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -85,7 +86,7 @@ pub mod pallet {
 		// type Call: From<Call<Self>>;
 
 		/// The identifier type for an offchain worker.
-		type AuthorityId: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>;
+		// type AuthorityId: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>;
 
 		/// Weight information for extrinsics in this pallet.
 		type AirdropWeightInfo: WeightInfo;
@@ -206,9 +207,9 @@ pub mod pallet {
 		pub fn dispatch_user_claim(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
+			ice_address: types::AccountIdOf<T>,
 			message: Vec<u8>,
 			icon_signature: types::IconSignature,
-			ice_evm_signature: types::IceEvmSignature,
 			total_amount : types::ServerBalance,
 			defi_user: bool
 		) -> DispatchResultWithPostInfo {
@@ -217,10 +218,8 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::DeniedOperation)?;
 			Self::validate_creditor_fund(total_amount)?;
 			Self::validate_icon_address(&icon_address,&icon_signature,&message)?;
-			let ice_evm_address=Self::validate_ice_evm_address()?;
-			let ice_evm_address= H160(ice_evm_address);
 			let mut snapshot =
-				Self::validate_unclaimed(&icon_address, &ice_evm_address, total_amount,defi_user)?;
+				Self::validate_unclaimed(&icon_address, &ice_address, total_amount,defi_user)?;
 			Self::do_transfer(&mut snapshot, &icon_address,total_amount,defi_user)?;
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
 
@@ -235,17 +234,17 @@ pub mod pallet {
 		pub fn dispatch_exchange_claim(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
-            ice_evm_address: types::IceEvmAddress,
+            ice_address: types::AccountIdOf<T>,
 			total_amount : types::ServerBalance,
 			defi_user: bool
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
-			Self::validate_whitelisted(&ice_evm_address.0)?;
+			Self::validate_whitelisted(&icon_address)?;
 			Self::validate_creditor_fund(total_amount)?;
 
 			// check if claim has already been processed
-			let mut snapshot =Self::validate_unclaimed(&icon_address, &ice_evm_address,total_amount,defi_user)?;
+			let mut snapshot =Self::validate_unclaimed(&icon_address, &ice_address,total_amount,defi_user)?;
 			Self::do_transfer(&mut snapshot, &icon_address,total_amount,defi_user)?;
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
 			Ok(Pays::No.into())
@@ -361,7 +360,7 @@ pub mod pallet {
 
 		pub fn validate_unclaimed(
 			icon_address: &types::IconAddress,
-			ice_address: &H160,
+			ice_address: &types::AccountIdOf<T>,
 			amount: types::ServerBalance,
 			defi_user:bool,
 		) -> Result<types::SnapshotInfo<T>, Error<T>> {
@@ -370,9 +369,9 @@ pub mod pallet {
 				if saved.done_vesting && saved.done_instant {
 					return Err(Error::<T>::ClaimAlreadyMade.into());
 				}
+				return Ok(saved);
 			}
-			let mut new_snapshot =
-				types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
+			let mut new_snapshot = types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
 			
 			new_snapshot.defi_user = defi_user;
 			new_snapshot.amount = types::to_balance::<T>(amount);
@@ -407,10 +406,6 @@ pub mod pallet {
 			);
 			Ok(())
 
-		}
-
-		pub fn validate_ice_evm_address()->Result<[u8;20],Error<T>>{
-			return Ok([0;20])
 		}
 
 		pub fn validate_merkle_proof(proof_hashes:types::MerkleProofs,leaf_index:u32,leaf_hash:types::MerkleHash)-> Result<bool,Error<T>> {
@@ -466,13 +461,10 @@ pub mod pallet {
 			defi_user:bool,
 		) -> Result<(), DispatchError> {
 			// TODO: put more relaible value
-			const BLOCKS_IN_YEAR: u32 = 10_000u32;
+			const BLOCKS_IN_YEAR: u32 = 5256000u32;
 			// Block number after which enable to do vesting
-			const VESTING_APPLICABLE_FROM: u32 = 100u32;
-            let mut account_id  = utils::into_account_id(snapshot.ice_address.clone());
-			let account_bytes:[u8;32] =*account_id.as_mut();
-			let claimer = types::AccountIdOf::<T>::decode(&mut &account_bytes[..])
-			             .map_err(|_|Error::<T>::FailedMappingAccount)?;
+			const VESTING_APPLICABLE_FROM: u32 = 1u32;
+            let claimer = snapshot.ice_address.clone();
 			let creditor = Self::get_creditor_account();
 
 			let (mut instant_amount, vesting_amount) =
@@ -584,25 +576,21 @@ pub mod pallet {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	impl<T: Config> Pallet<T> {
-		pub fn init_balance(account: &types::AccountIdOf<T>, free: u32) {
-			<T as Config>::Currency::make_free_balance_be(account, free.into());
+	 impl<T: Config> Pallet<T> {
+		
+		pub fn init_balance(account: &types::AccountIdOf<T>, free: types::ServerBalance) {
+			let amount=<T::BalanceTypeConversion as Convert<_, _>>::convert(free);
+			<T as Config>::Currency::make_free_balance_be(account,amount);
 		}
 
-		pub fn setup_claimer(
-			claimer: types::AccountIdOf<T>,
-			bl_number: types::BlockNumberOf<T>,
-			icon_address: types::IconAddress,
-		) {
-			<T as Config>::Currency::make_free_balance_be(&claimer, 10_00_00_00u32.into());
-
-			let mut snapshot = types::SnapshotInfo::<T>::default();
-
-			snapshot = snapshot.ice_address(claimer.clone());
-
-			<IceSnapshotMap<T>>::insert(&icon_address, snapshot);
-
-			<PendingClaims<T>>::insert(bl_number, &icon_address, 2_u8);
+		pub fn set_creditor_account(
+			new_account: sr25519::Public,
+		){
+			
+			let mut account_bytes=new_account.0.clone();
+			let account= T::AccountId::decode(&mut &account_bytes[..]).unwrap_or_default();
+			
+			<CreditorAccount<T>>::set(Some(account.clone()));
 		}
 	}
 
@@ -640,22 +628,22 @@ pub mod pallet {
 	
 }
 
-pub mod airdrop_crypto {
-	use crate::KEY_TYPE_ID;
-	use codec::alloc::string::String;
-	use sp_runtime::{
-		app_crypto::{app_crypto, sr25519},
-		MultiSignature, MultiSigner,
-	};
+// pub mod airdrop_crypto {
+// 	use crate::KEY_TYPE_ID;
+// 	use codec::alloc::string::String;
+// 	use sp_runtime::{
+// 		app_crypto::{app_crypto, sr25519},
+// 		MultiSignature, MultiSigner,
+// 	};
 
-	app_crypto!(sr25519, KEY_TYPE_ID);
+// 	app_crypto!(sr25519, KEY_TYPE_ID);
 
-	pub struct AuthId;
+// 	pub struct AuthId;
 
-	// implemented for runtime
-	impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for AuthId {
-		type RuntimeAppPublic = Public;
-		type GenericSignature = sp_core::sr25519::Signature;
-		type GenericPublic = sp_core::sr25519::Public;
-	}
-}
+// 	// implemented for runtime
+// 	impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for AuthId {
+// 		type RuntimeAppPublic = Public;
+// 		type GenericSignature = sp_core::sr25519::Signature;
+// 		type GenericPublic = sp_core::sr25519::Public;
+// 	}
+// }
