@@ -38,7 +38,7 @@ pub type IconSignature = [u8; 65];
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
 
 pub type MerkleHash=[u8;32];
-pub type MerkleProofs=[MerkleHash;10];
+pub type MerkleProofs=Vec<MerkleHash>;
 
 
 ///
