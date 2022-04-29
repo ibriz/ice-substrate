@@ -1,4 +1,4 @@
-use crate::mock;
+use crate::{mock, types::{MerkleHash, MerkleProofs}};
 mod signature_validation;
 mod transfer;
 mod utility_functions;
@@ -32,8 +32,9 @@ use mock::System;
 use prelude::*;
 
 pub mod samples {
-	use super::decode_hex;
-	use super::types::{IconAddress, ServerResponse};
+
+use super::decode_hex;
+	use super::types::{IconAddress, ServerResponse,MerkleHash,MerkleProofs};
 	use sp_core::sr25519;
 
 	pub const ACCOUNT_ID: &[sr25519::Public] = &[
@@ -65,6 +66,7 @@ pub mod samples {
 		decode_hex!("ee12463586abb90e6589289a4b9c06ac4516a7ba"),
 		decode_hex!("ee02363546bcc50e643910104321c0623451a65a"),
 	];
+
 }
 
 /// Dummy implementation for IconVerififable trait for test AccountId
@@ -189,4 +191,28 @@ pub fn credit_creditor(balance: u64) {
 		<Test as pallet_airdrop::Config>::Currency::free_balance(&creditor_account),
 		balance.into()
 	);
+}
+
+pub fn to_test_case(sample:(String,Vec<String>))->(MerkleHash,MerkleProofs){
+	let mut  hash_bytes =[0u8; 32];
+	hex::decode_to_slice(sample.0, &mut hash_bytes as &mut [u8]).unwrap();
+	let proofs =sample.1.iter().map(|p|{
+		let mut bytes: [u8; 32] = [0u8; 32];
+				hex::decode_to_slice(p, &mut bytes as &mut [u8]).unwrap();
+				bytes
+
+	}).collect::<Vec<MerkleHash>>();
+	(hash_bytes,proofs)
+}
+
+pub fn get_merkle_proof_sample()->(String,Vec<String>){
+	let sample=(
+		"7fe522d63ebcabfa052eec3647366138c23c9870995f4af94d9b22b8c5923f49".to_owned(),
+		vec![
+			"813340daefd7f1ca705faf8318cf6455632259d113c06e97b70eeeccd43519a9".to_owned(),
+			"409519ab7129397bdc895e4da05871c9725697a5e092addf2fe90f6e795feb8f".to_owned(),
+			"38055bb872670c69ac3461707f8c0b4b8e436eecfc84cfd80db30db3030c489a".to_owned(),
+		],
+	);
+	return sample;
 }

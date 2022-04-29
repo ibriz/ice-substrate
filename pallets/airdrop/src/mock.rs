@@ -8,6 +8,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
 };
+use crate::merkle;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -16,6 +17,16 @@ type Signature = sp_core::sr25519::Signature;
 type Index = u64;
 type BlockNumber = u64;
 type Extrinsic = sp_runtime::testing::TestXt<Call, ()>;
+
+pub struct TestValidator{}
+
+impl merkle::MerkelProofValidator for TestValidator {
+
+	fn validate(icon_address:pallet_airdrop::types::IconAddress, amount:u64, defi_user: bool, root_hash:pallet_airdrop::types::MerkleHash, leaf_hash:pallet_airdrop::types::MerkleHash, proofs:pallet_airdrop::types::MerkleProofs) -> bool {
+		return true;
+	}
+
+}
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -79,6 +90,7 @@ impl pallet_airdrop::Config for Test {
 	type VestingModule = Test;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Test>;
+	type MerkelProofValidator = TestValidator;
 
 }
 
@@ -131,19 +143,6 @@ impl pallet_vesting::Config for Test {
 	type WeightInfo = ();
 	const MAX_VESTING_SCHEDULES: u32 = u32::MAX;
 }
-
-/// Implement AppCrypto with airdrop_pallet::AuthId
-/// to enable Keystore with mock accounts (sr25519) pair
-// impl
-// 	frame_system::offchain::AppCrypto<
-// 		<sp_core::sr25519::Signature as sp_runtime::traits::Verify>::Signer,
-// 		sp_core::sr25519::Signature,
-// 	> for crate::airdrop_crypto::AuthId
-// {
-// 	type RuntimeAppPublic = crate::airdrop_crypto::Public;
-// 	type GenericSignature = sp_core::sr25519::Signature;
-// 	type GenericPublic = sp_core::sr25519::Public;
-// }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	system::GenesisConfig::default()

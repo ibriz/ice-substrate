@@ -1,12 +1,17 @@
-use super::prelude::*;
+use crate::{types::{MerkleProofs, MerkleHash}, tests::get_merkle_proof_sample};
+
+use super::{prelude::*, to_test_case};
 use codec::Decode;
 const VALID_ICON_SIGNATURE:types::IconSignature= decode_hex!("628af708622383d60e1d9d95763cf4be64d0bafa8daebb87847f14fde0db40013105586f0c937ddf0e8913251bf01cf8e0ed82e4f631b666453e15e50d69f3b900");
 const VALID_MESSAGE: &str = "icx_sendTransaction.data.{method.transfer.params.{wallet.da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c}}.dataType.call.from.hxdd9ecb7d3e441d25e8c4f03cd20a80c502f0c374.nid.0x1.nonce.0x1..timestamp.0x5d56f3231f818.to.cx8f87a4ce573a2e1377545feabac48a960e8092bb.version.0x3";
 const VALID_ICON_WALLET: types::IconAddress =decode_hex!("ee1448f0867b90e6589289a4b9c06ac4516a75a9");
 
+
 #[test]
 fn claim_success() {
     let defi_user=true;
+	let sample =get_merkle_proof_sample();
+    let case =to_test_case(sample);
     let amount=10017332_u64;
 	let ofw_account= samples::ACCOUNT_ID[0].into_account();
 	let mut test_ext = minimal_test_ext();
@@ -42,7 +47,9 @@ fn claim_success() {
 			message.to_vec(),
 			icon_signature,
 			amount,
-            defi_user
+            defi_user,
+			case.0,
+			case.1,
 		));
 	});
 }
@@ -51,6 +58,8 @@ fn claim_success() {
 fn insufficient_balance() {
 	let defi_user=true;
     let amount=10017332_u64;
+	let sample =get_merkle_proof_sample();
+    let case =to_test_case(sample);
 	let ofw_account= samples::ACCOUNT_ID[0].into_account();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
@@ -86,7 +95,9 @@ fn insufficient_balance() {
 				message.to_vec(),
 				icon_signature,
 				amount,
-                defi_user
+                defi_user,
+				case.0,
+			case.1,
 			),
 			PalletError::InsufficientCreditorBalance
 		);
@@ -96,7 +107,8 @@ fn insufficient_balance() {
 #[test]
 fn already_claimed() {
 	use codec::Decode;
-
+	let sample =get_merkle_proof_sample();
+    let case =to_test_case(sample);
 	let defi_user=true;
     let amount=10017332_u64;
 	let ofw_account= samples::ACCOUNT_ID[0].into_account();
@@ -139,7 +151,9 @@ fn already_claimed() {
 				message.to_vec(),
 				icon_signature,
 				amount,
-                defi_user
+                defi_user,
+				case.0,
+			    case.1,
 			),
 			PalletError::ClaimAlreadyMade
 		);

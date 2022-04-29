@@ -318,6 +318,8 @@ impl pallet_airdrop::Config for Runtime {
 	type VestingModule = Runtime;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
+
+	type MerkelProofValidator = pallet_airdrop::merkle::AirdropMerkleValidator;
 }
 
 parameter_types! {

@@ -1,11 +1,16 @@
+use crate::{types::{MerkleHash, MerkleProofs}, tests::{to_test_case, get_merkle_proof_sample}};
+
 use super::prelude::*;
 const VALID_ICON_WALLET: types::IconAddress =
 	decode_hex!("ee1448f0867b90e6589289a4b9c06ac4516a75a9");
 
+
 #[test]
 fn claim_success() {
+	
 	use codec::Decode;
-
+	let sample =get_merkle_proof_sample();
+    let case =to_test_case(sample);
 	let defi_user=true;
     let amount=10017332_u64;
 	let mut test_ext = minimal_test_ext();
@@ -33,7 +38,9 @@ fn claim_success() {
 			icon_wallet,
 			ice_address.clone(),
 			amount,
-            defi_user
+            defi_user,
+			case.0,
+			case.1,
 		));
 	});
 }
@@ -41,7 +48,8 @@ fn claim_success() {
 #[test]
 fn insufficient_balance() {
 	use codec::Decode;
-
+	let sample =get_merkle_proof_sample();
+    let case =to_test_case(sample);
 	let defi_user=true;
     let amount=10017332_u64;
 	let mut test_ext = minimal_test_ext();
@@ -70,7 +78,10 @@ fn insufficient_balance() {
 				icon_wallet,
 				ice_address.clone(),
 				amount,
-                defi_user
+                defi_user,
+				case.0,
+			case.1,
+				
 			),
 			PalletError::InsufficientCreditorBalance
 		);
@@ -79,7 +90,8 @@ fn insufficient_balance() {
 #[test]
 fn already_claimed() {
 	use codec::Decode;
-
+	let sample =get_merkle_proof_sample();
+    let case =to_test_case(sample);
 	let defi_user=true;
     let amount=10017332_u64;
 	let mut test_ext = minimal_test_ext();
@@ -115,7 +127,9 @@ fn already_claimed() {
 				icon_wallet,
 				ice_address.clone(),
 				amount,
-                defi_user
+                defi_user,
+				case.0,
+			case.1,
 			),
 			PalletError::ClaimAlreadyMade
 		);
@@ -125,7 +139,8 @@ fn already_claimed() {
 #[test]
 fn only_whitelisted_claim() {
 	use codec::Decode;
-
+	let sample =get_merkle_proof_sample();
+    let case =to_test_case(sample);
 	let defi_user=true;
     let amount=10017332_u64;
 	let mut test_ext = minimal_test_ext();
@@ -158,7 +173,9 @@ fn only_whitelisted_claim() {
 				icon_wallet,
 				ice_address.clone(),
 				amount,
-                defi_user
+                defi_user,
+				case.0,
+			case.1,
 			),
 			PalletError::DeniedOperation
 		);

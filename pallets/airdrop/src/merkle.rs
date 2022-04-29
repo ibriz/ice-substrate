@@ -1,3 +1,4 @@
+use crate::Config;
 use crate::types;
 use codec::alloc::string::String;
 use codec::alloc::string::ToString;
@@ -10,6 +11,40 @@ pub trait Hasher: Clone {
 
 	fn hash(data: &[u8]) -> Self::Hash;
 }
+
+pub trait MerkelProofValidator {
+	fn validate(
+		icon_address:types::IconAddress,
+		amount:u64,
+		defi_user: bool,
+		root_hash:types::MerkleHash,
+		leaf_hash:types::MerkleHash,
+		proofs:types::MerkleProofs)-> bool {
+		let computed_leaf= hex::encode(hash_leaf(icon_address,amount,defi_user));
+		let input_leaf =hex::encode(leaf_hash);
+
+		if computed_leaf.ne(&input_leaf){
+			return false;
+		}
+		let computed_root= hex::encode(proof_root(leaf_hash,proofs));
+		let root_hex = hex::encode(root_hash);
+
+		if computed_root.ne(&root_hex){
+			return false;
+		}
+
+
+		return true;
+		
+
+	}
+}
+
+pub struct AirdropMerkleValidator {}
+
+impl MerkelProofValidator for AirdropMerkleValidator{}
+
+
 
 #[derive(Clone)]
 pub struct Blake2bAlgorithm {}
@@ -142,7 +177,7 @@ mod tests {
 		assert_eq!(result, [arr2, arr1].concat());
 	}
 
-	fn verify_proof_case(root: &str, leaf: &str, proofs: Vec<&str>) {
+	pub fn verify_proof_case(root: &str, leaf: &str, proofs: Vec<&str>) {
 		let mut leaf_hash = [0u8; 32];
 		hex::decode_to_slice(leaf, &mut leaf_hash as &mut [u8]).unwrap();
 		let proofs = proofs

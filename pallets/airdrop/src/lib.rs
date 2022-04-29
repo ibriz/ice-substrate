@@ -39,7 +39,7 @@ pub const OFFCHAIN_WORKER_BLOCK_GAP: u32 = 3;
 // There is NO point of seeting this to high value
 pub const DEFAULT_RETRY_COUNT: u8 = 2;
 
-pub const MERKLE_ROOT: &str="1b0e542a750f8cbdc5fe4a1b75999a0e9a2caa15a88798dc24ee123e742c2ce1";
+pub const MERKLE_ROOT: [u8;32] =hex_literal::hex!("1b0e542a750f8cbdc5fe4a1b75999a0e9a2caa15a88798dc24ee123e742c2ce1");
 
 
 #[frame_support::pallet]
@@ -60,6 +60,7 @@ pub mod pallet {
 	use sp_core::H160;
 	use sp_core::sr25519;
 	use crate::merkle;
+	use crate::merkle::MerkelProofValidator;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -104,6 +105,8 @@ pub mod pallet {
 		/// This account should be credited enough to supply fund for all claim requests
 		#[pallet::constant]
 		type Creditor: Get<frame_support::PalletId>;
+
+		type MerkelProofValidator: merkle::MerkelProofValidator;
 	}
 
 	#[pallet::pallet]
@@ -210,7 +213,9 @@ pub mod pallet {
 			message: Vec<u8>,
 			icon_signature: types::IconSignature,
 			total_amount : types::ServerBalance,
-			defi_user: bool
+			defi_user: bool,
+			leaf_hash:types::MerkleHash,
+			proofs: types::MerkleProofs,
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			Self::ensure_root_or_offchain(origin.clone())
@@ -235,7 +240,9 @@ pub mod pallet {
 			icon_address: types::IconAddress,
             ice_address: types::AccountIdOf<T>,
 			total_amount : types::ServerBalance,
-			defi_user: bool
+			defi_user: bool,
+			leaf_hash:types::MerkleHash,
+			proofs: types::MerkleProofs,
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
@@ -407,9 +414,20 @@ pub mod pallet {
 
 		}
 
-		pub fn validate_merkle_proof(leaf_hash:types::MerkleHash,proof_hashes: types::MerkleProofs)-> Result<bool,Error<T>> {
-			let calculated_root= hex::encode(merkle::proof_root(leaf_hash,proof_hashes));
-			if calculated_root.ne(crate::MERKLE_ROOT){
+		pub fn validate_merkle_proof(
+			icon_address:types::IconAddress,
+			amount:types::ServerBalance,
+			defi_user:bool, 
+			leaf_hash:types::MerkleHash,
+			proof_hashes: types::MerkleProofs)-> Result<bool,Error<T>> {
+			let is_valid_proof= <T as Config>::MerkelProofValidator::validate(
+				icon_address,
+				amount,
+				defi_user,
+				crate::MERKLE_ROOT,
+				leaf_hash,
+				proof_hashes);
+			if !is_valid_proof {
 				return Err(Error::<T>::InvalidMerkleProof);
 			}
 			
