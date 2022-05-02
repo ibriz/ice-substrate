@@ -22,7 +22,7 @@ pub struct TestValidator{}
 
 impl merkle::MerkelProofValidator for TestValidator {
 
-	fn validate(icon_address:pallet_airdrop::types::IconAddress, amount:u64, defi_user: bool, root_hash:pallet_airdrop::types::MerkleHash, leaf_hash:pallet_airdrop::types::MerkleHash, proofs:pallet_airdrop::types::MerkleProofs) -> bool {
+	fn validate(icon_address:&pallet_airdrop::types::IconAddress, amount:u64, defi_user: bool, root_hash:pallet_airdrop::types::MerkleHash, leaf_hash:pallet_airdrop::types::MerkleHash, proofs:pallet_airdrop::types::MerkleProofs) -> bool {
 		return true;
 	}
 

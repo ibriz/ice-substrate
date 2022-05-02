@@ -39,7 +39,7 @@ pub const OFFCHAIN_WORKER_BLOCK_GAP: u32 = 3;
 // There is NO point of seeting this to high value
 pub const DEFAULT_RETRY_COUNT: u8 = 2;
 
-pub const MERKLE_ROOT: [u8;32] =hex_literal::hex!("1b0e542a750f8cbdc5fe4a1b75999a0e9a2caa15a88798dc24ee123e742c2ce1");
+pub const MERKLE_ROOT: [u8;32] =hex_literal::hex!("4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672");
 
 
 #[frame_support::pallet]
@@ -220,6 +220,7 @@ pub mod pallet {
 			// Make sure its callable by sudo or offchain
 			Self::ensure_root_or_offchain(origin.clone())
 				.map_err(|_| Error::<T>::DeniedOperation)?;
+			Self::validate_merkle_proof(&icon_address,total_amount,defi_user,leaf_hash,proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
 			Self::validate_icon_address(&icon_address,&icon_signature,&message)?;
 			let mut snapshot =
@@ -247,6 +248,7 @@ pub mod pallet {
 			// Make sure its callable by sudo or offchain
 			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
 			Self::validate_whitelisted(&icon_address)?;
+			Self::validate_merkle_proof(&icon_address,total_amount,defi_user,leaf_hash,proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
 
 			// check if claim has already been processed
@@ -387,6 +389,7 @@ pub mod pallet {
 			Ok(new_snapshot)
 		}
 
+		
 		pub fn validate_creditor_fund(amount: types::ServerBalance) -> Result<(), Error<T>> {
 			use sp_std::cmp::Ordering;
 			let creditor_balance =
@@ -415,7 +418,7 @@ pub mod pallet {
 		}
 
 		pub fn validate_merkle_proof(
-			icon_address:types::IconAddress,
+			icon_address: &types::IconAddress,
 			amount:types::ServerBalance,
 			defi_user:bool, 
 			leaf_hash:types::MerkleHash,
@@ -641,22 +644,3 @@ pub mod pallet {
 	
 }
 
-// pub mod airdrop_crypto {
-// 	use crate::KEY_TYPE_ID;
-// 	use codec::alloc::string::String;
-// 	use sp_runtime::{
-// 		app_crypto::{app_crypto, sr25519},
-// 		MultiSignature, MultiSigner,
-// 	};
-
-// 	app_crypto!(sr25519, KEY_TYPE_ID);
-
-// 	pub struct AuthId;
-
-// 	// implemented for runtime
-// 	impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for AuthId {
-// 		type RuntimeAppPublic = Public;
-// 		type GenericSignature = sp_core::sr25519::Signature;
-// 		type GenericPublic = sp_core::sr25519::Public;
-// 	}
-// }
