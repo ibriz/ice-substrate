@@ -16,7 +16,7 @@ fn claim_success() {
 	let ofw_account= samples::ACCOUNT_ID[0].into_account();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
-		assert_ok!(AirdropModule::set_offchain_account(
+		assert_ok!(AirdropModule::set_airdrop_server_account(
 			Origin::root(),
 			ofw_account
 		));
@@ -41,7 +41,7 @@ fn claim_success() {
 		.unwrap();
 
 		assert_ok!(AirdropModule::dispatch_user_claim(
-			Origin::signed(AirdropModule::get_offchain_account().unwrap()),
+			Origin::signed(AirdropModule::get_airdrop_server_account().unwrap()),
 			icon_wallet,
 			ice_address.clone(),
 			message.to_vec(),
@@ -62,7 +62,7 @@ fn insufficient_balance() {
 	let ofw_account= samples::ACCOUNT_ID[0].into_account();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
-		assert_ok!(AirdropModule::set_offchain_account(
+		assert_ok!(AirdropModule::set_airdrop_server_account(
 			Origin::root(),
 			ofw_account
 		));
@@ -88,7 +88,7 @@ fn insufficient_balance() {
 
 		assert_err!(
 			AirdropModule::dispatch_user_claim(
-				Origin::signed(AirdropModule::get_offchain_account().unwrap()),
+				Origin::signed(AirdropModule::get_airdrop_server_account().unwrap()),
 				icon_wallet,
 				ice_address.clone(),
 				message.to_vec(),
@@ -112,7 +112,7 @@ fn already_claimed() {
 	let ofw_account= samples::ACCOUNT_ID[0].into_account();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
-        assert_ok!(AirdropModule::set_offchain_account(
+        assert_ok!(AirdropModule::set_airdrop_server_account(
 			Origin::root(),
 			ofw_account
 		));
@@ -143,7 +143,7 @@ fn already_claimed() {
 
 		assert_err!(
 			AirdropModule::dispatch_user_claim(
-				Origin::signed(AirdropModule::get_offchain_account().unwrap()),
+				Origin::signed(AirdropModule::get_airdrop_server_account().unwrap()),
 				icon_wallet,
 				ice_address.clone(),
 				message.to_vec(),

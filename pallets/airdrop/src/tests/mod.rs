@@ -101,7 +101,7 @@ pub fn minimal_test_ext() -> sp_io::TestExternalities {
 
 // Return the same address if it is not sudo
 pub fn not_offchain_account(account: types::AccountIdOf<Test>) -> types::AccountIdOf<Test> {
-	if account != AirdropModule::get_offchain_account().unwrap_or_default() {
+	if account != AirdropModule::get_airdrop_server_account().unwrap_or_default() {
 		account
 	} else {
 		panic!("This address must not be same as defined in offchian worker. Change test value.");

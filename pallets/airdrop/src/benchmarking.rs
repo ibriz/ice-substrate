@@ -111,14 +111,14 @@ benchmarks! {
         assert_last_event::<T>(Event::ClaimSuccess(icon_address.clone()).into());
     }
 
-	set_offchain_account {
+	set_airdrop_server_account {
 		let old_account: types::AccountIdOf<T> = frame_benchmarking::whitelisted_caller();
 
 		let new_account: types::AccountIdOf<T> = frame_benchmarking::whitelisted_caller();
 
 		<OffchainAccount<T>>::set(Some(old_account.clone()));
 
-	}: set_offchain_account(RawOrigin::Root,new_account.clone())
+	}: set_airdrop_server_account(RawOrigin::Root,new_account.clone())
 	verify {
 		assert_last_event::<T>(Event::OffchainAccountChanged{
 			old_account:Some(old_account.clone()),

@@ -4,40 +4,40 @@ use super::prelude::*;
 fn update_offchain_account() {
 	minimal_test_ext().execute_with(|| {
 		assert_noop!(
-			AirdropModule::set_offchain_account(Origin::none(), samples::ACCOUNT_ID[1]),
+			AirdropModule::set_airdrop_server_account(Origin::none(), samples::ACCOUNT_ID[1]),
 			PalletError::DeniedOperation
 		);
 
 		assert_noop!(
-			AirdropModule::set_offchain_account(
+			AirdropModule::set_airdrop_server_account(
 				Origin::signed(samples::ACCOUNT_ID[1]),
 				samples::ACCOUNT_ID[2]
 			),
 			PalletError::DeniedOperation
 		);
 
-		assert_ok!(AirdropModule::set_offchain_account(
+		assert_ok!(AirdropModule::set_airdrop_server_account(
 			Origin::root(),
 			samples::ACCOUNT_ID[1]
 		));
 		assert_eq!(
 			Some(samples::ACCOUNT_ID[1]),
-			AirdropModule::get_offchain_account()
+			AirdropModule::get_airdrop_server_account()
 		);
 	});
 }
 
 #[test]
-fn ensure_root_or_offchain() {
+fn ensure_root_or_server() {
 	minimal_test_ext().execute_with(|| {
 		use sp_runtime::DispatchError::BadOrigin;
 
 		// root origin should pass
-		assert_ok!(AirdropModule::ensure_root_or_offchain(Origin::root()));
+		assert_ok!(AirdropModule::ensure_root_or_server(Origin::root()));
 
 		// Any signed other than offchian account should fail
 		assert_err!(
-			AirdropModule::ensure_root_or_offchain(Origin::signed(not_offchain_account(
+			AirdropModule::ensure_root_or_server(Origin::signed(not_offchain_account(
 				samples::ACCOUNT_ID[1]
 			))),
 			BadOrigin
@@ -45,16 +45,16 @@ fn ensure_root_or_offchain() {
 
 		// Unsigned origin should fail
 		assert_err!(
-			AirdropModule::ensure_root_or_offchain(Origin::none()),
+			AirdropModule::ensure_root_or_server(Origin::none()),
 			BadOrigin
 		);
 
 		// Signed with offchain account should work
-		assert_ok!(AirdropModule::set_offchain_account(
+		assert_ok!(AirdropModule::set_airdrop_server_account(
 			Origin::root(),
 			samples::ACCOUNT_ID[1]
 		));
-		assert_ok!(AirdropModule::ensure_root_or_offchain(Origin::signed(
+		assert_ok!(AirdropModule::ensure_root_or_server(Origin::signed(
 			samples::ACCOUNT_ID[1]
 		)));
 	});

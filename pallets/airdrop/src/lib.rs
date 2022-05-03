@@ -124,9 +124,9 @@ pub mod pallet {
 
 		DonatedToCreditor(types::AccountIdOf<T>, types::BalanceOf<T>),
 
-		/// Value of OffchainAccount sotrage have been changed
+		/// Value of ServerAccount sotrage have been changed
 		/// Return old value and new one
-		OffchainAccountChanged {
+		ServerAccountChanged {
 			old_account: Option<types::AccountIdOf<T>>,
 			new_account: types::AccountIdOf<T>,
 		},
@@ -150,8 +150,8 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, types::IconAddress, types::SnapshotInfo<T>, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn get_offchain_account)]
-	pub(super) type OffchainAccount<T: Config> =
+	#[pallet::getter(fn get_airdrop_server_account)]
+	pub(super) type ServerAccount<T: Config> =
 		StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
 
 	#[pallet::storage]
@@ -217,7 +217,7 @@ pub mod pallet {
 			proofs: types::MerkleProofs,
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
-			Self::ensure_root_or_offchain(origin.clone())
+			Self::ensure_root_or_server(origin.clone())
 				.map_err(|_| Error::<T>::DeniedOperation)?;
 			let leaf_hash = merkle::hash_leaf(&icon_address,total_amount,defi_user);
 			Self::validate_merkle_proof(&icon_address,total_amount,defi_user,leaf_hash,proofs)?;
@@ -258,23 +258,23 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-		#[pallet::weight(<T as Config>::AirdropWeightInfo::set_offchain_account())]
-		pub fn set_offchain_account(
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::set_airdrop_server_account())]
+		pub fn set_airdrop_server_account(
 			origin: OriginFor<T>,
 			new_account: types::AccountIdOf<T>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin).map_err(|_| Error::<T>::DeniedOperation)?;
 
-			let old_account = Self::get_offchain_account();
-			<OffchainAccount<T>>::set(Some(new_account.clone()));
+			let old_account = Self::get_airdrop_server_account();
+			<ServerAccount<T>>::set(Some(new_account.clone()));
 
 			log::info!(
 				"[Airdrop pallet] {} {:?}",
-				"Value for OffchainAccount was changed in onchain storage. (Old, New): ",
+				"Value for ServerAccount was changed in onchain storage. (Old, New): ",
 				(&old_account, &new_account)
 			);
 
-			Self::deposit_event(Event::OffchainAccountChanged {
+			Self::deposit_event(Event::ServerAccountChanged {
 				old_account,
 				new_account,
 			});
@@ -350,11 +350,11 @@ pub mod pallet {
 
 		/// Helper function to create similar interface like `ensure_root`
 		/// but which instead check for sudo key
-		pub fn ensure_root_or_offchain(origin: OriginFor<T>) -> DispatchResult {
+		pub fn ensure_root_or_server(origin: OriginFor<T>) -> DispatchResult {
 			let is_root = ensure_root(origin.clone()).is_ok();
 			let is_offchain = {
 				let signed = ensure_signed(origin);
-				signed.is_ok() && signed.ok() == Self::get_offchain_account()
+				signed.is_ok() && signed.ok() == Self::get_airdrop_server_account()
 			};
 
 			ensure!(is_root || is_offchain, DispatchError::BadOrigin);

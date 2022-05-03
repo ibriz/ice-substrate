@@ -8,7 +8,7 @@ pub trait WeightInfo {
 	fn register_failed_claim(_b: u32, _u: u32) -> Weight;
 	fn claim_request() -> Weight;
 	fn update_processed_upto_counter(_b: u32) -> Weight;
-	fn set_offchain_account() -> Weight;
+	fn set_airdrop_server_account() -> Weight;
 	fn force_claim_request(_u: u32, ) -> Weight;
 	fn dispatch_user_claim()->Weight;
 	fn dispatch_exchange_claim()->Weight;
@@ -59,7 +59,7 @@ impl<T: frame_system::Config> WeightInfo for AirDropWeightInfo<T> {
 		(43_555_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Airdrop OffchainAccount (r:1 w:1)
-	fn set_offchain_account() -> Weight {
+	fn set_airdrop_server_account() -> Weight {
 		(568_200_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
