@@ -101,7 +101,9 @@ pub fn sort_array(one: types::MerkleHash, other: types::MerkleHash, pos: usize) 
 
 mod tests {
 
-	use super::*;
+	use crate::utils;
+
+use super::*;
 
 	#[test]
 	fn test_hash_leaf() {
@@ -230,6 +232,32 @@ mod tests {
 	}
 
 	#[test]
+	fn fails_invalid_proof(){
+		let root = "4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672";
+		let invalid_leaf= "e56abc4f8308afe283b128761e3d00202aa3fa502526b317b37e114a5d52416e";
+		let leaf_hash=utils::hex_as_byte_array(invalid_leaf).unwrap();
+		let proofs=[
+			"e5c1cefc1be025a1f2851d1c21a1e4417fb89a8ac8a10d3655c915a514160c9d",
+			"beab672f1c4ec3b1851d054f8e9ecae5f45646d3c67398174cd4c6d0ae9e15d6",
+			"92379acb8de9c3999d5e34bb0c280ba3a7ea8a7fb92474099b9f05c1e5856b57",
+			"3ad35d31ebe6d14143f2401f2fa9d5816dc5cfb12c9041afbf1f653a381ba289",
+			"7af4325e3a2a279b581ba9877800c1ef77e9f8208b8750b3dd46c7848f337491",
+			"c2d3826ca7c9ed3c53e4757e5b222083f985f07109c800d5e4090dca8cb94779",
+			"5e23727864ebad198df2f497cb3e74455f280dad3c92c3b368bddd91dafd48ec",
+			"703ad3a90417ac11be663bd45122ef7bb139e2ccde51889c1c3922c93e78f8b7",
+			"335fb756d0b76f5ddba80a4238ad8b19e2fda8e620de8fc8eeabef08e53c8c1c",
+			"ab12930064ec318bb8501d88670d659da956a1cdb30cbf7033f561d6368c40e9",
+		].into_iter().map(|h|{
+			let bytes:[u8;32]=utils::hex_as_byte_array(h).unwrap();
+			bytes
+		}).collect::<Vec<[u8;32]>>();
+
+
+		let proof_root = proof_root(leaf_hash, proofs);
+		assert_ne!(root, hex::encode(proof_root));
+	}
+
+	#[test]
 	fn test_sort_array() {
 		let arr1 = [0u8; 32];
 		let arr2 = [0u8; 32];
@@ -248,13 +276,12 @@ mod tests {
 	}
 
 	pub fn verify_proof_case(root: &str, leaf: &str, proofs: Vec<&str>) {
-		let mut leaf_hash = [0u8; 32];
-		hex::decode_to_slice(leaf, &mut leaf_hash as &mut [u8]).unwrap();
+		let leaf_hash = utils::hex_as_byte_array(leaf).unwrap();
+		
 		let proofs = proofs
 			.into_iter()
 			.map(|h| {
-				let mut bytes: [u8; 32] = [0u8; 32];
-				hex::decode_to_slice(h, &mut bytes as &mut [u8]).unwrap();
+				let bytes= utils::hex_as_byte_array(h).unwrap();
 				bytes
 			})
 			.collect::<Vec<[u8; 32]>>();

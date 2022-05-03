@@ -1,5 +1,6 @@
 use crate as airdrop;
 use airdrop::types;
+use hex::FromHexError;
 use sp_core::H160;
 use sp_runtime::{
 	traits::{BlakeTwo256, Bounded, CheckedDiv, Convert, Saturating},
@@ -250,4 +251,11 @@ pub fn to_hex_string<T: Clone + Into<Vec<u8>>>(bytes: &T) -> String {
    let vec:Vec<u8>= bytes.clone().into();
    hex::encode(&vec)
 	
+}
+
+pub fn hex_as_byte_array<const SIZE:usize>(hex_str:&str)->Result<[u8;SIZE],FromHexError>{
+	let mut bytes =[0u8;SIZE];
+	hex::decode_to_slice(hex_str, &mut bytes as &mut [u8])?;
+	Ok(bytes)
+
 }
