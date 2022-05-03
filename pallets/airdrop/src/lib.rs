@@ -214,12 +214,12 @@ pub mod pallet {
 			icon_signature: types::IconSignature,
 			total_amount : types::ServerBalance,
 			defi_user: bool,
-			leaf_hash:types::MerkleHash,
 			proofs: types::MerkleProofs,
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			Self::ensure_root_or_offchain(origin.clone())
 				.map_err(|_| Error::<T>::DeniedOperation)?;
+			let leaf_hash = merkle::hash_leaf(&icon_address,total_amount,defi_user);
 			Self::validate_merkle_proof(&icon_address,total_amount,defi_user,leaf_hash,proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
 			Self::validate_icon_address(&icon_address,&icon_signature,&message)?;
@@ -242,12 +242,12 @@ pub mod pallet {
             ice_address: types::AccountIdOf<T>,
 			total_amount : types::ServerBalance,
 			defi_user: bool,
-			leaf_hash:types::MerkleHash,
 			proofs: types::MerkleProofs,
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
 			Self::validate_whitelisted(&icon_address)?;
+			let leaf_hash = merkle::hash_leaf(&icon_address,total_amount,defi_user);
 			Self::validate_merkle_proof(&icon_address,total_amount,defi_user,leaf_hash,proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
 

@@ -48,7 +48,6 @@ fn claim_success() {
 			icon_signature,
 			amount,
             defi_user,
-			case.0,
 			case.1,
 		));
 	});
@@ -96,8 +95,7 @@ fn insufficient_balance() {
 				icon_signature,
 				amount,
                 defi_user,
-				case.0,
-			case.1,
+			    case.1,
 			),
 			PalletError::InsufficientCreditorBalance
 		);
@@ -152,7 +150,6 @@ fn already_claimed() {
 				icon_signature,
 				amount,
                 defi_user,
-				case.0,
 			    case.1,
 			),
 			PalletError::ClaimAlreadyMade

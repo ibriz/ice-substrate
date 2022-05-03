@@ -39,7 +39,6 @@ fn claim_success() {
 			ice_address.clone(),
 			amount,
             defi_user,
-			case.0,
 			case.1,
 		));
 	});
@@ -79,8 +78,7 @@ fn insufficient_balance() {
 				ice_address.clone(),
 				amount,
                 defi_user,
-				case.0,
-			case.1,
+			    case.1,
 				
 			),
 			PalletError::InsufficientCreditorBalance
@@ -128,8 +126,7 @@ fn already_claimed() {
 				ice_address.clone(),
 				amount,
                 defi_user,
-				case.0,
-			case.1,
+			    case.1,
 			),
 			PalletError::ClaimAlreadyMade
 		);
@@ -174,8 +171,7 @@ fn only_whitelisted_claim() {
 				ice_address.clone(),
 				amount,
                 defi_user,
-				case.0,
-			case.1,
+			    case.1,
 			),
 			PalletError::DeniedOperation
 		);
