@@ -1,3 +1,5 @@
+use frame_support::{BoundedVec, traits::ConstU32};
+
 use crate::{types::{MerkleHash, MerkleProofs}, tests::{to_test_case, get_merkle_proof_sample}};
 
 use super::prelude::*;
@@ -11,6 +13,7 @@ fn claim_success() {
 	use codec::Decode;
 	let sample =get_merkle_proof_sample();
     let case =to_test_case(sample);
+	let bounded_proofs=BoundedVec::<types::MerkleHash,ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user=true;
     let amount=10017332_u64;
 	let mut test_ext = minimal_test_ext();
@@ -39,7 +42,7 @@ fn claim_success() {
 			ice_address.clone(),
 			amount,
             defi_user,
-			case.1,
+			bounded_proofs,
 		));
 	});
 }
@@ -49,6 +52,7 @@ fn insufficient_balance() {
 	use codec::Decode;
 	let sample =get_merkle_proof_sample();
     let case =to_test_case(sample);
+	let bounded_proofs=BoundedVec::<types::MerkleHash,ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user=true;
     let amount=10017332_u64;
 	let mut test_ext = minimal_test_ext();
@@ -78,7 +82,7 @@ fn insufficient_balance() {
 				ice_address.clone(),
 				amount,
                 defi_user,
-			    case.1,
+			    bounded_proofs,
 				
 			),
 			PalletError::InsufficientCreditorBalance
@@ -90,6 +94,7 @@ fn already_claimed() {
 	use codec::Decode;
 	let sample =get_merkle_proof_sample();
     let case =to_test_case(sample);
+	let bounded_proofs=BoundedVec::<types::MerkleHash,ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user=true;
     let amount=10017332_u64;
 	let mut test_ext = minimal_test_ext();
@@ -126,7 +131,7 @@ fn already_claimed() {
 				ice_address.clone(),
 				amount,
                 defi_user,
-			    case.1,
+			    bounded_proofs,
 			),
 			PalletError::ClaimAlreadyMade
 		);
@@ -138,6 +143,7 @@ fn only_whitelisted_claim() {
 	use codec::Decode;
 	let sample =get_merkle_proof_sample();
     let case =to_test_case(sample);
+	let bounded_proofs=BoundedVec::<types::MerkleHash,ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user=true;
     let amount=10017332_u64;
 	let mut test_ext = minimal_test_ext();
@@ -171,7 +177,7 @@ fn only_whitelisted_claim() {
 				ice_address.clone(),
 				amount,
                 defi_user,
-			    case.1,
+			    bounded_proofs,
 			),
 			PalletError::DeniedOperation
 		);

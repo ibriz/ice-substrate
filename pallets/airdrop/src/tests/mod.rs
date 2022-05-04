@@ -4,7 +4,9 @@ mod transfer;
 mod utility_functions;
 mod exchange_claim;
 mod user_claim;
+mod merkle_tests;
 
+use frame_support::storage::bounded_vec::BoundedVec;
 pub mod prelude {
 	pub use super::{
 		assert_tx_call, credit_creditor, get_last_event, minimal_test_ext, not_offchain_account,
@@ -193,7 +195,7 @@ pub fn credit_creditor(balance: u64) {
 	);
 }
 
-pub fn to_test_case(sample:(String,Vec<String>))->(MerkleHash,MerkleProofs){
+pub fn to_test_case(sample:(String,Vec<String>))->(MerkleHash,Vec<MerkleHash>){
 	let mut  hash_bytes =[0u8; 32];
 	hex::decode_to_slice(sample.0, &mut hash_bytes as &mut [u8]).unwrap();
 	let proofs =sample.1.iter().map(|p|{
@@ -202,6 +204,7 @@ pub fn to_test_case(sample:(String,Vec<String>))->(MerkleHash,MerkleProofs){
 				bytes
 
 	}).collect::<Vec<MerkleHash>>();
+	
 	(hash_bytes,proofs)
 }
 

@@ -54,13 +54,14 @@ pub mod pallet {
 	use frame_support::traits::{
 		Currency, ExistenceRequirement, LockableCurrency, ReservableCurrency,
 	};
+	use frame_support::storage::bounded_vec::BoundedVec;
 	use frame_system::offchain::CreateSignedTransaction;
 	use types::IconVerifiable;
 	use weights::WeightInfo;
 	use sp_core::H160;
 	use sp_core::sr25519;
+	use crate::types::MerkelProofValidator;
 	use crate::merkle;
-	use crate::merkle::MerkelProofValidator;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -106,7 +107,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type Creditor: Get<frame_support::PalletId>;
 
-		type MerkelProofValidator: merkle::MerkelProofValidator;
+		type MerkelProofValidator: types::MerkelProofValidator<Self>;
+
+		type MaxProofSize:Get<u32>;
 	}
 
 	#[pallet::pallet]
@@ -195,6 +198,8 @@ pub mod pallet {
 		FailedMappingAccount,
 
 		InvalidMerkleProof,
+
+		ProofTooLarge,
 	}
 
 	#[pallet::call]
@@ -214,7 +219,7 @@ pub mod pallet {
 			icon_signature: types::IconSignature,
 			total_amount : types::ServerBalance,
 			defi_user: bool,
-			proofs: types::MerkleProofs,
+			proofs: types::MerkleProofs<T>,
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			Self::ensure_root_or_server(origin.clone())
@@ -242,7 +247,7 @@ pub mod pallet {
             ice_address: types::AccountIdOf<T>,
 			total_amount : types::ServerBalance,
 			defi_user: bool,
-			proofs: types::MerkleProofs,
+			proofs: types::MerkleProofs<T>,
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
@@ -417,12 +422,18 @@ pub mod pallet {
 
 		}
 
+		pub fn get_bounded_proofs(input:Vec<types::MerkleHash>)->Result<BoundedVec<types::MerkleHash,T::MaxProofSize>,Error<T>>{
+			let bounded_vec =BoundedVec::<types::MerkleHash, T::MaxProofSize>::try_from(input)
+							.map_err(|()| Error::<T>::ProofTooLarge)?;
+			Ok(bounded_vec)
+		}
+
 		pub fn validate_merkle_proof(
 			icon_address: &types::IconAddress,
 			amount:types::ServerBalance,
 			defi_user:bool, 
 			leaf_hash:types::MerkleHash,
-			proof_hashes: types::MerkleProofs)-> Result<bool,Error<T>> {
+			proof_hashes: types::MerkleProofs<T>)-> Result<bool,Error<T>> {
 			let is_valid_proof= <T as Config>::MerkelProofValidator::validate(
 				icon_address,
 				amount,

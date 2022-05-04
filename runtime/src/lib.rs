@@ -35,6 +35,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 use frame_support::inherent::Vec;
+use frame_support::traits::ConstU32;
 use sp_core::u32_trait::{_1, _2, _5};
 use sp_std::boxed::Box;
 
@@ -319,7 +320,9 @@ impl pallet_airdrop::Config for Runtime {
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
 
-	type MerkelProofValidator = pallet_airdrop::merkle::AirdropMerkleValidator;
+	type MerkelProofValidator = pallet_airdrop::merkle::AirdropMerkleValidator<Runtime>;
+
+	type MaxProofSize = ConstU32<10>;
 }
 
 parameter_types! {

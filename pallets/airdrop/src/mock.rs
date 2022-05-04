@@ -1,6 +1,9 @@
-use crate as pallet_airdrop;
+use core::marker::PhantomData;
 
-use frame_support::parameter_types;
+use crate::{self as pallet_airdrop, types};
+use crate::types::MerkelProofValidator;
+
+use frame_support::{parameter_types, traits::ConstU32};
 use frame_system as system;
 use pallet_balances;
 use sp_core::H256;
@@ -8,7 +11,6 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
 };
-use crate::merkle;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -18,13 +20,14 @@ type Index = u64;
 type BlockNumber = u64;
 type Extrinsic = sp_runtime::testing::TestXt<Call, ()>;
 
-pub struct TestValidator{}
+pub struct TestValidator<T>(PhantomData<T>);
 
-impl merkle::MerkelProofValidator for TestValidator {
+impl types::MerkelProofValidator<Test> for TestValidator<Test> {
 
-	fn validate(icon_address:&pallet_airdrop::types::IconAddress, amount:u64, defi_user: bool, root_hash:pallet_airdrop::types::MerkleHash, leaf_hash:pallet_airdrop::types::MerkleHash, proofs:pallet_airdrop::types::MerkleProofs) -> bool {
+	fn validate(icon_address:&pallet_airdrop::types::IconAddress, amount:u64, defi_user: bool, root_hash:pallet_airdrop::types::MerkleHash, leaf_hash:pallet_airdrop::types::MerkleHash, proofs:pallet_airdrop::types::MerkleProofs<Test>) -> bool {
 		return true;
 	}
+
 
 }
 
@@ -90,7 +93,9 @@ impl pallet_airdrop::Config for Test {
 	type VestingModule = Test;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Test>;
-	type MerkelProofValidator = TestValidator;
+	type MerkelProofValidator = TestValidator<Test>;
+
+	type MaxProofSize = ConstU32<10>;
 
 }
 

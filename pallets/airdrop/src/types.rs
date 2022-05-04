@@ -12,6 +12,8 @@ use serde::Deserialize;
 use sp_std::prelude::*;
 use sp_core::H160;
 
+use frame_support::storage::bounded_vec::BoundedVec;
+
 
 /// AccountId of anything that implements frame_system::Config
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -38,7 +40,8 @@ pub type IconSignature = [u8; 65];
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
 
 pub type MerkleHash=[u8;32];
-pub type MerkleProofs=Vec<MerkleHash>;
+// pub type MerkleProofs=Vec<MerkleHash>;
+pub type MerkleProofs<T>=BoundedVec<MerkleHash,<T as Config>::MaxProofSize>;
 
 
 ///
@@ -273,5 +276,18 @@ impl Default for AirdropState {
 			avoid_claim_processing: false,
 		}
 	}
+}
+
+pub trait MerkelProofValidator<T:Config> {
+	fn validate(
+		icon_address: &IconAddress,
+		amount: u64,
+		defi_user: bool,
+		root_hash: MerkleHash,
+		leaf_hash: MerkleHash,
+		proofs: MerkleProofs<T>,
+	) -> bool;
+
+	// fn proof_root(leaf_hash: types::MerkleHash, proofs: types::MerkleProofs<T>) -> [u8; 32];
 }
 
