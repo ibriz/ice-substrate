@@ -1,13 +1,10 @@
 use crate::types;
 use crate::Config;
-use codec::alloc::string::String;
 use codec::alloc::string::ToString;
 use core::cmp::Ordering;
 use core::convert::TryFrom;
 use core::marker::PhantomData;
 use sp_std::prelude::*;
-use frame_support::storage::bounded_vec::BoundedVec;
-use frame_support::traits::ConstU32;
 use types::MerkelProofValidator;
 
 

@@ -1,8 +1,4 @@
-use super::prelude::*;
-use frame_support::BoundedVec;
-use frame_support::traits::ConstU32;
-use crate::{utils, types::MerkleHash};
-use crate::types::MerkelProofValidator;
+use crate::utils;
 use crate::merkle::{sort_array,hash_leaf,proof_root};
 use hex_literal;
 

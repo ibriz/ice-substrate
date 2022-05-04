@@ -58,8 +58,6 @@ pub mod pallet {
 	use frame_system::offchain::CreateSignedTransaction;
 	use types::IconVerifiable;
 	use weights::WeightInfo;
-	use sp_core::H160;
-	use sp_core::sr25519;
 	use crate::types::MerkelProofValidator;
 	use crate::merkle;
 
