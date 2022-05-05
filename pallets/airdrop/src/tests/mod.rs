@@ -33,6 +33,15 @@ pub mod prelude {
 use mock::System;
 use prelude::*;
 
+pub struct SignatureTestCase {
+	pub icon_address:[u8;20],
+	pub icon_signature:[u8;65],
+	pub ice_address:[u8;32],
+	pub ice_signature:[u8;64],
+	pub message:Vec<u8>
+
+}
+
 pub mod samples {
 
 use super::decode_hex;

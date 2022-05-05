@@ -68,7 +68,7 @@ polkadotSignature: "0x901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb
 fn test_ice_signature_frontend(){
 	use codec::Decode;
 	let mut ice_bytes=hex!("b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48");
-	//let ice_public =Public::from_raw(ice_bytes);
+
 	let signature =hex!("901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb55ca5537276dad3c68627a7ddb96956a17ae0d89ca27901a9638ad26426d0e2fbf7e8a");
 	let message =hex!("9ee3f663175691ad82f4fbb0cfd0594652e3a034e3b6934b0e4d4a60437ba4043c89d2ffcb7b0af49ed0744ce773612d7ebcdf3a5b035c247706050e0a0033e401");
 	let ice_address =
