@@ -60,11 +60,12 @@ pub mod pallet {
 	use weights::WeightInfo;
 	use crate::types::MerkelProofValidator;
 	use crate::merkle;
+	use sp_runtime::traits::{IdentifyAccount, Member, Verify};
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config:
-		frame_system::Config + CreateSignedTransaction<Call<Self>> + pallet_vesting::Config
+		frame_system::Config + pallet_vesting::Config
 	{
 		/// AccountIf type that is same as frame_system's accountId also
 		/// extended to be verifable against icon data
@@ -108,6 +109,9 @@ pub mod pallet {
 		type MerkelProofValidator: types::MerkelProofValidator<Self>;
 
 		type MaxProofSize:Get<u32>;
+
+		type Public: IdentifyAccount<AccountId = Self::VerifiableAccountId> + Clone;
+        type Signature: Verify<Signer = Self::Public> + Member + Decode + Encode;
 	}
 
 	#[pallet::pallet]
@@ -198,6 +202,7 @@ pub mod pallet {
 		InvalidMerkleProof,
 
 		ProofTooLarge,
+		InvalidIceAddress,
 	}
 
 	#[pallet::call]
@@ -382,6 +387,7 @@ pub mod pallet {
 				}
 				return Ok(saved);
 			}
+			
 			let mut new_snapshot = types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
 			
 			new_snapshot.defi_user = defi_user;
@@ -418,6 +424,22 @@ pub mod pallet {
 			);
 			Ok(())
 
+		}
+
+		pub fn check_signature(
+			signature_raw: [u8;64],
+			msg: &[u8],
+			signer:[u8;32],
+			account:types::AccountIdOf<T>
+		) -> Result<bool,Error<T>> {
+             let signature =sp_core::sr25519::Signature::from_raw(signature_raw);
+			 let account_bytes:[u8;32]=account.encode().try_into().map_err(|_e|Error::<T>::InvalidIceAddress)?;
+			 let public =sp_core::sr25519::Public::from_raw(account_bytes);
+			if signature.verify(msg, &public) {
+				Ok(true)
+			} else {
+				Err(Error::<T>::InvalidSignature.into())
+			}
 		}
 
 		pub fn get_bounded_proofs(input:Vec<types::MerkleHash>)->Result<BoundedVec<types::MerkleHash,T::MaxProofSize>,Error<T>>{

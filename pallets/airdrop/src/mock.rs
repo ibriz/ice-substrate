@@ -97,6 +97,9 @@ impl pallet_airdrop::Config for Test {
 
 	type MaxProofSize = ConstU32<10>;
 
+	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
+	type Signature = Signature;
+
 }
 
 type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;

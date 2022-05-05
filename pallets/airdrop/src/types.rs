@@ -25,16 +25,22 @@ pub type VestingBalanceOf<T> =
 /// Type that represent the balance
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
+pub type SignatureOf<T> = <T as Config>::Signature;
+
 /// Balance type that will be returned from server
 pub type ServerBalance = u64;
 
 /// Type that represent IconAddress
 pub type IconAddress = [u8; 20];
 
+pub type IceAddress=[u8;32];
+
 pub type IceEvmAddress = H160;
 
 /// Type that represent Icon signed message
 pub type IconSignature = [u8; 65];
+
+pub type IceSignature = [u8; 64];
 
 ///
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
@@ -129,10 +135,6 @@ pub enum ClaimError {
 	/// Error while doing an http request
 	/// Also might contains the actual error
 	HttpError,
-
-	/// Server returned an response that is actually an error
-	ServerError(ServerError),
-
 	/// Server returned an response in a format that couldn't be understood
 	/// this is set when response neither could not be deserialize into
 	/// valid server response or valid server error
@@ -205,21 +207,6 @@ pub fn to_balance<T:Config>(amount:ServerBalance)->BalanceOf<T>{
 	<T::BalanceTypeConversion as Convert<ServerBalance,BalanceOf<T>>>::convert(amount)
 }
 
-/// Known error server might respond with
-#[derive(Deserialize, Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Copy)]
-#[cfg_attr(feature = "std", derive(Debug))]
-#[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
-pub enum ServerError {
-	/// When the given icon address do not existsin server
-	InvalidAddress,
-
-	/// When server is in maintainance mode
-	HostOffline,
-
-	/// When there is not data about this icon address
-	NonExistentData,
-}
-
 /// Error while calling On-chain calls from offchain worker
 #[cfg_attr(feature = "std", derive(Debug))]
 #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
@@ -251,11 +238,6 @@ pub fn balance_to_u32<T: Config>(input: BalanceOf<T>) -> u32 {
 pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
 	TryInto::<u32>::try_into(input).ok().unwrap()
 }
-
-// pub struct PendingClaimsOf<T: Config> {
-// 	pub range: core::ops::Range<BlockNumberOf<T>>,
-// }
-
 /// Chain state
 #[derive(Deserialize, Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Debug))]

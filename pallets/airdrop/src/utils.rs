@@ -1,9 +1,9 @@
 use crate as airdrop;
 use airdrop::types;
 use hex::FromHexError;
-use sp_core::H160;
+use sp_core::{H160};
 use sp_runtime::{
-	traits::{BlakeTwo256, Bounded, CheckedDiv, Convert, Saturating},
+	traits::{BlakeTwo256, Bounded, CheckedDiv, Convert, Saturating, Verify},
 	AccountId32,
 };
 use sp_std::vec::Vec;
@@ -172,30 +172,6 @@ impl types::IconVerifiable for sp_runtime::AccountId32 {
 	}
 }
 
-/// Try to decode bytes returned from server to
-/// ServerResponse if response is valid
-/// ServerError if server returned some known error
-/// If not return InvalidResponse
-pub fn unpack_server_response(
-	response_bytes: &[u8],
-) -> Result<types::ServerResponse, types::ClaimError> {
-	let deserialize_response_res = serde_json::from_slice::<types::ServerResponse>(response_bytes);
-
-	match deserialize_response_res {
-		Ok(response) => Ok(response),
-
-		Err(_) => {
-			let deserialize_error_res =
-				serde_json::from_slice::<types::ServerError>(response_bytes);
-
-			match deserialize_error_res {
-				Ok(server_error) => Err(types::ClaimError::ServerError(server_error)),
-				Err(_) => Err(types::ClaimError::InvalidResponse),
-			}
-		}
-	}
-}
-
 pub fn recover_address(
 	signature: &[u8],
 	payload: &[u8],
@@ -244,6 +220,8 @@ pub fn into_account_id(address: H160) -> AccountId32 {
 	let hash = <BlakeTwo256 as sp_runtime::traits::Hash>::hash(&data);
 	AccountId32::from(Into::<[u8; 32]>::into(hash))
 }
+
+
 
 
 
