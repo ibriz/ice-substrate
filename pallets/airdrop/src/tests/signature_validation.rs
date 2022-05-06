@@ -5,6 +5,16 @@ use hex_literal::hex;
 use sp_runtime::AccountId32;
 use types::{IconVerifiable, SignatureValidationError};
 
+/**
+ * Secret phrase:       hunt west segment acoustic wealth divorce spend glue label adult sand kangaroo
+  Network ID:        substrate
+  Secret seed:       0x257fcb1840e36b4800aeadfa4ea9da7aa23bb5e2f47519cdd3e4d9b89141b8f9
+  Public key (hex):  0x92e1714fbd1083569b43be429adb8049a95fa58e56007e849c9862869268b544
+  Account ID:        0x92e1714fbd1083569b43be429adb8049a95fa58e56007e849c9862869268b544
+  Public key (SS58): 5FPHpScU1uPmQTJHKLywjiuNxiNf6MtPCCAbTDvL9WPZSu8F
+  SS58 Address:      5FPHpScU1uPmQTJHKLywjiuNxiNf6MtPCCAbTDvL9WPZSu8F
+ */
+
 
 
 const VALID_ICON_SIGNATURE: types::IconSignature = hex!("628af708622383d60e1d9d95763cf4be64d0bafa8daebb87847f14fde0db40013105586f0c937ddf0e8913251bf01cf8e0ed82e4f631b666453e15e50d69f3b900");
@@ -47,7 +57,7 @@ fn test_ice_signature_native(){
 	let message =hex!("2f8c6129d816cf51c374bc7f08c3e63ed156cf78aefb4a6550d97b87997977ee00000000000000000200d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a4500000000000000");
 	let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
-				.unwrap_or_default();
+				.unwrap();
 	let result= AirdropModule::check_signature(signature, &message, ice_bytes,ice_address).unwrap();
 
     assert!(result);
@@ -55,6 +65,16 @@ fn test_ice_signature_native(){
 
 
 }
+
+/**
+ * {
+  iconAddress: "0xb37f6a9930318e0bd1c18891fb594cd5dda4bb2d"
+  iconSignature: "0x11f7dc15685555af583228f14e6f5766cf339d3c38389ce022f10a468296dde864df99d9056b7ee7116a290713ba38c7ca7fcf161fc8137a039445d0701c4dbb00"
+  iconTxObj: "icx_sendTransaction.data.{method.transfer.params.{wallet.0x14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f}}.dataType.call.from.hxb37f6a9930318e0bd1c18891fb594cd5dda4bb2d.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb37f6a9930318e0bd1c18891fb594cd5dda4bb2d.version.0x3"
+  polkadotAddress: "0x14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f"
+  polkadotSignature: "0x7e360e742ee4b6fe067d4bd8e04761fbe7bc3d63463ac60212f9d7546dc3e804b21506807076945e4eb4690266c383b9730acde4909afec64e6e76bd74e0fd88"
+}
+ */
 
 /**
  *iconAddress: "0xb48f3bd3862d4a489fb3c9b761c4cfb20b34a645"
@@ -65,20 +85,49 @@ polkadotSignature: "0x901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb
  */
 // from frontend
 #[test]
-fn test_ice_signature_frontend(){
+fn test_ice_signature_frontend_plain_message(){
 	use codec::Decode;
-	let mut ice_bytes=hex!("b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48");
+	let mut ice_bytes=hex!("14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f");
 
-	let signature =hex!("901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb55ca5537276dad3c68627a7ddb96956a17ae0d89ca27901a9638ad26426d0e2fbf7e8a");
-	let message =hex!("9ee3f663175691ad82f4fbb0cfd0594652e3a034e3b6934b0e4d4a60437ba4043c89d2ffcb7b0af49ed0744ce773612d7ebcdf3a5b035c247706050e0a0033e401");
+	let signature =hex!("42b054d71be08205377b8f9fa1e96fbb45bfe8889d5cc8019e41ff6ea6364525669092b385920b38d7d289f312e63d9ea4d036e2989909926b5127417784eb83");
+	let message =  "Message to Sign".as_bytes();
+	let wrapped_message =wrap_bytes(message);
 	let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
-				.unwrap_or_default();
-	let result= AirdropModule::check_signature(signature, &message, ice_bytes,ice_address).unwrap();
+				.unwrap();
+	let result= AirdropModule::check_signature(signature, &wrapped_message, ice_bytes,ice_address).unwrap();
 
     assert!(result);
 
 
+
+}
+
+
+#[test]
+fn test_ice_signature_frontend_icon_signature(){
+	use codec::Decode;
+	let mut ice_bytes=hex!("14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f");
+
+	let signature =hex!("62ff224a8401451ffd32e8d56bef2253ecebdf9d5fa825ccd2de823ccebad34cdf18ea924273cd1e735ca1a0ec8a4b2a61333bc0ec8d0a1f6ff08d8cf25a9080");
+	let message =  hex!("11f7dc15685555af583228f14e6f5766cf339d3c38389ce022f10a468296dde864df99d9056b7ee7116a290713ba38c7ca7fcf161fc8137a039445d0701c4dbb00");
+	let wrapped_message =wrap_bytes(&message);
+	let ice_address =
+			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
+				.unwrap();
+	let result= AirdropModule::check_signature(signature, &wrapped_message, ice_bytes,ice_address).unwrap();
+
+    assert!(result);
+
+
+
+}
+
+fn wrap_bytes(payload:&[u8])->Vec<u8>{
+	let mut wrapped_message="<Bytes>".as_bytes().to_vec();
+	wrapped_message.extend_from_slice(payload);
+	wrapped_message.extend_from_slice("</Bytes>".as_bytes());
+	wrapped_message
 
 }
 
@@ -92,7 +141,7 @@ fn test_ice_signature_polkadot(){
 	let message ="This is a text message".as_bytes();
 	let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
-				.unwrap_or_default();
+				.unwrap();
 	let result= AirdropModule::check_signature(signature, &message, ice_bytes,ice_address).unwrap();
 
     assert!(result);
