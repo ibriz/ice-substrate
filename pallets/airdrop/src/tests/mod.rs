@@ -5,8 +5,6 @@ mod utility_functions;
 mod exchange_claim;
 mod user_claim;
 mod merkle_tests;
-
-use frame_support::storage::bounded_vec::BoundedVec;
 pub mod prelude {
 	pub use super::{
 		assert_tx_call, credit_creditor, get_last_event, minimal_test_ext, not_offchain_account,
@@ -45,7 +43,7 @@ pub struct SignatureTestCase {
 pub mod samples {
 
 use super::decode_hex;
-	use super::types::{IconAddress, ServerResponse,MerkleHash,MerkleProofs};
+	use super::types::{IconAddress, ServerResponse};
 	use sp_core::sr25519;
 
 	pub const ACCOUNT_ID: &[sr25519::Public] = &[

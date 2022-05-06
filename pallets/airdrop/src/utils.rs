@@ -237,3 +237,11 @@ pub fn hex_as_byte_array<const SIZE:usize>(hex_str:&str)->Result<[u8;SIZE],FromH
 	Ok(bytes)
 
 }
+
+pub fn wrap_bytes(payload:&[u8])->Vec<u8>{
+	let mut wrapped_message="<Bytes>".as_bytes().to_vec();
+	wrapped_message.extend_from_slice(payload);
+	wrapped_message.extend_from_slice("</Bytes>".as_bytes());
+	wrapped_message
+
+}
