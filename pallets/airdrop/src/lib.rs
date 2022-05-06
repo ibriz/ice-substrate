@@ -426,20 +426,29 @@ pub mod pallet {
 
 		}
 
-		pub fn check_signature(
-			signature_raw: [u8;64],
-			msg: &[u8],
-			signer:[u8;32],
-			account:types::AccountIdOf<T>
-		) -> Result<bool,Error<T>> {
-             let signature =sp_core::sr25519::Signature::from_raw(signature_raw);
-			 let account_bytes:[u8;32]=account.encode().try_into().map_err(|_e|Error::<T>::InvalidIceAddress)?;
-			 let public =sp_core::sr25519::Public::from_raw(account_bytes);
-			if signature.verify(msg, &public) {
+		pub fn validate_ice_signature(signature_raw: [u8;64],msg: &[u8],account:types::AccountIdOf<T>)-> Result<bool,Error<T>>{
+			let wrapped_msg=utils::wrap_bytes(msg);
+			let account_bytes:[u8;32]=account.encode().try_into().map_err(|_e|Error::<T>::InvalidIceAddress)?;
+			let is_valid = Self::check_signature(signature_raw,wrapped_msg,account_bytes);
+			if is_valid {
 				Ok(true)
 			} else {
 				Err(Error::<T>::InvalidSignature.into())
 			}
+
+
+
+		}
+
+		pub fn check_signature(
+			signature_raw: [u8;64],
+			msg: &[u8],
+			account_bytes:[u8;32]
+		) -> bool{
+             let signature =sp_core::sr25519::Signature::from_raw(signature_raw);
+			 let public =sp_core::sr25519::Public::from_raw(account_bytes);
+			 signature.verify(msg, &public)
+			
 		}
 
 		pub fn get_bounded_proofs(input:Vec<types::MerkleHash>)->Result<BoundedVec<types::MerkleHash,T::MaxProofSize>,Error<T>>{
