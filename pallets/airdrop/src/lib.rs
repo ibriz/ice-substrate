@@ -429,7 +429,7 @@ pub mod pallet {
 		pub fn validate_ice_signature(signature_raw: [u8;64],msg: &[u8],account:types::AccountIdOf<T>)-> Result<bool,Error<T>>{
 			let wrapped_msg=utils::wrap_bytes(msg);
 			let account_bytes:[u8;32]=account.encode().try_into().map_err(|_e|Error::<T>::InvalidIceAddress)?;
-			let is_valid = Self::check_signature(signature_raw,wrapped_msg,account_bytes);
+			let is_valid = Self::check_signature(signature_raw,&wrapped_msg,account_bytes);
 			if is_valid {
 				Ok(true)
 			} else {

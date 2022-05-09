@@ -34,7 +34,7 @@ fn test_ice_signature_native(){
 	let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
 				.unwrap();
-	let result= AirdropModule::check_signature(signature, &message, ice_bytes,ice_address).unwrap();
+	let result= AirdropModule::check_signature(signature, &message, ice_bytes);
 
     assert!(result);
 
@@ -53,7 +53,7 @@ fn test_ice_signature_frontend_plain_message(){
 	let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
 				.unwrap();
-	let result= AirdropModule::check_signature(signature, &wrapped_message, ice_bytes,ice_address).unwrap();
+	let result= AirdropModule::check_signature(signature, &wrapped_message, ice_bytes);
 
     assert!(result);
 }
@@ -70,7 +70,7 @@ fn test_ice_signature_frontend_icon_signature(){
 	let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
 				.unwrap();
-	let result= AirdropModule::check_signature(signature, &wrapped_message, ice_bytes,ice_address).unwrap();
+	let result= AirdropModule::check_signature(signature, &wrapped_message, ice_bytes);
 
     assert!(result);
 
@@ -89,7 +89,7 @@ fn test_ice_signature_polkadot(){
 	let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
 				.unwrap();
-	let result= AirdropModule::check_signature(signature, &message, ice_bytes,ice_address).unwrap();
+	let result= AirdropModule::check_signature(signature, &message, ice_bytes);
 
     assert!(result);
 }
