@@ -204,6 +204,8 @@ pub mod pallet {
 		ProofTooLarge,
 		InvalidIceAddress,
 		InvalidIceSignature,
+		FailedExtractingIceAddress,
+		InvalidMessagePayload,
 	}
 
 	#[pallet::call]
@@ -229,12 +231,15 @@ pub mod pallet {
 			// Make sure its callable by sudo or offchain
 			Self::ensure_root_or_server(origin.clone())
 				.map_err(|_| Error::<T>::DeniedOperation)?;
+			let account_bytes:[u8;32] = ice_address.encode().try_into().map_err(|_e|Error::<T>::InvalidIceAddress)?;
+			Self::validate_message_payload(&message,&account_bytes)?;
 			let leaf_hash = merkle::hash_leaf(&icon_address,total_amount,defi_user);
 			Self::validate_merkle_proof(&icon_address,total_amount,defi_user,leaf_hash,proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
 			Self::validate_icon_address(&icon_address,&icon_signature,&message)?;
 
 			Self::validate_ice_signature(&ice_signature,&icon_signature,&ice_address)?;
+			//  write starts here so payload should be validated before this.
 			let mut snapshot =
 				Self::validate_unclaimed(&icon_address, &ice_address, total_amount,defi_user)?;
 			Self::do_transfer(&mut snapshot, &icon_address,total_amount,defi_user)?;
@@ -441,6 +446,15 @@ pub mod pallet {
 			}
 
 
+
+		}
+
+		pub fn validate_message_payload(payload:&[u8], ice_address:&[u8;32])->Result<(),Error<T>>{
+			let extracted_address = utils::extract_ice_address(payload, ice_address).map_err(|_e|{
+				Error::<T>::FailedExtractingIceAddress
+			})?;
+			ensure!(extracted_address==ice_address,Error::<T>::InvalidMessagePayload);
+			Ok(())
 
 		}
 

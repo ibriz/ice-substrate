@@ -221,6 +221,15 @@ pub fn into_account_id(address: H160) -> AccountId32 {
 	AccountId32::from(Into::<[u8; 32]>::into(hash))
 }
 
+pub fn extract_ice_address(payload:&[u8],expected_address:&[u8])->Result<Vec<u8>,FromHexError>{
+	let expected_string =hex::encode(expected_address);
+	let expected_address = expected_string.as_bytes();
+	const PREFIX_LEN: usize =b"ice_sendTransaction.data.{method.transfer.params.{wallet.".len();
+	let address_len = expected_address.len();
+	let slice = payload[PREFIX_LEN..PREFIX_LEN + address_len].to_vec();
+	hex::decode(slice)
+}
+
 
 
 

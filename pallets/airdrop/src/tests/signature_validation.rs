@@ -5,25 +5,11 @@ use hex_literal::hex;
 use sp_runtime::AccountId32;
 use types::{IconVerifiable, SignatureValidationError};
 
-/**
- * Secret phrase:       hunt west segment acoustic wealth divorce spend glue label adult sand kangaroo
-  Network ID:        substrate
-  Secret seed:       0x257fcb1840e36b4800aeadfa4ea9da7aa23bb5e2f47519cdd3e4d9b89141b8f9
-  Public key (hex):  0x92e1714fbd1083569b43be429adb8049a95fa58e56007e849c9862869268b544
-  Account ID:        0x92e1714fbd1083569b43be429adb8049a95fa58e56007e849c9862869268b544
-  Public key (SS58): 5FPHpScU1uPmQTJHKLywjiuNxiNf6MtPCCAbTDvL9WPZSu8F
-  SS58 Address:      5FPHpScU1uPmQTJHKLywjiuNxiNf6MtPCCAbTDvL9WPZSu8F
- */
-
-
 
 const VALID_ICON_SIGNATURE: types::IconSignature = hex!("9ee3f663175691ad82f4fbb0cfd0594652e3a034e3b6934b0e4d4a60437ba4043c89d2ffcb7b0af49ed0744ce773612d7ebcdf3a5b035c247706050e0a0033e401");
 const VALID_MESSAGE: &str = "icx_sendTransaction.data.{method.transfer.params.{wallet.b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3";
-const VALID_ICON_WALLET: types::IconAddress =
-	decode_hex!("b48f3bd3862d4a489fb3c9b761c4cfb20b34a645");
-	
+const VALID_ICON_WALLET: types::IconAddress = decode_hex!("b48f3bd3862d4a489fb3c9b761c4cfb20b34a645");
 const VALID_ICE_ADDRESS: &str = "b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48";
-
 const VALID_ICE_SIGNATURE : &str="901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb55ca5537276dad3c68627a7ddb96956a17ae0d89ca27901a9638ad26426d0e2fbf7e8a";
 
 #[test]
