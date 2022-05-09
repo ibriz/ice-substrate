@@ -203,6 +203,7 @@ pub mod pallet {
 
 		ProofTooLarge,
 		InvalidIceAddress,
+		InvalidIceSignature,
 	}
 
 	#[pallet::call]
@@ -220,6 +221,7 @@ pub mod pallet {
 			ice_address: types::AccountIdOf<T>,
 			message: Vec<u8>,
 			icon_signature: types::IconSignature,
+			ice_signature: types::IceSignature,
 			total_amount : types::ServerBalance,
 			defi_user: bool,
 			proofs: types::MerkleProofs<T>,
@@ -231,6 +233,8 @@ pub mod pallet {
 			Self::validate_merkle_proof(&icon_address,total_amount,defi_user,leaf_hash,proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
 			Self::validate_icon_address(&icon_address,&icon_signature,&message)?;
+
+			Self::validate_ice_signature(&ice_signature,&icon_signature,&ice_address)?;
 			let mut snapshot =
 				Self::validate_unclaimed(&icon_address, &ice_address, total_amount,defi_user)?;
 			Self::do_transfer(&mut snapshot, &icon_address,total_amount,defi_user)?;
@@ -426,14 +430,14 @@ pub mod pallet {
 
 		}
 
-		pub fn validate_ice_signature(signature_raw: [u8;64],msg: &[u8],account:types::AccountIdOf<T>)-> Result<bool,Error<T>>{
+		pub fn validate_ice_signature(signature_raw: &[u8;64],msg: &[u8],account:&types::AccountIdOf<T>)-> Result<bool,Error<T>>{
 			let wrapped_msg=utils::wrap_bytes(msg);
 			let account_bytes:[u8;32]=account.encode().try_into().map_err(|_e|Error::<T>::InvalidIceAddress)?;
 			let is_valid = Self::check_signature(signature_raw,&wrapped_msg,account_bytes);
 			if is_valid {
 				Ok(true)
 			} else {
-				Err(Error::<T>::InvalidSignature.into())
+				Err(Error::<T>::InvalidIceSignature.into())
 			}
 
 
@@ -441,11 +445,11 @@ pub mod pallet {
 		}
 
 		pub fn check_signature(
-			signature_raw: [u8;64],
+			signature_raw: &[u8;64],
 			msg: &[u8],
 			account_bytes:[u8;32]
 		) -> bool{
-             let signature =sp_core::sr25519::Signature::from_raw(signature_raw);
+             let signature =sp_core::sr25519::Signature::from_raw(signature_raw.clone());
 			 let public =sp_core::sr25519::Public::from_raw(account_bytes);
 			 signature.verify(msg, &public)
 			

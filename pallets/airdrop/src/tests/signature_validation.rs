@@ -17,12 +17,14 @@ use types::{IconVerifiable, SignatureValidationError};
 
 
 
-const VALID_ICON_SIGNATURE: types::IconSignature = hex!("628af708622383d60e1d9d95763cf4be64d0bafa8daebb87847f14fde0db40013105586f0c937ddf0e8913251bf01cf8e0ed82e4f631b666453e15e50d69f3b900");
-const VALID_MESSAGE: &str = "icx_sendTransaction.data.{method.transfer.params.{wallet.da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c}}.dataType.call.from.hxdd9ecb7d3e441d25e8c4f03cd20a80c502f0c374.nid.0x1.nonce.0x1..timestamp.0x5d56f3231f818.to.cx8f87a4ce573a2e1377545feabac48a960e8092bb.version.0x3";
+const VALID_ICON_SIGNATURE: types::IconSignature = hex!("9ee3f663175691ad82f4fbb0cfd0594652e3a034e3b6934b0e4d4a60437ba4043c89d2ffcb7b0af49ed0744ce773612d7ebcdf3a5b035c247706050e0a0033e401");
+const VALID_MESSAGE: &str = "icx_sendTransaction.data.{method.transfer.params.{wallet.b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3";
 const VALID_ICON_WALLET: types::IconAddress =
-	decode_hex!("ee1448f0867b90e6589289a4b9c06ac4516a75a9");
+	decode_hex!("b48f3bd3862d4a489fb3c9b761c4cfb20b34a645");
 	
-const VALID_ICE_ADDRESS: &str = "da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c";
+const VALID_ICE_ADDRESS: &str = "b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48";
+
+const VALID_ICE_SIGNATURE : &str="901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb55ca5537276dad3c68627a7ddb96956a17ae0d89ca27901a9638ad26426d0e2fbf7e8a";
 
 #[test]
 fn test_ice_signature_native(){
@@ -34,7 +36,7 @@ fn test_ice_signature_native(){
 	let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
 				.unwrap();
-	let result= AirdropModule::check_signature(signature, &message, ice_bytes);
+	let result= AirdropModule::check_signature(&signature, &message, ice_bytes);
 
     assert!(result);
 
@@ -53,7 +55,7 @@ fn test_ice_signature_frontend_plain_message(){
 	let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
 				.unwrap();
-	let result= AirdropModule::check_signature(signature, &wrapped_message, ice_bytes);
+	let result= AirdropModule::check_signature(&signature, &wrapped_message, ice_bytes);
 
     assert!(result);
 }
@@ -70,19 +72,11 @@ fn test_ice_signature_frontend_icon_signature(){
 	let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
 				.unwrap();
-	let result= AirdropModule::check_signature(signature, &wrapped_message, ice_bytes);
+	let result= AirdropModule::check_signature(&signature, &wrapped_message, ice_bytes);
 
     assert!(result);
 
 }
-
-/**
- * iconAddress: "0xb48f3bd3862d4a489fb3c9b761c4cfb20b34a645"
-iconSignature: "0x9ee3f663175691ad82f4fbb0cfd0594652e3a034e3b6934b0e4d4a60437ba4043c89d2ffcb7b0af49ed0744ce773612d7ebcdf3a5b035c247706050e0a0033e401"
-iconTxObj: "icx_sendTransaction.data.{method.transfer.params.{wallet.0xb6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3"
-polkadotAddress: "0xb6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48"
-polkadotSignature: "0x901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb55ca5537276dad3c68627a7ddb96956a17ae0d89ca27901a9638ad26426d0e2fbf7e8a"
- */
 
 #[test]
 fn test_ice_signature_frontend_icon_signature_2(){
@@ -94,7 +88,7 @@ fn test_ice_signature_frontend_icon_signature_2(){
 	let icon_signature =  hex!("9ee3f663175691ad82f4fbb0cfd0594652e3a034e3b6934b0e4d4a60437ba4043c89d2ffcb7b0af49ed0744ce773612d7ebcdf3a5b035c247706050e0a0033e401");
 	let wrapped_message =utils::wrap_bytes(&icon_signature);
 	
-	let result= AirdropModule::check_signature(ice_signature, &wrapped_message, ice_bytes);
+	let result= AirdropModule::check_signature(&ice_signature, &wrapped_message, ice_bytes);
 
     assert!(result);
 
@@ -113,7 +107,7 @@ fn test_ice_signature_polkadot(){
 	let ice_address =
 			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
 				.unwrap();
-	let result= AirdropModule::check_signature(signature, &message, ice_bytes);
+	let result= AirdropModule::check_signature(&signature, &message, ice_bytes);
 
     assert!(result);
 }
