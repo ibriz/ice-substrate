@@ -76,6 +76,30 @@ fn test_ice_signature_frontend_icon_signature(){
 
 }
 
+/**
+ * iconAddress: "0xb48f3bd3862d4a489fb3c9b761c4cfb20b34a645"
+iconSignature: "0x9ee3f663175691ad82f4fbb0cfd0594652e3a034e3b6934b0e4d4a60437ba4043c89d2ffcb7b0af49ed0744ce773612d7ebcdf3a5b035c247706050e0a0033e401"
+iconTxObj: "icx_sendTransaction.data.{method.transfer.params.{wallet.0xb6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3"
+polkadotAddress: "0xb6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48"
+polkadotSignature: "0x901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb55ca5537276dad3c68627a7ddb96956a17ae0d89ca27901a9638ad26426d0e2fbf7e8a"
+ */
+
+#[test]
+fn test_ice_signature_frontend_icon_signature_2(){
+	use codec::Decode;
+	let icon_address=hex!("b48f3bd3862d4a489fb3c9b761c4cfb20b34a645");
+	let mut ice_bytes=hex!("b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48");
+
+	let ice_signature =hex!("901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb55ca5537276dad3c68627a7ddb96956a17ae0d89ca27901a9638ad26426d0e2fbf7e8a");
+	let icon_signature =  hex!("9ee3f663175691ad82f4fbb0cfd0594652e3a034e3b6934b0e4d4a60437ba4043c89d2ffcb7b0af49ed0744ce773612d7ebcdf3a5b035c247706050e0a0033e401");
+	let wrapped_message =utils::wrap_bytes(&icon_signature);
+	
+	let result= AirdropModule::check_signature(ice_signature, &wrapped_message, ice_bytes);
+
+    assert!(result);
+
+}
+
 
 
 // polkadot example
