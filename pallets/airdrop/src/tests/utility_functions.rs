@@ -333,6 +333,16 @@ fn test_extract_address() {
 
 #[test]
 fn respect_airdrop_state() {
+	// First verify thet initially everything is allowed
+	assert_eq!(
+		types::AirdropState::default(),
+		types::AirdropState {
+			block_claim_request: false,
+			block_exchange_request: false,
+		}
+	);
+
+	// Tests types::AirdropState::block_claim_request
 	minimal_test_ext().execute_with(|| {
 		// By default we shall allow it
 		assert_ok!(AirdropModule::ensure_request_acceptance());
@@ -341,6 +351,7 @@ fn respect_airdrop_state() {
 		assert_ok!(AirdropModule::update_airdrop_state(
 			Origin::root(),
 			types::AirdropState {
+				block_exchange_request: false,
 				block_claim_request: true,
 			}
 		));
@@ -367,4 +378,38 @@ fn respect_airdrop_state() {
 			PalletError::NewClaimRequestBlocked,
 		);
 	});
+
+	// Tests types::AirdropState::block_exchange_request
+	minimal_test_ext().execute_with(|| {
+		// By default we shall allow it
+		assert_ok!(AirdropModule::ensure_exchange_acceptance());
+
+		// Set the state to block incoming request
+		assert_ok!(AirdropModule::update_airdrop_state(
+			Origin::root(),
+			types::AirdropState {
+				block_exchange_request: true,
+				block_claim_request: false,
+			}
+		));
+
+		// Call the helper function
+		assert_err!(
+			AirdropModule::ensure_exchange_acceptance(),
+			PalletError::NewExchangeRequestBlocked
+		);
+
+		// Call teh actual dispatchable
+		assert_noop!(
+			AirdropModule::dispatch_exchange_claim(
+				Origin::root(),
+				Default::default(),
+				Default::default(),
+				Default::default(),
+				Default::default(),
+				Default::default(),
+			),
+			PalletError::NewExchangeRequestBlocked
+		);
+	})
 }

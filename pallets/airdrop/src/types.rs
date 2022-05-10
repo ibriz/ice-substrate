@@ -193,12 +193,16 @@ pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
 pub struct AirdropState {
 	// Only receive claim request when this flag is true
 	pub block_claim_request: bool,
+
+	// Only receive exchange request when this flag is true
+	pub block_exchange_request: bool,
 }
 
 impl Default for AirdropState {
 	fn default() -> Self {
 		AirdropState {
 			block_claim_request: false,
+			block_exchange_request: false,
 		}
 	}
 }

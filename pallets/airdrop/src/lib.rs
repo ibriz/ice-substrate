@@ -190,8 +190,8 @@ pub mod pallet {
 		/// Currently no new claim request is being accepted
 		NewClaimRequestBlocked,
 
-		/// Currently processing of claim request is blocked
-		ClaimProcessingBlocked,
+		/// Currently processing of exchange request is blocked
+		NewExchangeRequestBlocked,
 
 		ArithmeticError,
 
@@ -265,8 +265,11 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
+			Self::ensure_exchange_acceptance()?;
+
 			let amount = Self::validate_whitelisted(&icon_address)?;
-			ensure!(total_amount==amount,Error::<T>::InvalidClaimAmount);
+			ensure!(total_amount == amount, Error::<T>::InvalidClaimAmount);
+
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
 
@@ -274,6 +277,7 @@ pub mod pallet {
 			let mut snapshot =
 				Self::validate_unclaimed(&icon_address, &ice_address, total_amount, defi_user)?;
 			Self::do_transfer(&mut snapshot, &icon_address, total_amount, defi_user)?;
+
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
 			Ok(Pays::No.into())
 		}
@@ -373,6 +377,16 @@ pub mod pallet {
 
 			if is_disabled {
 				Err(Error::<T>::NewClaimRequestBlocked.into())
+			} else {
+				Ok(())
+			}
+		}
+
+		pub fn ensure_exchange_acceptance() -> DispatchResult {
+			let is_disabled = Self::get_airdrop_state().block_exchange_request;
+
+			if is_disabled {
+				Err(Error::<T>::NewExchangeRequestBlocked.into())
 			} else {
 				Ok(())
 			}
@@ -776,7 +790,7 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub exchange_accounts: Vec<(types::IconAddress,u64)>,
+		pub exchange_accounts: Vec<(types::IconAddress, u64)>,
 		pub creditor_account: Option<types::AccountIdOf<T>>,
 	}
 
@@ -794,7 +808,7 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			for account in &self.exchange_accounts {
-				<ExchangeAccountsMap<T>>::insert(account.0,account.1);
+				<ExchangeAccountsMap<T>>::insert(account.0, account.1);
 			}
 			if let Some(ref key) = self.creditor_account {
 				CreditorAccount::<T>::put(key);
