@@ -507,16 +507,16 @@ pub mod pallet {
 			defi_user:bool, 
 			leaf_hash:types::MerkleHash,
 			proof_hashes: types::MerkleProofs<T>)-> Result<bool,Error<T>> {
-			// let is_valid_proof= <T as Config>::MerkelProofValidator::validate(
-			// 	icon_address,
-			// 	amount,
-			// 	defi_user,
-			// 	crate::MERKLE_ROOT,
-			// 	leaf_hash,
-			// 	proof_hashes);
-			// if !is_valid_proof {
-			// 	return Err(Error::<T>::InvalidMerkleProof);
-			// }
+			let is_valid_proof= <T as Config>::MerkelProofValidator::validate(
+				icon_address,
+				amount,
+				defi_user,
+				crate::MERKLE_ROOT,
+				leaf_hash,
+				proof_hashes);
+			if !is_valid_proof {
+				return Err(Error::<T>::InvalidMerkleProof);
+			}
 			
 		    Ok(true)
 
