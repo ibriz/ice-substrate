@@ -383,6 +383,7 @@ pub mod pallet {
 			<frame_system::Pallet<T>>::block_number()
 		}
 
+        #[cfg(not(feature = "no-vesting"))]
 		pub fn validate_unclaimed(
 			icon_address: &types::IconAddress,
 			ice_address: &types::AccountIdOf<T>,
@@ -392,6 +393,31 @@ pub mod pallet {
 			let snapshot = Self::get_icon_snapshot_map(icon_address);
 			if let Some(saved) = snapshot {
 				if saved.done_vesting && saved.done_instant {
+					return Err(Error::<T>::ClaimAlreadyMade.into());
+				}
+				return Ok(saved);
+			}
+			
+			let mut new_snapshot = types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
+			
+			new_snapshot.defi_user = defi_user;
+			new_snapshot.amount = types::to_balance::<T>(amount);
+
+			<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
+
+			Ok(new_snapshot)
+		}
+
+		#[cfg(feature = "no-vesting")]
+		pub fn validate_unclaimed(
+			icon_address: &types::IconAddress,
+			ice_address: &types::AccountIdOf<T>,
+			amount: types::ServerBalance,
+			defi_user:bool,
+		) -> Result<types::SnapshotInfo<T>, Error<T>> {
+			let snapshot = Self::get_icon_snapshot_map(icon_address);
+			if let Some(saved) = snapshot {
+				if saved.done_instant {
 					return Err(Error::<T>::ClaimAlreadyMade.into());
 				}
 				return Ok(saved);
@@ -528,6 +554,56 @@ pub mod pallet {
 			))
 		}
 
+		#[cfg(feature = "no-vesting")]
+		pub fn do_transfer(
+			snapshot: &mut types::SnapshotInfo<T>,
+			icon_address: &types::IconAddress,
+			total_amount:types::ServerBalance,
+			defi_user:bool,
+		) -> Result<(), DispatchError> {
+
+			let total_balance =<T::BalanceTypeConversion as Convert<
+			types::ServerBalance,
+			types::BalanceOf<T>,
+		     >>::convert(total_amount);
+			let creditor = Self::get_creditor_account();
+			let claimer = snapshot.ice_address.clone();
+			if !snapshot.done_instant {
+				<T as Config>::Currency::transfer(
+					&creditor,
+					&claimer,
+					total_balance,
+					ExistenceRequirement::KeepAlive,
+				)
+				.map_err(|err| {
+					log::error!(
+						"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
+						claimer,
+						err
+					);
+					err
+				})?;
+
+				// Everything went ok. Update flag
+				snapshot.done_instant = true;
+				snapshot.initial_transfer = total_balance;
+				<IceSnapshotMap<T>>::insert(&icon_address, snapshot.clone());
+			} else {
+				log::trace!(
+					"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
+					claimer,
+					Self::get_current_block_number()
+				);
+			}
+			Ok(())
+		}
+	
+
+
+
+
+
+		#[cfg(not(feature = "no-vesting"))]
 		pub fn do_transfer(
 			snapshot: &mut types::SnapshotInfo<T>,
 			icon_address: &types::IconAddress,

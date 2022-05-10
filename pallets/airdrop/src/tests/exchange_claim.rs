@@ -1,6 +1,6 @@
 use frame_support::{BoundedVec, traits::ConstU32};
 
-use crate::{types::{MerkleHash, MerkleProofs}, tests::{to_test_case, get_merkle_proof_sample}};
+use crate::tests::{to_test_case, get_merkle_proof_sample};
 
 use super::prelude::*;
 const VALID_ICON_WALLET: types::IconAddress =

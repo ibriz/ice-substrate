@@ -186,11 +186,9 @@ pub fn verify_proof_case(root: &str, leaf: &str, proofs: Vec<&str>) {
 			bytes
 		})
 		.collect::<Vec<[u8; 32]>>();
-	// let bounded_proofs = BoundedVec::<MerkleHash, ConstU32<10>>::try_from(proofs).unwrap();
 	let proof_root = proof_root(
 		leaf_hash,
 		proofs,
 	);
-	// let proof_root = AirdropMerkleValidator< Test as dyn Config >::proof_root(leaf_hash, bounded_proofs);
 	assert_eq!(root, hex::encode(proof_root));
 }

@@ -1,7 +1,7 @@
 use super::prelude::*;
 
 #[test]
-fn update_offchain_account() {
+fn update_server_account() {
 	minimal_test_ext().execute_with(|| {
 		assert_noop!(
 			AirdropModule::set_airdrop_server_account(Origin::none(), samples::ACCOUNT_ID[1]),
