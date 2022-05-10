@@ -384,7 +384,7 @@ pub mod pallet {
 			<frame_system::Pallet<T>>::block_number()
 		}
 
-        #[cfg(not(feature = "no-vesting"))]
+		#[cfg(not(feature = "no-vesting"))]
 		pub fn validate_unclaimed(
 			icon_address: &types::IconAddress,
 			ice_address: &types::AccountIdOf<T>,
@@ -415,7 +415,7 @@ pub mod pallet {
 			icon_address: &types::IconAddress,
 			ice_address: &types::AccountIdOf<T>,
 			amount: types::ServerBalance,
-			defi_user:bool,
+			defi_user: bool,
 		) -> Result<types::SnapshotInfo<T>, Error<T>> {
 			let snapshot = Self::get_icon_snapshot_map(icon_address);
 			if let Some(saved) = snapshot {
@@ -424,9 +424,10 @@ pub mod pallet {
 				}
 				return Ok(saved);
 			}
-			
-			let mut new_snapshot = types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
-			
+
+			let mut new_snapshot =
+				types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
+
 			new_snapshot.defi_user = defi_user;
 			new_snapshot.amount = types::to_balance::<T>(amount);
 
@@ -435,7 +436,6 @@ pub mod pallet {
 			Ok(new_snapshot)
 		}
 
-		
 		pub fn validate_creditor_fund(amount: types::ServerBalance) -> Result<(), Error<T>> {
 			use sp_std::cmp::Ordering;
 			let creditor_balance =
@@ -517,22 +517,24 @@ pub mod pallet {
 
 		pub fn validate_merkle_proof(
 			icon_address: &types::IconAddress,
-			amount:types::ServerBalance,
-			defi_user:bool, 
-			leaf_hash:types::MerkleHash,
-			proof_hashes: types::MerkleProofs<T>)-> Result<bool,Error<T>> {
-			let is_valid_proof= <T as Config>::MerkelProofValidator::validate(
+			amount: types::ServerBalance,
+			defi_user: bool,
+			leaf_hash: types::MerkleHash,
+			proof_hashes: types::MerkleProofs<T>,
+		) -> Result<bool, Error<T>> {
+			let is_valid_proof = <T as Config>::MerkelProofValidator::validate(
 				icon_address,
 				amount,
 				defi_user,
 				crate::MERKLE_ROOT,
 				leaf_hash,
-				proof_hashes);
+				proof_hashes,
+			);
 			if !is_valid_proof {
 				return Err(Error::<T>::InvalidMerkleProof);
 			}
-			
-		    Ok(true)
+
+			Ok(true)
 		}
 
 		/// Split total amount to chunk of 3 amount
@@ -571,14 +573,13 @@ pub mod pallet {
 		pub fn do_transfer(
 			snapshot: &mut types::SnapshotInfo<T>,
 			icon_address: &types::IconAddress,
-			total_amount:types::ServerBalance,
-			defi_user:bool,
+			total_amount: types::ServerBalance,
+			defi_user: bool,
 		) -> Result<(), DispatchError> {
-
-			let total_balance =<T::BalanceTypeConversion as Convert<
-			types::ServerBalance,
-			types::BalanceOf<T>,
-		     >>::convert(total_amount);
+			let total_balance = <T::BalanceTypeConversion as Convert<
+				types::ServerBalance,
+				types::BalanceOf<T>,
+			>>::convert(total_amount);
 			let creditor = Self::get_creditor_account();
 			let claimer = snapshot.ice_address.clone();
 			if !snapshot.done_instant {
@@ -610,7 +611,7 @@ pub mod pallet {
 			}
 			Ok(())
 		}
-	
+
 		#[cfg(not(feature = "no-vesting"))]
 		pub fn do_transfer(
 			snapshot: &mut types::SnapshotInfo<T>,
@@ -619,7 +620,7 @@ pub mod pallet {
 			defi_user: bool,
 		) -> Result<(), DispatchError> {
 			// TODO: put more relaible value
-			const BLOCKS_IN_YEAR: u32 = 5256000u32;
+			const BLOCKS_IN_YEAR: u32 = 5_256_000u32;
 			// Block number after which enable to do vesting
 			const VESTING_APPLICABLE_FROM: u32 = 1u32;
 			let claimer = snapshot.ice_address.clone();

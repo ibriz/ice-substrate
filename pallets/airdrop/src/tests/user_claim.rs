@@ -15,12 +15,13 @@ const VALID_ICE_ADDRESS: [u8; 32] =
 const VALID_ICE_SIGNATURE : [u8;64] =decode_hex!("901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb55ca5537276dad3c68627a7ddb96956a17ae0d89ca27901a9638ad26426d0e2fbf7e8a");
 
 #[test]
+#[cfg(not(feature = "no-vesting"))]
 fn claim_success() {
 	let defi_user = true;
 	let sample = get_merkle_proof_sample();
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
-	let amount = 10017332_u64;
+	let amount = 12_017_332_u64;
 	let ofw_account = samples::ACCOUNT_ID[0].into_account();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
@@ -58,6 +59,61 @@ fn claim_success() {
 			defi_user,
 			bounded_proofs,
 		));
+		let claim_balance=<Test as pallet_airdrop::Config>::Currency::usable_balance(&ice_address);
+		assert_eq!(claim_balance,6761333);
+		
+	});
+}
+
+
+#[test]
+#[cfg(feature = "no-vesting")]
+fn claim_success() {
+	let defi_user = true;
+	let sample = get_merkle_proof_sample();
+	let case = to_test_case(sample);
+	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
+	let amount = 12_017_332_u64;
+	let ofw_account = samples::ACCOUNT_ID[0].into_account();
+	let mut test_ext = minimal_test_ext();
+	test_ext.execute_with(|| {
+		assert_ok!(AirdropModule::set_airdrop_server_account(
+			Origin::root(),
+			ofw_account
+		));
+
+		let icon_signature = VALID_ICON_SIGNATURE.clone();
+		let message = VALID_MESSAGE.as_bytes();
+		let icon_wallet = VALID_ICON_WALLET;
+		let ice_bytes = VALID_ICE_ADDRESS.clone();
+		let ice_signature = VALID_ICE_SIGNATURE.clone();
+
+		let ice_address =
+			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..]).unwrap();
+
+		let creditor_account = AirdropModule::get_creditor_account();
+		<Test as pallet_airdrop::Config>::Currency::set_balance(
+			mock::Origin::root(),
+			creditor_account,
+			10_000_0000_u32.into(),
+			10_000_00_u32.into(),
+		)
+		.unwrap();
+
+		assert_ok!(AirdropModule::dispatch_user_claim(
+			Origin::signed(AirdropModule::get_airdrop_server_account().unwrap()),
+			icon_wallet,
+			ice_address.clone(),
+			message.to_vec(),
+			icon_signature,
+			ice_signature,
+			amount,
+			defi_user,
+			bounded_proofs,
+		));
+		let claim_balance=<Test as pallet_airdrop::Config>::Currency::usable_balance(&ice_address);
+		assert_eq!(claim_balance,12_017_332);
+		
 	});
 }
 

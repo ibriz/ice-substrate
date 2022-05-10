@@ -1,6 +1,6 @@
 use frame_support::{traits::ConstU32, BoundedVec};
 
-use crate::tests::{to_test_case, get_merkle_proof_sample};
+use crate::tests::{get_merkle_proof_sample, to_test_case};
 
 use super::prelude::*;
 const VALID_ICON_WALLET: types::IconAddress =

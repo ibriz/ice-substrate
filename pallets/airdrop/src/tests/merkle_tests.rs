@@ -183,9 +183,6 @@ pub fn verify_proof_case(root: &str, leaf: &str, proofs: Vec<&str>) {
 			bytes
 		})
 		.collect::<Vec<[u8; 32]>>();
-	let proof_root = proof_root(
-		leaf_hash,
-		proofs,
-	);
+	let proof_root = proof_root(leaf_hash, proofs);
 	assert_eq!(root, hex::encode(proof_root));
 }

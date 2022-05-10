@@ -104,6 +104,7 @@ fn get_vesting_amounts_splitted() {
 }
 
 #[test]
+#[cfg(not(feature = "no-vesting"))]
 fn cook_vesting_schedule() {
 	type BlockToBalance = <Test as pallet_vesting::Config>::BlockNumberToBalance;
 	minimal_test_ext().execute_with(|| {
@@ -178,6 +179,7 @@ fn cook_vesting_schedule() {
 }
 
 #[test]
+#[cfg(not(feature = "no-vesting"))]
 fn making_vesting_transfer() {
 	minimal_test_ext().execute_with(|| {
 		run_to_block(3);
