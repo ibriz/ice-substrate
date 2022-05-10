@@ -621,6 +621,12 @@ pub mod pallet {
 
 				// No schedule was created
 				None => {
+					// If vesting is not applicable once then with same total_amount
+					// it will not be applicable ever. So mark it as done.
+					snapshot.done_vesting = true;
+					snapshot.vesting_block_number = Some(Self::get_current_block_number());
+					<IceSnapshotMap<T>>::insert(&icon_address, snapshot.clone());
+
 					log::trace!(
 						"[Airdrop pallet] Primary vesting not applicable for {:?}",
 						claimer_origin,
@@ -638,6 +644,13 @@ pub mod pallet {
 					ExistenceRequirement::KeepAlive,
 				)
 				.map_err(|err| {
+					// First reason to fail this transfer is due to low balance in creditor. Althogh
+					// there are other reasons why it might fail:
+					// - instant_amount is too low to transfer. This can be prevented by making sure
+					// that we have a certain lower bound for airdropping so that
+					// this instant_amount will never be too low to transfer
+					// - this is the very first operation on `ice-address` and instant_transfer is less than
+					// exestinsial deposit for ice_address to exist.
 					log::error!(
 						"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
 						claimer,
