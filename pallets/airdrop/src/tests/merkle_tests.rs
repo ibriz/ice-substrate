@@ -1,5 +1,5 @@
+use crate::merkle::{hash_leaf, proof_root, sort_array};
 use crate::utils;
-use crate::merkle::{sort_array,hash_leaf,proof_root};
 use hex_literal;
 
 #[test]
@@ -151,10 +151,7 @@ fn fails_invalid_proof() {
 		bytes
 	})
 	.collect::<Vec<[u8; 32]>>();
-	let proof_root = proof_root(
-		leaf_hash,
-		proofs,
-	);
+	let proof_root = proof_root(leaf_hash, proofs);
 	assert_ne!(root, hex::encode(proof_root));
 }
 

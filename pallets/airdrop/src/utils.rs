@@ -1,13 +1,13 @@
 use crate as airdrop;
 use airdrop::types;
+use codec::alloc::string::String;
 use hex::FromHexError;
-use sp_core::{H160};
+use sp_core::H160;
 use sp_runtime::{
 	traits::{BlakeTwo256, Bounded, CheckedDiv, Convert, Saturating, Verify},
 	AccountId32,
 };
 use sp_std::vec::Vec;
-use codec::alloc::string::String;
 
 /// Reuturns an optional vesting schedule which when applied release given amount
 /// which will be complete in given block. If
@@ -221,36 +221,32 @@ pub fn into_account_id(address: H160) -> AccountId32 {
 	AccountId32::from(Into::<[u8; 32]>::into(hash))
 }
 
-pub fn extract_ice_address(payload:&[u8],expected_address:&[u8])->Result<Vec<u8>,FromHexError>{
-	let expected_string =hex::encode(expected_address);
+pub fn extract_ice_address(
+	payload: &[u8],
+	expected_address: &[u8],
+) -> Result<Vec<u8>, FromHexError> {
+	let expected_string = hex::encode(expected_address);
 	let expected_address = expected_string.as_bytes();
-	const PREFIX_LEN: usize =b"ice_sendTransaction.data.{method.transfer.params.{wallet.".len();
+	const PREFIX_LEN: usize = b"ice_sendTransaction.data.{method.transfer.params.{wallet.".len();
 	let address_len = expected_address.len();
 	let slice = payload[PREFIX_LEN..PREFIX_LEN + address_len].to_vec();
 	hex::decode(slice)
 }
 
-
-
-
-
 pub fn to_hex_string<T: Clone + Into<Vec<u8>>>(bytes: &T) -> String {
-   let vec:Vec<u8>= bytes.clone().into();
-   hex::encode(&vec)
-	
+	let vec: Vec<u8> = bytes.clone().into();
+	hex::encode(&vec)
 }
 
-pub fn hex_as_byte_array<const SIZE:usize>(hex_str:&str)->Result<[u8;SIZE],FromHexError>{
-	let mut bytes =[0u8;SIZE];
+pub fn hex_as_byte_array<const SIZE: usize>(hex_str: &str) -> Result<[u8; SIZE], FromHexError> {
+	let mut bytes = [0u8; SIZE];
 	hex::decode_to_slice(hex_str, &mut bytes as &mut [u8])?;
 	Ok(bytes)
-
 }
 
-pub fn wrap_bytes(payload:&[u8])->Vec<u8>{
-	let mut wrapped_message="<Bytes>".as_bytes().to_vec();
+pub fn wrap_bytes(payload: &[u8]) -> Vec<u8> {
+	let mut wrapped_message = "<Bytes>".as_bytes().to_vec();
 	wrapped_message.extend_from_slice(payload);
 	wrapped_message.extend_from_slice("</Bytes>".as_bytes());
 	wrapped_message
-
 }

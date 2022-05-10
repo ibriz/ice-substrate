@@ -39,8 +39,8 @@ pub const OFFCHAIN_WORKER_BLOCK_GAP: u32 = 3;
 // There is NO point of seeting this to high value
 pub const DEFAULT_RETRY_COUNT: u8 = 2;
 
-pub const MERKLE_ROOT: [u8;32] =hex_literal::hex!("4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672");
-
+pub const MERKLE_ROOT: [u8; 32] =
+	hex_literal::hex!("4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672");
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -51,22 +51,20 @@ pub mod pallet {
 	use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 	use sp_std::prelude::*;
 
+	use crate::merkle;
+	use crate::types::MerkelProofValidator;
+	use frame_support::storage::bounded_vec::BoundedVec;
 	use frame_support::traits::{
 		Currency, ExistenceRequirement, LockableCurrency, ReservableCurrency,
 	};
-	use frame_support::storage::bounded_vec::BoundedVec;
 	use frame_system::offchain::CreateSignedTransaction;
+	use sp_runtime::traits::{IdentifyAccount, Member, Verify};
 	use types::IconVerifiable;
 	use weights::WeightInfo;
-	use crate::types::MerkelProofValidator;
-	use crate::merkle;
-	use sp_runtime::traits::{IdentifyAccount, Member, Verify};
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config + pallet_vesting::Config
-	{
+	pub trait Config: frame_system::Config + pallet_vesting::Config {
 		/// AccountIf type that is same as frame_system's accountId also
 		/// extended to be verifable against icon data
 		type VerifiableAccountId: IconVerifiable + IsType<<Self as frame_system::Config>::AccountId>;
@@ -108,10 +106,10 @@ pub mod pallet {
 
 		type MerkelProofValidator: types::MerkelProofValidator<Self>;
 
-		type MaxProofSize:Get<u32>;
+		type MaxProofSize: Get<u32>;
 
 		type Public: IdentifyAccount<AccountId = Self::VerifiableAccountId> + Clone;
-        type Signature: Verify<Signer = Self::Public> + Member + Decode + Encode;
+		type Signature: Verify<Signer = Self::Public> + Member + Decode + Encode;
 	}
 
 	#[pallet::pallet]
@@ -156,8 +154,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_airdrop_server_account)]
-	pub(super) type ServerAccount<T: Config> =
-		StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
+	pub(super) type ServerAccount<T: Config> = StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_exchange_account)]
@@ -166,7 +163,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn creditor_account)]
-	pub(super) type CreditorAccount<T: Config> = StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
+	pub(super) type CreditorAccount<T: Config> =
+		StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -224,25 +222,27 @@ pub mod pallet {
 			message: Vec<u8>,
 			icon_signature: types::IconSignature,
 			ice_signature: types::IceSignature,
-			total_amount : types::ServerBalance,
+			total_amount: types::ServerBalance,
 			defi_user: bool,
 			proofs: types::MerkleProofs<T>,
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
-			Self::ensure_root_or_server(origin.clone())
-				.map_err(|_| Error::<T>::DeniedOperation)?;
-			let account_bytes:[u8;32] = ice_address.encode().try_into().map_err(|_e|Error::<T>::InvalidIceAddress)?;
-			Self::validate_message_payload(&message,&account_bytes)?;
-			let leaf_hash = merkle::hash_leaf(&icon_address,total_amount,defi_user);
-			Self::validate_merkle_proof(&icon_address,total_amount,defi_user,leaf_hash,proofs)?;
+			Self::ensure_root_or_server(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
+			let account_bytes: [u8; 32] = ice_address
+				.encode()
+				.try_into()
+				.map_err(|_e| Error::<T>::InvalidIceAddress)?;
+			Self::validate_message_payload(&message, &account_bytes)?;
+			let leaf_hash = merkle::hash_leaf(&icon_address, total_amount, defi_user);
+			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, leaf_hash, proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
-			Self::validate_icon_address(&icon_address,&icon_signature,&message)?;
+			Self::validate_icon_address(&icon_address, &icon_signature, &message)?;
 
-			Self::validate_ice_signature(&ice_signature,&icon_signature,&ice_address)?;
+			Self::validate_ice_signature(&ice_signature, &icon_signature, &ice_address)?;
 			//  write starts here so payload should be validated before this.
 			let mut snapshot =
-				Self::validate_unclaimed(&icon_address, &ice_address, total_amount,defi_user)?;
-			Self::do_transfer(&mut snapshot, &icon_address,total_amount,defi_user)?;
+				Self::validate_unclaimed(&icon_address, &ice_address, total_amount, defi_user)?;
+			Self::do_transfer(&mut snapshot, &icon_address, total_amount, defi_user)?;
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
 
 			Ok(Pays::No.into())
@@ -256,21 +256,22 @@ pub mod pallet {
 		pub fn dispatch_exchange_claim(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
-            ice_address: types::AccountIdOf<T>,
-			total_amount : types::ServerBalance,
+			ice_address: types::AccountIdOf<T>,
+			total_amount: types::ServerBalance,
 			defi_user: bool,
 			proofs: types::MerkleProofs<T>,
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
 			Self::validate_whitelisted(&icon_address)?;
-			let leaf_hash = merkle::hash_leaf(&icon_address,total_amount,defi_user);
-			Self::validate_merkle_proof(&icon_address,total_amount,defi_user,leaf_hash,proofs)?;
+			let leaf_hash = merkle::hash_leaf(&icon_address, total_amount, defi_user);
+			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, leaf_hash, proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
 
 			// check if claim has already been processed
-			let mut snapshot =Self::validate_unclaimed(&icon_address, &ice_address,total_amount,defi_user)?;
-			Self::do_transfer(&mut snapshot, &icon_address,total_amount,defi_user)?;
+			let mut snapshot =
+				Self::validate_unclaimed(&icon_address, &ice_address, total_amount, defi_user)?;
+			Self::do_transfer(&mut snapshot, &icon_address, total_amount, defi_user)?;
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
 			Ok(Pays::No.into())
 		}
@@ -388,7 +389,7 @@ pub mod pallet {
 			icon_address: &types::IconAddress,
 			ice_address: &types::AccountIdOf<T>,
 			amount: types::ServerBalance,
-			defi_user:bool,
+			defi_user: bool,
 		) -> Result<types::SnapshotInfo<T>, Error<T>> {
 			let snapshot = Self::get_icon_snapshot_map(icon_address);
 			if let Some(saved) = snapshot {
@@ -397,9 +398,10 @@ pub mod pallet {
 				}
 				return Ok(saved);
 			}
-			
-			let mut new_snapshot = types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
-			
+
+			let mut new_snapshot =
+				types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
+
 			new_snapshot.defi_user = defi_user;
 			new_snapshot.amount = types::to_balance::<T>(amount);
 
@@ -451,53 +453,65 @@ pub mod pallet {
 			Self::get_exchange_account(icon_address).ok_or_else(|| Error::<T>::DeniedOperation)
 		}
 
-		pub fn validate_icon_address(icon_address:&types::IconAddress,signature:&types::IconSignature,payload:&[u8])->Result<(),Error<T>>{
+		pub fn validate_icon_address(
+			icon_address: &types::IconAddress,
+			signature: &types::IconSignature,
+			payload: &[u8],
+		) -> Result<(), Error<T>> {
 			let recovered_key = utils::recover_address(signature, payload)?;
 			ensure!(
 				recovered_key == icon_address.as_slice(),
 				Error::<T>::InvalidSignature
 			);
 			Ok(())
-
 		}
 
-		pub fn validate_ice_signature(signature_raw: &[u8;64],msg: &[u8],account:&types::AccountIdOf<T>)-> Result<bool,Error<T>>{
-			let wrapped_msg=utils::wrap_bytes(msg);
-			let account_bytes:[u8;32]=account.encode().try_into().map_err(|_e|Error::<T>::InvalidIceAddress)?;
-			let is_valid = Self::check_signature(signature_raw,&wrapped_msg,account_bytes);
+		pub fn validate_ice_signature(
+			signature_raw: &[u8; 64],
+			msg: &[u8],
+			account: &types::AccountIdOf<T>,
+		) -> Result<bool, Error<T>> {
+			let wrapped_msg = utils::wrap_bytes(msg);
+			let account_bytes: [u8; 32] = account
+				.encode()
+				.try_into()
+				.map_err(|_e| Error::<T>::InvalidIceAddress)?;
+			let is_valid = Self::check_signature(signature_raw, &wrapped_msg, account_bytes);
 			if is_valid {
 				Ok(true)
 			} else {
 				Err(Error::<T>::InvalidIceSignature.into())
 			}
-
-
-
 		}
 
-		pub fn validate_message_payload(payload:&[u8], ice_address:&[u8;32])->Result<(),Error<T>>{
-			let extracted_address = utils::extract_ice_address(payload, ice_address).map_err(|_e|{
-				Error::<T>::FailedExtractingIceAddress
-			})?;
-			ensure!(extracted_address==ice_address,Error::<T>::InvalidMessagePayload);
+		pub fn validate_message_payload(
+			payload: &[u8],
+			ice_address: &[u8; 32],
+		) -> Result<(), Error<T>> {
+			let extracted_address = utils::extract_ice_address(payload, ice_address)
+				.map_err(|_e| Error::<T>::FailedExtractingIceAddress)?;
+			ensure!(
+				extracted_address == ice_address,
+				Error::<T>::InvalidMessagePayload
+			);
 			Ok(())
-
 		}
 
 		pub fn check_signature(
-			signature_raw: &[u8;64],
+			signature_raw: &[u8; 64],
 			msg: &[u8],
-			account_bytes:[u8;32]
-		) -> bool{
-             let signature =sp_core::sr25519::Signature::from_raw(signature_raw.clone());
-			 let public =sp_core::sr25519::Public::from_raw(account_bytes);
-			 signature.verify(msg, &public)
-			
+			account_bytes: [u8; 32],
+		) -> bool {
+			let signature = sp_core::sr25519::Signature::from_raw(signature_raw.clone());
+			let public = sp_core::sr25519::Public::from_raw(account_bytes);
+			signature.verify(msg, &public)
 		}
 
-		pub fn get_bounded_proofs(input:Vec<types::MerkleHash>)->Result<BoundedVec<types::MerkleHash,T::MaxProofSize>,Error<T>>{
-			let bounded_vec =BoundedVec::<types::MerkleHash, T::MaxProofSize>::try_from(input)
-							.map_err(|()| Error::<T>::ProofTooLarge)?;
+		pub fn get_bounded_proofs(
+			input: Vec<types::MerkleHash>,
+		) -> Result<BoundedVec<types::MerkleHash, T::MaxProofSize>, Error<T>> {
+			let bounded_vec = BoundedVec::<types::MerkleHash, T::MaxProofSize>::try_from(input)
+				.map_err(|()| Error::<T>::ProofTooLarge)?;
 			Ok(bounded_vec)
 		}
 
@@ -519,7 +533,6 @@ pub mod pallet {
 			}
 			
 		    Ok(true)
-
 		}
 
 		/// Split total amount to chunk of 3 amount
@@ -598,23 +611,18 @@ pub mod pallet {
 			Ok(())
 		}
 	
-
-
-
-
-
 		#[cfg(not(feature = "no-vesting"))]
 		pub fn do_transfer(
 			snapshot: &mut types::SnapshotInfo<T>,
 			icon_address: &types::IconAddress,
-			total_amount:types::ServerBalance,
-			defi_user:bool,
+			total_amount: types::ServerBalance,
+			defi_user: bool,
 		) -> Result<(), DispatchError> {
 			// TODO: put more relaible value
 			const BLOCKS_IN_YEAR: u32 = 5256000u32;
 			// Block number after which enable to do vesting
 			const VESTING_APPLICABLE_FROM: u32 = 1u32;
-            let claimer = snapshot.ice_address.clone();
+			let claimer = snapshot.ice_address.clone();
 			let creditor = Self::get_creditor_account();
 
 			let (mut instant_amount, vesting_amount) =
@@ -684,6 +692,12 @@ pub mod pallet {
 
 				// No schedule was created
 				None => {
+					// If vesting is not applicable once then with same total_amount
+					// it will not be applicable ever. So mark it as done.
+					snapshot.done_vesting = true;
+					snapshot.vesting_block_number = Some(Self::get_current_block_number());
+					<IceSnapshotMap<T>>::insert(&icon_address, snapshot.clone());
+
 					log::trace!(
 						"[Airdrop pallet] Primary vesting not applicable for {:?}",
 						claimer_origin,
@@ -701,6 +715,13 @@ pub mod pallet {
 					ExistenceRequirement::KeepAlive,
 				)
 				.map_err(|err| {
+					// First reason to fail this transfer is due to low balance in creditor. Althogh
+					// there are other reasons why it might fail:
+					// - instant_amount is too low to transfer. This can be prevented by making sure
+					// that we have a certain lower bound for airdropping so that
+					// this instant_amount will never be too low to transfer
+					// - this is the very first operation on `ice-address` and instant_transfer is less than
+					// exestinsial deposit for ice_address to exist.
 					log::error!(
 						"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
 						claimer,
@@ -726,20 +747,16 @@ pub mod pallet {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	 impl<T: Config> Pallet<T> {
-		
+	impl<T: Config> Pallet<T> {
 		pub fn init_balance(account: &types::AccountIdOf<T>, free: types::ServerBalance) {
-			let amount=<T::BalanceTypeConversion as Convert<_, _>>::convert(free);
-			<T as Config>::Currency::make_free_balance_be(account,amount);
+			let amount = <T::BalanceTypeConversion as Convert<_, _>>::convert(free);
+			<T as Config>::Currency::make_free_balance_be(account, amount);
 		}
 
-		pub fn set_creditor_account(
-			new_account: sr25519::Public,
-		){
-			
-			let mut account_bytes=new_account.0.clone();
-			let account= T::AccountId::decode(&mut &account_bytes[..]).unwrap_or_default();
-			
+		pub fn set_creditor_account(new_account: sr25519::Public) {
+			let mut account_bytes = new_account.0.clone();
+			let account = T::AccountId::decode(&mut &account_bytes[..]).unwrap_or_default();
+
 			<CreditorAccount<T>>::set(Some(account.clone()));
 		}
 	}
@@ -749,17 +766,14 @@ pub mod pallet {
 		pub exchange_accounts: Vec<types::IconAddress>,
 		pub creditor_account: Option<types::AccountIdOf<T>>,
 	}
-	
-
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self {
 				exchange_accounts: Vec::new(),
-				creditor_account: None
+				creditor_account: None,
 			}
-			
 		}
 	}
 
@@ -774,7 +788,4 @@ pub mod pallet {
 			}
 		}
 	}
-
-	
 }
-

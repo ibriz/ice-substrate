@@ -1,10 +1,13 @@
-use crate::{mock, types::{MerkleHash, MerkleProofs}};
+use crate::{
+	mock,
+	types::{MerkleHash, MerkleProofs},
+};
+mod exchange_claim;
+mod merkle_tests;
 mod signature_validation;
 mod transfer;
-mod utility_functions;
-mod exchange_claim;
 mod user_claim;
-mod merkle_tests;
+mod utility_functions;
 pub mod prelude {
 	pub use super::{
 		assert_tx_call, credit_creditor, get_last_event, minimal_test_ext, not_offchain_account,
@@ -32,17 +35,16 @@ use mock::System;
 use prelude::*;
 
 pub struct SignatureTestCase {
-	pub icon_address:[u8;20],
-	pub icon_signature:[u8;65],
-	pub ice_address:[u8;32],
-	pub ice_signature:[u8;64],
-	pub message:Vec<u8>
-
+	pub icon_address: [u8; 20],
+	pub icon_signature: [u8; 65],
+	pub ice_address: [u8; 32],
+	pub ice_signature: [u8; 64],
+	pub message: Vec<u8>,
 }
 
 pub mod samples {
 
-use super::decode_hex;
+	use super::decode_hex;
 	use super::types::{IconAddress, ServerResponse};
 	use sp_core::sr25519;
 
@@ -75,7 +77,6 @@ use super::decode_hex;
 		decode_hex!("ee12463586abb90e6589289a4b9c06ac4516a7ba"),
 		decode_hex!("ee02363546bcc50e643910104321c0623451a65a"),
 	];
-
 }
 
 /// Dummy implementation for IconVerififable trait for test AccountId
@@ -93,19 +94,21 @@ impl types::IconVerifiable for sp_core::sr25519::Public {
 
 // Build genesis storage according to the mock runtime.
 pub fn minimal_test_ext() -> sp_io::TestExternalities {
-		use hex_literal::hex;
-		use codec::Decode;
-		use frame_support::traits::GenesisBuild;
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-		let account_hex=hex!["d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"];
-		let account_id = types::AccountIdOf::<Test>::decode(&mut &account_hex[..]).unwrap();
-		pallet_airdrop::GenesisConfig::<Test> { 
-			creditor_account: Some(account_id), 
-			exchange_accounts:vec![] 
-		}
-			.assimilate_storage(&mut t)
-			.unwrap();
-		t.into()
+	use codec::Decode;
+	use frame_support::traits::GenesisBuild;
+	use hex_literal::hex;
+	let mut t = frame_system::GenesisConfig::default()
+		.build_storage::<Test>()
+		.unwrap();
+	let account_hex = hex!["d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"];
+	let account_id = types::AccountIdOf::<Test>::decode(&mut &account_hex[..]).unwrap();
+	pallet_airdrop::GenesisConfig::<Test> {
+		creditor_account: Some(account_id),
+		exchange_accounts: vec![],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+	t.into()
 }
 
 // Return the same address if it is not sudo
@@ -202,21 +205,24 @@ pub fn credit_creditor(balance: u64) {
 	);
 }
 
-pub fn to_test_case(sample:(String,Vec<String>))->(MerkleHash,Vec<MerkleHash>){
-	let mut  hash_bytes =[0u8; 32];
+pub fn to_test_case(sample: (String, Vec<String>)) -> (MerkleHash, Vec<MerkleHash>) {
+	let mut hash_bytes = [0u8; 32];
 	hex::decode_to_slice(sample.0, &mut hash_bytes as &mut [u8]).unwrap();
-	let proofs =sample.1.iter().map(|p|{
-		let mut bytes: [u8; 32] = [0u8; 32];
-				hex::decode_to_slice(p, &mut bytes as &mut [u8]).unwrap();
-				bytes
+	let proofs = sample
+		.1
+		.iter()
+		.map(|p| {
+			let mut bytes: [u8; 32] = [0u8; 32];
+			hex::decode_to_slice(p, &mut bytes as &mut [u8]).unwrap();
+			bytes
+		})
+		.collect::<Vec<MerkleHash>>();
 
-	}).collect::<Vec<MerkleHash>>();
-	
-	(hash_bytes,proofs)
+	(hash_bytes, proofs)
 }
 
-pub fn get_merkle_proof_sample()->(String,Vec<String>){
-	let sample=(
+pub fn get_merkle_proof_sample() -> (String, Vec<String>) {
+	let sample = (
 		"7fe522d63ebcabfa052eec3647366138c23c9870995f4af94d9b22b8c5923f49".to_owned(),
 		vec![
 			"813340daefd7f1ca705faf8318cf6455632259d113c06e97b70eeeccd43519a9".to_owned(),

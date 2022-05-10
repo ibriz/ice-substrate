@@ -9,10 +9,10 @@ pub trait WeightInfo {
 	fn claim_request() -> Weight;
 	fn update_processed_upto_counter(_b: u32) -> Weight;
 	fn set_airdrop_server_account() -> Weight;
-	fn force_claim_request(_u: u32, ) -> Weight;
-	fn dispatch_user_claim()->Weight;
-	fn dispatch_exchange_claim()->Weight;
-	fn update_airdrop_state()->Weight;
+	fn force_claim_request(_u: u32) -> Weight;
+	fn dispatch_user_claim() -> Weight;
+	fn dispatch_exchange_claim() -> Weight;
+	fn update_airdrop_state() -> Weight;
 }
 
 /// Weight functions for `pallet_airdrop`.
@@ -73,17 +73,15 @@ impl<T: frame_system::Config> WeightInfo for AirDropWeightInfo<T> {
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
 
-	fn dispatch_user_claim()->Weight{
+	fn dispatch_user_claim() -> Weight {
 		return 10000 as Weight;
 	}
 
-	fn dispatch_exchange_claim()->Weight{
+	fn dispatch_exchange_claim() -> Weight {
 		return 10000 as Weight;
 	}
 
-	fn update_airdrop_state()->Weight {
+	fn update_airdrop_state() -> Weight {
 		return 10000 as Weight;
 	}
-
-	
 }
