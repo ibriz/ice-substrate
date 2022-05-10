@@ -1,6 +1,6 @@
 use crate::{
 	mock,
-	types::{MerkleHash, MerkleProofs},
+	types::{MerkleHash},
 };
 mod exchange_claim;
 mod merkle_tests;

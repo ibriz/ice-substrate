@@ -233,7 +233,10 @@ pub mod pallet {
 				.try_into()
 				.map_err(|_e| Error::<T>::InvalidIceAddress)?;
 			Self::validate_message_payload(&message, &account_bytes)?;
+			
 			let leaf_hash = merkle::hash_leaf(&icon_address, total_amount, defi_user);
+			log::trace!("[Airdrop pallet] Leaf Hash Is: {:?}",&leaf_hash);
+
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, leaf_hash, proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
 			Self::validate_icon_address(&icon_address, &icon_signature, &message)?;

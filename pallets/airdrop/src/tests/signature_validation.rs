@@ -49,7 +49,7 @@ fn test_ice_signature_frontend_icon_signature() {
 
 #[test]
 fn test_ice_signature_frontend_icon_signature_2() {
-	let icon_address = hex!("b48f3bd3862d4a489fb3c9b761c4cfb20b34a645");
+	let _icon_address = hex!("b48f3bd3862d4a489fb3c9b761c4cfb20b34a645");
 	let ice_bytes = hex!("b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48");
 
 	let ice_signature =hex!("901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb55ca5537276dad3c68627a7ddb96956a17ae0d89ca27901a9638ad26426d0e2fbf7e8a");
