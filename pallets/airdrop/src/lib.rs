@@ -228,6 +228,9 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			Self::ensure_root_or_server(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
+
+			Self::ensure_request_acceptance()?;
+
 			let account_bytes: [u8; 32] = ice_address
 				.encode()
 				.try_into()
@@ -367,6 +370,16 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		pub fn get_creditor_account() -> types::AccountIdOf<T> {
 			Self::creditor_account().expect("Creditor Account Not Set")
+		}
+
+		pub fn ensure_request_acceptance() -> DispatchResult {
+			let is_disabled = Self::get_airdrop_state().block_claim_request;
+
+			if is_disabled {
+				Err(Error::<T>::NewClaimRequestBlocked.into())
+			} else {
+				Ok(())
+			}
 		}
 
 		/// Helper function to create similar interface like `ensure_root`
