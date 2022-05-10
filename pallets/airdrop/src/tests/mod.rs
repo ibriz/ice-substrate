@@ -1,6 +1,6 @@
 use crate::{
 	mock,
-	types::{MerkleHash},
+	types::{MerkleHash, AccountIdOf},
 };
 mod exchange_claim;
 mod merkle_tests;
@@ -31,21 +31,58 @@ pub mod prelude {
 	pub type BalanceError = pallet_balances::Error<Test>;
 }
 
+use frame_support::{BoundedVec, traits::ConstU32};
 use mock::System;
 use prelude::*;
 
-pub struct SignatureTestCase {
+pub struct UserClaimTestCase <T:pallet_airdrop::Config>{
 	pub icon_address: [u8; 20],
-	pub icon_signature: [u8; 65],
-	pub ice_address: [u8; 32],
-	pub ice_signature: [u8; 64],
+	pub ice_address: AccountIdOf<T>,
 	pub message: Vec<u8>,
+	pub icon_signature: [u8; 65],
+	pub ice_signature: [u8; 64],
+	pub amount: u64,
+	pub defi_user:bool,
+	pub merkle_proofs:BoundedVec<MerkleHash,ConstU32<10>>,
+	pub merkle_root:[u8;32]
 }
+
+/*
+let icon_signature = VALID_ICON_SIGNATURE.clone();
+		let message = VALID_MESSAGE.as_bytes();
+		let icon_wallet = VALID_ICON_WALLET;
+		let ice_bytes = VALID_ICE_ADDRESS.clone();
+		let ice_signature = VALID_ICE_SIGNATURE.clone();
+ */
+
+impl<T:pallet_airdrop::Config> Default for UserClaimTestCase<T> {
+    fn default() -> Self {
+		use codec::Decode;
+		let (root,proofs)=to_test_case(get_merkle_proof_sample());
+		let ice_address=samples::VALID_ICE_ADDRESS.clone();
+		let account=<T as frame_system::Config>::AccountId::decode(&mut &ice_address[..]).unwrap();
+		let bounded_proofs = 
+		BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(proofs).unwrap();
+        Self {
+			 icon_address: samples::VALID_ICON_WALLET.clone(), 
+			 ice_address: account, 
+			 message: samples::VALID_MESSAGE.as_bytes().to_vec(), 
+			 icon_signature: samples::VALID_ICON_SIGNATURE.clone(), 
+			 ice_signature: samples::VALID_ICE_SIGNATURE.clone(), 
+			 amount: 12_000_000, 
+			 defi_user: true, 
+			 merkle_proofs: bounded_proofs,
+			 merkle_root: root,
+		}
+    }
+}
+
+
 
 pub mod samples {
 
 	use super::decode_hex;
-	use super::types::{IconAddress, ServerResponse};
+	use super::types::{IconAddress,IconSignature, ServerResponse};
 	use sp_core::sr25519;
 
 	pub const ACCOUNT_ID: &[sr25519::Public] = &[
@@ -77,6 +114,15 @@ pub mod samples {
 		decode_hex!("ee12463586abb90e6589289a4b9c06ac4516a7ba"),
 		decode_hex!("ee02363546bcc50e643910104321c0623451a65a"),
 	];
+
+pub const VALID_ICON_SIGNATURE:IconSignature= decode_hex!("9ee3f663175691ad82f4fbb0cfd0594652e3a034e3b6934b0e4d4a60437ba4043c89d2ffcb7b0af49ed0744ce773612d7ebcdf3a5b035c247706050e0a0033e401");
+pub const VALID_MESSAGE: &str = "icx_sendTransaction.data.{method.transfer.params.{wallet.b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3";
+pub const VALID_ICON_WALLET:IconAddress =
+	decode_hex!("b48f3bd3862d4a489fb3c9b761c4cfb20b34a645");
+pub const VALID_ICE_ADDRESS: [u8; 32] =
+	decode_hex!("b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48");
+pub const VALID_ICE_SIGNATURE : [u8;64] =decode_hex!("901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb55ca5537276dad3c68627a7ddb96956a17ae0d89ca27901a9638ad26426d0e2fbf7e8a");
+
 }
 
 /// Dummy implementation for IconVerififable trait for test AccountId
