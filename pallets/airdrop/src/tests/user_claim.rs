@@ -59,12 +59,14 @@ fn claim_success() {
 			defi_user,
 			bounded_proofs,
 		));
-		let claim_balance=<Test as pallet_airdrop::Config>::Currency::usable_balance(&ice_address);
-		assert_eq!(claim_balance,6761333);
-		
+		let claim_balance =
+			<Test as pallet_airdrop::Config>::Currency::usable_balance(&ice_address);
+		assert_eq!(claim_balance, 6761333);
+		let snapshot =<pallet_airdrop::IceSnapshotMap<Test>>::get(&icon_wallet).unwrap();
+		assert_eq!(snapshot.done_vesting,true);
+		assert_eq!(snapshot.done_instant,true);
 	});
 }
-
 
 #[test]
 #[cfg(feature = "no-vesting")]
@@ -111,9 +113,12 @@ fn claim_success() {
 			defi_user,
 			bounded_proofs,
 		));
-		let claim_balance=<Test as pallet_airdrop::Config>::Currency::usable_balance(&ice_address);
-		assert_eq!(claim_balance,12_017_332);
-		
+		let claim_balance =
+			<Test as pallet_airdrop::Config>::Currency::usable_balance(&ice_address);
+		assert_eq!(claim_balance, 12_017_332);
+		let snapshot =<pallet_airdrop::IceSnapshotMap<Test>>::get(&icon_wallet).unwrap();
+		assert_eq!(snapshot.done_vesting,false);
+		assert_eq!(snapshot.done_instant,true);
 	});
 }
 

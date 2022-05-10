@@ -84,7 +84,7 @@ parameter_types! {
 	pub const MaxLocks: u32 = 50;
 	pub const FetchIconEndpoint: &'static str = "http://35.175.202.72:5000/claimDetails?address=";
 	pub const CreditorAccount: frame_support::PalletId = frame_support::PalletId(*b"t-aidrop");
-	pub const VestingMinTransfer: Balance = 256 * 2;
+	pub const VestingMinTransfer: Balance = 4_000_000;
 }
 
 impl pallet_airdrop::Config for Test {
