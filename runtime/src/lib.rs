@@ -554,8 +554,8 @@ construct_runtime!(
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Config<T>, Event<T>} = 32,
 		Assets: pallet_assets::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Airdrop: pallet_airdrop::{Pallet, Call, Storage, Event<T>, Config<T>},
-	    Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
+		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
 		SimpleInflation: pallet_simple_inflation::{Pallet}
 	}
 );

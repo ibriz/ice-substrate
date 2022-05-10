@@ -1,19 +1,18 @@
 use crate as airdrop;
 use airdrop::pallet::Config;
 use airdrop::pallet::Error;
-use sp_runtime::ArithmeticError;
-use sp_runtime::traits::Convert;
 use core::convert::Into;
 use frame_support::pallet_prelude::*;
 use frame_support::traits::Currency;
 use frame_system;
 use scale_info::TypeInfo;
 use serde::Deserialize;
-use sp_std::prelude::*;
 use sp_core::H160;
+use sp_runtime::traits::Convert;
+use sp_runtime::ArithmeticError;
+use sp_std::prelude::*;
 
 use frame_support::storage::bounded_vec::BoundedVec;
-
 
 /// AccountId of anything that implements frame_system::Config
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -33,7 +32,7 @@ pub type ServerBalance = u64;
 /// Type that represent IconAddress
 pub type IconAddress = [u8; 20];
 
-pub type IceAddress=[u8;32];
+pub type IceAddress = [u8; 32];
 
 pub type IceEvmAddress = H160;
 
@@ -45,10 +44,9 @@ pub type IceSignature = [u8; 64];
 ///
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
 
-pub type MerkleHash=[u8;32];
+pub type MerkleHash = [u8; 32];
 // pub type MerkleProofs=Vec<MerkleHash>;
-pub type MerkleProofs<T>=BoundedVec<MerkleHash,<T as Config>::MaxProofSize>;
-
+pub type MerkleProofs<T> = BoundedVec<MerkleHash, <T as Config>::MaxProofSize>;
 
 ///
 pub type VestingInfoOf<T> = pallet_vesting::VestingInfo<VestingBalanceOf<T>, BlockNumberOf<T>>;
@@ -101,7 +99,7 @@ pub struct SnapshotInfo<T: Config> {
 impl<T: Config> SnapshotInfo<T> {
 	/// Helper function to set ice_address in builder-pattern way
 	/// so that initilisation can be done in single line
-	pub fn ice_address(mut self, val:AccountIdOf<T>) -> Self {
+	pub fn ice_address(mut self, val: AccountIdOf<T>) -> Self {
 		self.ice_address = val;
 		self
 	}
@@ -117,8 +115,8 @@ impl<T: Config> Default for SnapshotInfo<T> {
 			vesting_percentage: 0,
 			done_instant: false,
 			done_vesting: false,
-			vesting_block_number:None,
-			initial_transfer: BalanceOf::<T>::from(0u32)
+			vesting_block_number: None,
+			initial_transfer: BalanceOf::<T>::from(0u32),
 		}
 	}
 }
@@ -165,16 +163,14 @@ pub struct ServerResponse {
 }
 
 impl ServerResponse {
-	pub fn get_total_balance<T:Config>(&self)->Result<BalanceOf<T>,Error<T>>{
-		let total = self.get_total().map_err(|e|Error::<T>::from(e))?;
-		let balance =<T::BalanceTypeConversion as Convert<
-			ServerBalance,
-			BalanceOf<T>,
-		>>::convert(total);
+	pub fn get_total_balance<T: Config>(&self) -> Result<BalanceOf<T>, Error<T>> {
+		let total = self.get_total().map_err(|e| Error::<T>::from(e))?;
+		let balance =
+			<T::BalanceTypeConversion as Convert<ServerBalance, BalanceOf<T>>>::convert(total);
 		Ok(balance)
 	}
 
-	pub fn get_total(&self)->Result<ServerBalance,ArithmeticError>{
+	pub fn get_total(&self) -> Result<ServerBalance, ArithmeticError> {
 		use sp_runtime::ArithmeticError::Overflow;
 		let total = self
 			.amount
@@ -183,28 +179,23 @@ impl ServerResponse {
 			.checked_add(self.omm)
 			.ok_or(Overflow);
 		total
-
 	}
 }
 
-impl<T:Config> From<ArithmeticError> for Error<T>{
+impl<T: Config> From<ArithmeticError> for Error<T> {
 	fn from(_: ArithmeticError) -> Self {
 		Error::<T>::ArithmeticError
 	}
-
 }
 
-impl<T:Config> From<SignatureValidationError> for Error<T>{
-
-	fn from(_:SignatureValidationError)-> Self {
+impl<T: Config> From<SignatureValidationError> for Error<T> {
+	fn from(_: SignatureValidationError) -> Self {
 		Error::<T>::InvalidSignature
 	}
-
 }
 
-
-pub fn to_balance<T:Config>(amount:ServerBalance)->BalanceOf<T>{
-	<T::BalanceTypeConversion as Convert<ServerBalance,BalanceOf<T>>>::convert(amount)
+pub fn to_balance<T: Config>(amount: ServerBalance) -> BalanceOf<T> {
+	<T::BalanceTypeConversion as Convert<ServerBalance, BalanceOf<T>>>::convert(amount)
 }
 
 /// Error while calling On-chain calls from offchain worker
@@ -260,7 +251,7 @@ impl Default for AirdropState {
 	}
 }
 
-pub trait MerkelProofValidator<T:Config> {
+pub trait MerkelProofValidator<T: Config> {
 	fn validate(
 		icon_address: &IconAddress,
 		amount: u64,
@@ -272,4 +263,3 @@ pub trait MerkelProofValidator<T:Config> {
 
 	// fn proof_root(leaf_hash: types::MerkleHash, proofs: types::MerkleProofs<T>) -> [u8; 32];
 }
-

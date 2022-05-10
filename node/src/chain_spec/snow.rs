@@ -1,7 +1,7 @@
 use hex_literal::hex;
 use ice_runtime::{
-	currency::ICY, AccountId, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig,
-	GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY,AirdropConfig
+	currency::ICY, AccountId, AirdropConfig, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig,
+	EthereumConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -207,7 +207,7 @@ fn testnet_genesis(
 	council_members: Vec<AccountId>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	creditor_account:AccountId,
+	creditor_account: AccountId,
 	_enable_println: bool,
 ) -> GenesisConfig {
 	GenesisConfig {
@@ -247,13 +247,13 @@ fn testnet_genesis(
 		base_fee: Default::default(),
 		vesting: Default::default(),
 		assets: Default::default(),
-        council: CouncilConfig {
-            members: council_members,
-            phantom: PhantomData,
-        },
-        treasury: Default::default(),
+		council: CouncilConfig {
+			members: council_members,
+			phantom: PhantomData,
+		},
+		treasury: Default::default(),
 		airdrop: AirdropConfig {
-			creditor_account:Some(creditor_account),
+			creditor_account: Some(creditor_account),
 			exchange_accounts: vec![],
 		},
 	}

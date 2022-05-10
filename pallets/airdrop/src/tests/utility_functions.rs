@@ -181,9 +181,9 @@ fn cook_vesting_schedule() {
 fn making_vesting_transfer() {
 	minimal_test_ext().execute_with(|| {
 		run_to_block(3);
-		let defi_user=true;
-        let amount= 9775129_u64;
-		let icon_address =samples::ICON_ADDRESS[0];
+		let defi_user = true;
+		let amount = 9775129_u64;
+		let icon_address = samples::ICON_ADDRESS[0];
 		type Currency = <Test as pallet_airdrop::Config>::Currency;
 		// Fund creditor
 		credit_creditor(u64::MAX);
@@ -198,7 +198,12 @@ fn making_vesting_transfer() {
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(&mut snapshot,&icon_address,amount,defi_user));
+			assert_ok!(AirdropModule::do_transfer(
+				&mut snapshot,
+				&icon_address,
+				amount,
+				defi_user
+			));
 
 			// Ensure all amount is being transferred
 			assert_eq!(9775129_u128, Currency::free_balance(&claimer));
@@ -221,18 +226,20 @@ fn making_vesting_transfer() {
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(&mut snapshot,&icon_address,amount,defi_user));
+			assert_ok!(AirdropModule::do_transfer(
+				&mut snapshot,
+				&icon_address,
+				amount,
+				defi_user
+			));
 
 			// Ensure amount only accounting to vesting is transfererd
 
 			let expected_transfer = {
 				let vesting_amount: types::VestingBalanceOf<Test> =
-					AirdropModule::get_splitted_amounts(
-						amount,
-						defi_user,
-					)
-					.unwrap()
-					.1;
+					AirdropModule::get_splitted_amounts(amount, defi_user)
+						.unwrap()
+						.1;
 				let schedule = utils::new_vesting_with_deadline::<Test, 1u32>(
 					vesting_amount,
 					5256000u32.into(),
@@ -242,7 +249,7 @@ fn making_vesting_transfer() {
 
 				schedule.locked()
 			};
-			let user_balance=Currency::free_balance(&claimer);
+			let user_balance = Currency::free_balance(&claimer);
 			assert_eq!(expected_transfer, user_balance);
 
 			// Ensure flag is updates
@@ -259,15 +266,17 @@ fn making_vesting_transfer() {
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(&mut snapshot,&icon_address,amount,defi_user));
+			assert_ok!(AirdropModule::do_transfer(
+				&mut snapshot,
+				&icon_address,
+				amount,
+				defi_user
+			));
 
 			// Ensure amount only accounting to instant is transferred
 			let expected_transfer = {
-				let (instant_amount, vesting_amount) = AirdropModule::get_splitted_amounts(
-					amount,
-					defi_user,
-				)
-				.unwrap();
+				let (instant_amount, vesting_amount) =
+					AirdropModule::get_splitted_amounts(amount, defi_user).unwrap();
 				let remainder = utils::new_vesting_with_deadline::<Test, 1u32>(
 					vesting_amount,
 					5256000u32.into(),
@@ -276,7 +285,7 @@ fn making_vesting_transfer() {
 
 				instant_amount + remainder
 			};
-			let user_balance=Currency::free_balance(&claimer);
+			let user_balance = Currency::free_balance(&claimer);
 
 			assert_eq!(expected_transfer, user_balance);
 
@@ -295,7 +304,12 @@ fn making_vesting_transfer() {
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(&mut snapshot,&icon_address,amount,defi_user));
+			assert_ok!(AirdropModule::do_transfer(
+				&mut snapshot,
+				&icon_address,
+				amount,
+				defi_user
+			));
 
 			// Ensure amount only accounting to instant is transfererd
 			assert_eq!(0_u128, Currency::free_balance(&claimer));
@@ -307,11 +321,10 @@ fn making_vesting_transfer() {
 }
 
 #[test]
-fn test_extract_address(){
+fn test_extract_address() {
 	let payload = "icx_sendTransaction.data.{method.transfer.params.{wallet.b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3".as_bytes();
-	let expected_address= hex_literal::hex!("b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48");
-	let extracted_address = utils::extract_ice_address(payload,&expected_address).unwrap();
-	assert_eq!(extracted_address,expected_address);
-
-
+	let expected_address =
+		hex_literal::hex!("b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48");
+	let extracted_address = utils::extract_ice_address(payload, &expected_address).unwrap();
+	assert_eq!(extracted_address, expected_address);
 }

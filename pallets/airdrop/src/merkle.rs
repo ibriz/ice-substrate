@@ -7,8 +7,6 @@ use core::marker::PhantomData;
 use sp_std::prelude::*;
 use types::MerkelProofValidator;
 
-
-
 pub trait Hasher: Clone {
 	type Hash: Copy + PartialEq + Into<sp_std::vec::Vec<u8>> + TryFrom<sp_std::vec::Vec<u8>>;
 
@@ -17,7 +15,7 @@ pub trait Hasher: Clone {
 
 pub struct AirdropMerkleValidator<T>(PhantomData<T>);
 
-impl<T:Config> MerkelProofValidator<T> for AirdropMerkleValidator<T> {
+impl<T: Config> MerkelProofValidator<T> for AirdropMerkleValidator<T> {
 	fn validate(
 		icon_address: &types::IconAddress,
 		amount: u64,
@@ -41,10 +39,6 @@ impl<T:Config> MerkelProofValidator<T> for AirdropMerkleValidator<T> {
 
 		return true;
 	}
-
-	
-
-	
 }
 
 #[derive(Clone)]
@@ -81,8 +75,6 @@ pub fn proof_root(leaf_hash: types::MerkleHash, proofs: Vec<types::MerkleHash>) 
 	}
 	return one;
 }
-
-
 
 pub fn create_hash(one: types::MerkleHash, other: types::MerkleHash) -> [u8; 32] {
 	let sorted = sort_array(one, other, 0 as usize);

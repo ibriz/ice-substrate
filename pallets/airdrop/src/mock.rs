@@ -1,7 +1,7 @@
 use core::marker::PhantomData;
 
-use crate::{self as pallet_airdrop, types};
 use crate::types::MerkelProofValidator;
+use crate::{self as pallet_airdrop, types};
 
 use frame_support::{parameter_types, traits::ConstU32};
 use frame_system as system;
@@ -23,12 +23,16 @@ type Extrinsic = sp_runtime::testing::TestXt<Call, ()>;
 pub struct TestValidator<T>(PhantomData<T>);
 
 impl types::MerkelProofValidator<Test> for TestValidator<Test> {
-
-	fn validate(icon_address:&pallet_airdrop::types::IconAddress, amount:u64, defi_user: bool, root_hash:pallet_airdrop::types::MerkleHash, leaf_hash:pallet_airdrop::types::MerkleHash, proofs:pallet_airdrop::types::MerkleProofs<Test>) -> bool {
+	fn validate(
+		icon_address: &pallet_airdrop::types::IconAddress,
+		amount: u64,
+		defi_user: bool,
+		root_hash: pallet_airdrop::types::MerkleHash,
+		leaf_hash: pallet_airdrop::types::MerkleHash,
+		proofs: pallet_airdrop::types::MerkleProofs<Test>,
+	) -> bool {
 		return true;
 	}
-
-
 }
 
 frame_support::construct_runtime!(
@@ -99,7 +103,6 @@ impl pallet_airdrop::Config for Test {
 
 	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
 	type Signature = Signature;
-
 }
 
 type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
