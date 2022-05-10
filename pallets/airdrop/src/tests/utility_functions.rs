@@ -330,3 +330,42 @@ fn test_extract_address() {
 	let extracted_address = utils::extract_ice_address(payload, &expected_address).unwrap();
 	assert_eq!(extracted_address, expected_address);
 }
+
+#[test]
+fn respect_airdrop_state() {
+	minimal_test_ext().execute_with(|| {
+		// By default we shall allow it
+		assert_ok!(AirdropModule::ensure_request_acceptance());
+
+		// Set the state to block incoming request
+		assert_ok!(AirdropModule::update_airdrop_state(
+			Origin::root(),
+			types::AirdropState {
+				avoid_claim_processing: false,
+				block_claim_request: true,
+			}
+		));
+
+		// Call the helper function
+		assert_err!(
+			AirdropModule::ensure_request_acceptance(),
+			PalletError::NewClaimRequestBlocked
+		);
+
+		// Call the actual dispatchable
+		assert_err!(
+			AirdropModule::dispatch_user_claim(
+				Origin::root(),
+				Default::default(),
+				Default::default(),
+				Default::default(),
+				[0; 65],
+				[0; 64],
+				Default::default(),
+				Default::default(),
+				Default::default(),
+			),
+			PalletError::NewClaimRequestBlocked,
+		);
+	});
+}

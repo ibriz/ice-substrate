@@ -239,6 +239,7 @@ pub struct AirdropState {
 	pub block_claim_request: bool,
 
 	// Only process already received claim request when this flag is true
+	#[deprecated(note = "This pallet no longer user offchain so this flag is not needed")]
 	pub avoid_claim_processing: bool,
 }
 
