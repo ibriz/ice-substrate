@@ -10,8 +10,6 @@ const VALID_MESSAGE: &str = "icx_sendTransaction.data.{method.transfer.params.{w
 const VALID_ICON_WALLET: types::IconAddress =
 	decode_hex!("b48f3bd3862d4a489fb3c9b761c4cfb20b34a645");
 const VALID_ICE_ADDRESS: &str = "b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48";
-const VALID_ICE_SIGNATURE : &str="901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb55ca5537276dad3c68627a7ddb96956a17ae0d89ca27901a9638ad26426d0e2fbf7e8a";
-
 #[test]
 fn test_ice_signature_native() {
 	let ice_bytes = hex!("741c08a06f41c596608f6774259bd9043304adfa5d3eea62760bd9be97634d63");
@@ -34,7 +32,6 @@ fn test_ice_signature_frontend_plain_message() {
 
 #[test]
 fn test_ice_signature_frontend_icon_signature() {
-	use codec::Decode;
 	let ice_bytes = hex!("14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f");
 
 	let signature =hex!("62ff224a8401451ffd32e8d56bef2253ecebdf9d5fa825ccd2de823ccebad34cdf18ea924273cd1e735ca1a0ec8a4b2a61333bc0ec8d0a1f6ff08d8cf25a9080");

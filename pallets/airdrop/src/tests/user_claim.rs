@@ -1,4 +1,4 @@
-use super::{prelude::*};
+use super::prelude::*;
 use crate::tests::UserClaimTestCase;
 
 #[test]
@@ -11,9 +11,8 @@ fn claim_success() {
 			Origin::root(),
 			ofw_account
 		));
-		let mut case  =UserClaimTestCase::default();
-		case.amount=12_017_332_u64;
-		
+		let mut case = UserClaimTestCase::default();
+		case.amount = 12_017_332_u64;
 
 		let creditor_account = AirdropModule::get_creditor_account();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
@@ -35,13 +34,12 @@ fn claim_success() {
 			case.defi_user,
 			case.merkle_proofs,
 		));
-		let ice_account=AirdropModule::to_account_id(case.ice_address.clone()).unwrap();
-		let claim_balance =
-			<Test as pallet_airdrop::Config>::Currency::usable_balance(ice_account);
+		let ice_account = AirdropModule::to_account_id(case.ice_address.clone()).unwrap();
+		let claim_balance = <Test as pallet_airdrop::Config>::Currency::usable_balance(ice_account);
 		assert_eq!(claim_balance, 6761333);
-		let snapshot =<pallet_airdrop::IceSnapshotMap<Test>>::get(&case.icon_address).unwrap();
-		assert_eq!(snapshot.done_vesting,true);
-		assert_eq!(snapshot.done_instant,true);
+		let snapshot = <pallet_airdrop::IceSnapshotMap<Test>>::get(&case.icon_address).unwrap();
+		assert_eq!(snapshot.done_vesting, true);
+		assert_eq!(snapshot.done_instant, true);
 	});
 }
 
@@ -56,8 +54,8 @@ fn claim_success() {
 			ofw_account
 		));
 
-		let mut case  =UserClaimTestCase::default();
-		case.amount=12_017_332_u64;
+		let mut case = UserClaimTestCase::default();
+		case.amount = 12_017_332_u64;
 
 		let creditor_account = AirdropModule::get_creditor_account();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
@@ -79,13 +77,13 @@ fn claim_success() {
 			case.defi_user,
 			case.merkle_proofs,
 		));
-		let ice_account=AirdropModule::to_account_id(case.ice_address.clone()).unwrap();
+		let ice_account = AirdropModule::to_account_id(case.ice_address.clone()).unwrap();
 		let claim_balance =
 			<Test as pallet_airdrop::Config>::Currency::usable_balance(&ice_account);
 		assert_eq!(claim_balance, 12_017_332);
-		let snapshot =<pallet_airdrop::IceSnapshotMap<Test>>::get(&case.icon_address).unwrap();
-		assert_eq!(snapshot.done_vesting,false);
-		assert_eq!(snapshot.done_instant,true);
+		let snapshot = <pallet_airdrop::IceSnapshotMap<Test>>::get(&case.icon_address).unwrap();
+		assert_eq!(snapshot.done_vesting, false);
+		assert_eq!(snapshot.done_instant, true);
 	});
 }
 
@@ -99,8 +97,8 @@ fn insufficient_balance() {
 			ofw_account
 		));
 
-		let mut case =UserClaimTestCase::default();
-		case.amount=10017332_u64;
+		let mut case = UserClaimTestCase::default();
+		case.amount = 10017332_u64;
 		let creditor_account = AirdropModule::get_creditor_account();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
@@ -136,8 +134,8 @@ fn already_claimed() {
 			Origin::root(),
 			ofw_account
 		));
-		let mut case =UserClaimTestCase::default();
-		case.amount=10017332_u64;
+		let mut case = UserClaimTestCase::default();
+		case.amount = 10017332_u64;
 
 		let mut snapshot = types::SnapshotInfo::default();
 		snapshot.done_instant = true;
@@ -173,7 +171,6 @@ fn already_claimed() {
 
 #[test]
 fn invalid_payload() {
-	
 	let ofw_account = samples::ACCOUNT_ID[0].into_account();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
@@ -184,7 +181,6 @@ fn invalid_payload() {
 		let mut case =UserClaimTestCase::default();
 
 		case.message = "icx_sendTransaction.data.{method.transfer.params.{wallet.eee7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3".as_bytes().to_vec();
-		
 		let creditor_account = AirdropModule::get_creditor_account();
 
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
@@ -217,12 +213,12 @@ fn invalid_ice_signature() {
 	let ofw_account = samples::ACCOUNT_ID[0].into_account();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
-        assert_ok!(AirdropModule::set_airdrop_server_account(
+		assert_ok!(AirdropModule::set_airdrop_server_account(
 			Origin::root(),
 			ofw_account
 		));
-		let mut case =UserClaimTestCase::default();
-		case.ice_signature=[0u8;64];
+		let mut case = UserClaimTestCase::default();
+		case.ice_signature = [0u8; 64];
 
 		let creditor_account = AirdropModule::get_creditor_account();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
@@ -255,12 +251,12 @@ fn invalid_icon_signature() {
 	let ofw_account = samples::ACCOUNT_ID[0].into_account();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
-        assert_ok!(AirdropModule::set_airdrop_server_account(
+		assert_ok!(AirdropModule::set_airdrop_server_account(
 			Origin::root(),
 			ofw_account
 		));
-		let mut case =UserClaimTestCase::default();
-		case.icon_signature=[0u8;65];
+		let mut case = UserClaimTestCase::default();
+		case.icon_signature = [0u8; 65];
 
 		let creditor_account = AirdropModule::get_creditor_account();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
@@ -287,4 +283,3 @@ fn invalid_icon_signature() {
 		);
 	});
 }
-

@@ -20,7 +20,7 @@ fn claim_success() {
 			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
 
 		let creditor_account = AirdropModule::get_creditor_account();
-		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(icon_wallet, true);
+		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(icon_wallet, amount);
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
 			creditor_account,
@@ -53,10 +53,8 @@ fn insufficient_balance() {
 		let ice_address =
 			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
 
-		
-
 		let creditor_account = AirdropModule::get_creditor_account();
-		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet, true);
+		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet, amount);
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
 			creditor_account,
@@ -91,14 +89,13 @@ fn already_claimed() {
 		let ice_address =
 			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
 
-		
 		let mut snapshot = types::SnapshotInfo::default();
 		snapshot.done_instant = true;
 		snapshot.done_vesting = true;
 
 		pallet_airdrop::IceSnapshotMap::<Test>::insert(&icon_wallet, snapshot);
 		let creditor_account = AirdropModule::get_creditor_account();
-		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet, true);
+		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet, amount);
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
 			creditor_account,
@@ -134,7 +131,6 @@ fn only_whitelisted_claim() {
 		let ice_address =
 			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
 
-		
 		let snapshot = types::SnapshotInfo::default();
 
 		pallet_airdrop::IceSnapshotMap::<Test>::insert(&icon_wallet, snapshot);
@@ -157,6 +153,49 @@ fn only_whitelisted_claim() {
 				bounded_proofs,
 			),
 			PalletError::DeniedOperation
+		);
+	});
+}
+
+
+#[test]
+fn invalid_claim_amount() {
+	let sample = get_merkle_proof_sample();
+	let case = to_test_case(sample);
+	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
+	let defi_user = true;
+	let amount = 10017332_u64;
+	let mut test_ext = minimal_test_ext();
+	test_ext.execute_with(|| {
+		let icon_wallet = VALID_ICON_WALLET;
+		let ice_address =
+			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
+
+		let mut snapshot = types::SnapshotInfo::default();
+		snapshot.done_instant = true;
+		snapshot.done_vesting = true;
+
+		pallet_airdrop::IceSnapshotMap::<Test>::insert(&icon_wallet, snapshot);
+		let creditor_account = AirdropModule::get_creditor_account();
+		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet, amount);
+		<Test as pallet_airdrop::Config>::Currency::set_balance(
+			mock::Origin::root(),
+			creditor_account,
+			10_000_0000_u32.into(),
+			10_000_00_u32.into(),
+		)
+		.unwrap();
+
+		assert_err!(
+			AirdropModule::dispatch_exchange_claim(
+				Origin::root(),
+				icon_wallet,
+				ice_address.clone(),
+				amount+10000,
+				defi_user,
+				bounded_proofs,
+			),
+			PalletError::InvalidClaimAmount
 		);
 	});
 }

@@ -45,7 +45,7 @@ pub const MERKLE_ROOT: [u8; 32] =
 #[frame_support::pallet]
 pub mod pallet {
 	use super::{types, utils, weights};
-	use sp_runtime::traits::{CheckedAdd, Convert, Saturating};
+	use sp_runtime::traits::{CheckedAdd, Convert};
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
@@ -159,7 +159,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_exchange_account)]
 	pub type ExchangeAccountsMap<T: Config> =
-		StorageMap<_, Twox64Concat, types::IconAddress, bool, OptionQuery>;
+		StorageMap<_, Twox64Concat, types::IconAddress, u64, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn creditor_account)]
@@ -204,6 +204,7 @@ pub mod pallet {
 		InvalidIceSignature,
 		FailedExtractingIceAddress,
 		InvalidMessagePayload,
+		InvalidClaimAmount,
 	}
 
 	#[pallet::call]
@@ -231,13 +232,10 @@ pub mod pallet {
 
 			Self::ensure_request_acceptance()?;
 
-			
 			Self::validate_message_payload(&message, &ice_address)?;
-			
-			
 
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs)?;
-			
+
 			Self::validate_icon_address(&icon_address, &icon_signature, &message)?;
 
 			Self::validate_ice_signature(&ice_signature, &icon_signature, &ice_address)?;
@@ -267,7 +265,8 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
 			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
-			Self::validate_whitelisted(&icon_address)?;
+			let amount = Self::validate_whitelisted(&icon_address)?;
+			ensure!(total_amount==amount,Error::<T>::InvalidClaimAmount);
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
 
@@ -462,7 +461,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn validate_whitelisted(icon_address: &types::IconAddress) -> Result<bool, Error<T>> {
+		pub fn validate_whitelisted(icon_address: &types::IconAddress) -> Result<u64, Error<T>> {
 			Self::get_exchange_account(icon_address).ok_or_else(|| Error::<T>::DeniedOperation)
 		}
 
@@ -485,7 +484,7 @@ pub mod pallet {
 			ice_bytes: &types::IceAddress,
 		) -> Result<bool, Error<T>> {
 			let wrapped_msg = utils::wrap_bytes(msg);
-			
+
 			let is_valid = Self::check_signature(signature_raw, &wrapped_msg, ice_bytes);
 			if is_valid {
 				Ok(true)
@@ -531,7 +530,7 @@ pub mod pallet {
 			defi_user: bool,
 			proof_hashes: types::MerkleProofs<T>,
 		) -> Result<bool, Error<T>> {
-			let leaf_hash=merkle::hash_leaf(icon_address, amount, defi_user);
+			let leaf_hash = merkle::hash_leaf(icon_address, amount, defi_user);
 			let is_valid_proof = <T as Config>::MerkelProofValidator::validate(
 				leaf_hash,
 				crate::MERKLE_ROOT,
@@ -544,10 +543,9 @@ pub mod pallet {
 			Ok(true)
 		}
 
-		pub fn to_account_id(ice_bytes:[u8;32])->Result<types::AccountIdOf<T>,Error<T>>{
+		pub fn to_account_id(ice_bytes: [u8; 32]) -> Result<types::AccountIdOf<T>, Error<T>> {
 			<T as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
-			.map_err(|_e|Error::<T>::InvalidIceAddress)
-
+				.map_err(|_e| Error::<T>::InvalidIceAddress)
 		}
 
 		/// Split total amount to chunk of 3 amount
@@ -778,7 +776,7 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub exchange_accounts: Vec<types::IconAddress>,
+		pub exchange_accounts: Vec<(types::IconAddress,u64)>,
 		pub creditor_account: Option<types::AccountIdOf<T>>,
 	}
 
@@ -796,7 +794,7 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			for account in &self.exchange_accounts {
-				<ExchangeAccountsMap<T>>::insert(account, true);
+				<ExchangeAccountsMap<T>>::insert(account.0,account.1);
 			}
 			if let Some(ref key) = self.creditor_account {
 				CreditorAccount::<T>::put(key);

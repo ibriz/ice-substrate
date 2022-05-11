@@ -17,11 +17,10 @@ pub struct AirdropMerkleValidator<T>(PhantomData<T>);
 
 impl<T: Config> MerkelProofValidator<T> for AirdropMerkleValidator<T> {
 	fn validate(
-		leaf_hash:types::MerkleHash,
+		leaf_hash: types::MerkleHash,
 		root_hash: types::MerkleHash,
 		proofs: types::MerkleProofs<T>,
 	) -> bool {
-		
 		let computed_root = hex::encode(proof_root(leaf_hash, proofs.to_vec()));
 		let root_hex = hex::encode(root_hash);
 
@@ -62,7 +61,6 @@ pub fn proof_root(leaf_hash: types::MerkleHash, proofs: Vec<types::MerkleHash>) 
 	let mut one = leaf_hash;
 	for proof in proofs {
 		one = create_hash(one, proof);
-		
 	}
 	return one;
 }

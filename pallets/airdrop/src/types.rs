@@ -106,7 +106,7 @@ impl<T: Config> SnapshotInfo<T> {
 impl<T: Config> Default for SnapshotInfo<T> {
 	fn default() -> Self {
 		Self {
-			ice_address: [0u8;32],
+			ice_address: [0u8; 32],
 			amount: 0_u32.into(),
 			defi_user: false,
 			done_instant: false,
@@ -137,7 +137,6 @@ pub enum ClaimError {
 	/// Error was occured when making extrinsic call
 	CallingError(CallDispatchableError),
 }
-
 
 impl<T: Config> From<ArithmeticError> for Error<T> {
 	fn from(_: ArithmeticError) -> Self {
@@ -205,10 +204,5 @@ impl Default for AirdropState {
 }
 
 pub trait MerkelProofValidator<T: Config> {
-	fn validate(
-		leaf_hash:MerkleHash,
-		root_hash: MerkleHash,
-		proofs: MerkleProofs<T>,
-	) -> bool;
-
+	fn validate(leaf_hash: MerkleHash, root_hash: MerkleHash, proofs: MerkleProofs<T>) -> bool;
 }

@@ -24,9 +24,9 @@ pub struct TestValidator<T>(PhantomData<T>);
 
 impl types::MerkelProofValidator<Test> for TestValidator<Test> {
 	fn validate(
-		root_hash: pallet_airdrop::types::MerkleHash,
-		leaf_hash: pallet_airdrop::types::MerkleHash,
-		proofs: pallet_airdrop::types::MerkleProofs<Test>,
+		_root_hash: pallet_airdrop::types::MerkleHash,
+		_leaf_hash: pallet_airdrop::types::MerkleHash,
+		_proofs: pallet_airdrop::types::MerkleProofs<Test>,
 	) -> bool {
 		return true;
 	}

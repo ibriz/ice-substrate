@@ -4,7 +4,7 @@ use codec::alloc::string::String;
 use hex::FromHexError;
 use sp_core::H160;
 use sp_runtime::{
-	traits::{BlakeTwo256, Bounded, CheckedDiv, Convert, Saturating, Verify},
+	traits::{BlakeTwo256, Bounded, CheckedDiv, Convert, Saturating},
 	AccountId32,
 };
 use sp_std::vec::Vec;
