@@ -8,7 +8,6 @@ const VALID_ICON_WALLET: types::IconAddress =
 
 #[test]
 fn claim_success() {
-	use codec::Decode;
 	let sample = get_merkle_proof_sample();
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
@@ -17,12 +16,8 @@ fn claim_success() {
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
 		let icon_wallet = VALID_ICON_WALLET;
-		let ice_bytes =
-			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
-
 		let ice_address =
-			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
-				.unwrap_or_default();
+			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
 
 		let creditor_account = AirdropModule::get_creditor_account();
 		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(icon_wallet, true);
@@ -47,7 +42,6 @@ fn claim_success() {
 
 #[test]
 fn insufficient_balance() {
-	use codec::Decode;
 	let sample = get_merkle_proof_sample();
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
@@ -56,12 +50,10 @@ fn insufficient_balance() {
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
 		let icon_wallet = VALID_ICON_WALLET;
-		let ice_bytes =
+		let ice_address =
 			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
 
-		let ice_address =
-			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
-				.unwrap_or_default();
+		
 
 		let creditor_account = AirdropModule::get_creditor_account();
 		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet, true);
@@ -88,7 +80,6 @@ fn insufficient_balance() {
 }
 #[test]
 fn already_claimed() {
-	use codec::Decode;
 	let sample = get_merkle_proof_sample();
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
@@ -97,12 +88,10 @@ fn already_claimed() {
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
 		let icon_wallet = VALID_ICON_WALLET;
-		let ice_bytes =
+		let ice_address =
 			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
 
-		let ice_address =
-			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
-				.unwrap_or_default();
+		
 		let mut snapshot = types::SnapshotInfo::default();
 		snapshot.done_instant = true;
 		snapshot.done_vesting = true;
@@ -134,7 +123,6 @@ fn already_claimed() {
 
 #[test]
 fn only_whitelisted_claim() {
-	use codec::Decode;
 	let sample = get_merkle_proof_sample();
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
@@ -143,12 +131,10 @@ fn only_whitelisted_claim() {
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
 		let icon_wallet = VALID_ICON_WALLET;
-		let ice_bytes =
+		let ice_address =
 			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
 
-		let ice_address =
-			<mock::Test as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
-				.unwrap_or_default();
+		
 		let snapshot = types::SnapshotInfo::default();
 
 		pallet_airdrop::IceSnapshotMap::<Test>::insert(&icon_wallet, snapshot);

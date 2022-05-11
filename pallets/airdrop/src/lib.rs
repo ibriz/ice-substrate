@@ -218,7 +218,7 @@ pub mod pallet {
 		pub fn dispatch_user_claim(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
-			ice_address: types::AccountIdOf<T>,
+			ice_address: types::IceAddress,
 			message: Vec<u8>,
 			icon_signature: types::IconSignature,
 			ice_signature: types::IceSignature,
@@ -231,21 +231,17 @@ pub mod pallet {
 
 			Self::ensure_request_acceptance()?;
 
-			let account_bytes: [u8; 32] = ice_address
-				.encode()
-				.try_into()
-				.map_err(|_e| Error::<T>::InvalidIceAddress)?;
-			Self::validate_message_payload(&message, &account_bytes)?;
 			
-			let leaf_hash = merkle::hash_leaf(&icon_address, total_amount, defi_user);
-			log::trace!("[Airdrop pallet] Leaf Hash Is: {:?}",&leaf_hash);
+			Self::validate_message_payload(&message, &ice_address)?;
+			
+			
 
-			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, leaf_hash, proofs)?;
+			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs)?;
 			
 			Self::validate_icon_address(&icon_address, &icon_signature, &message)?;
 
 			Self::validate_ice_signature(&ice_signature, &icon_signature, &ice_address)?;
-			
+
 			Self::validate_creditor_fund(total_amount)?;
 			//  write starts here so payload should be validated before this.
 			let mut snapshot =
@@ -264,7 +260,7 @@ pub mod pallet {
 		pub fn dispatch_exchange_claim(
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
-			ice_address: types::AccountIdOf<T>,
+			ice_address: types::IceAddress,
 			total_amount: types::ServerBalance,
 			defi_user: bool,
 			proofs: types::MerkleProofs<T>,
@@ -272,8 +268,7 @@ pub mod pallet {
 			// Make sure its callable by sudo or offchain
 			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
 			Self::validate_whitelisted(&icon_address)?;
-			let leaf_hash = merkle::hash_leaf(&icon_address, total_amount, defi_user);
-			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, leaf_hash, proofs)?;
+			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
 
 			// check if claim has already been processed
@@ -405,7 +400,7 @@ pub mod pallet {
 		#[cfg(not(feature = "no-vesting"))]
 		pub fn validate_unclaimed(
 			icon_address: &types::IconAddress,
-			ice_address: &types::AccountIdOf<T>,
+			ice_address: &types::IceAddress,
 			amount: types::ServerBalance,
 			defi_user: bool,
 		) -> Result<types::SnapshotInfo<T>, Error<T>> {
@@ -431,7 +426,7 @@ pub mod pallet {
 		#[cfg(feature = "no-vesting")]
 		pub fn validate_unclaimed(
 			icon_address: &types::IconAddress,
-			ice_address: &types::AccountIdOf<T>,
+			ice_address: &types::IceAddress,
 			amount: types::ServerBalance,
 			defi_user: bool,
 		) -> Result<types::SnapshotInfo<T>, Error<T>> {
@@ -487,14 +482,11 @@ pub mod pallet {
 		pub fn validate_ice_signature(
 			signature_raw: &[u8; 64],
 			msg: &[u8],
-			account: &types::AccountIdOf<T>,
+			ice_bytes: &types::IceAddress,
 		) -> Result<bool, Error<T>> {
 			let wrapped_msg = utils::wrap_bytes(msg);
-			let account_bytes: [u8; 32] = account
-				.encode()
-				.try_into()
-				.map_err(|_e| Error::<T>::InvalidIceAddress)?;
-			let is_valid = Self::check_signature(signature_raw, &wrapped_msg, account_bytes);
+			
+			let is_valid = Self::check_signature(signature_raw, &wrapped_msg, ice_bytes);
 			if is_valid {
 				Ok(true)
 			} else {
@@ -518,10 +510,10 @@ pub mod pallet {
 		pub fn check_signature(
 			signature_raw: &[u8; 64],
 			msg: &[u8],
-			account_bytes: [u8; 32],
+			account_bytes: &[u8; 32],
 		) -> bool {
 			let signature = sp_core::sr25519::Signature::from_raw(signature_raw.clone());
-			let public = sp_core::sr25519::Public::from_raw(account_bytes);
+			let public = sp_core::sr25519::Public::from_raw(account_bytes.clone());
 			signature.verify(msg, &public)
 		}
 
@@ -537,15 +529,12 @@ pub mod pallet {
 			icon_address: &types::IconAddress,
 			amount: types::ServerBalance,
 			defi_user: bool,
-			leaf_hash: types::MerkleHash,
 			proof_hashes: types::MerkleProofs<T>,
 		) -> Result<bool, Error<T>> {
+			let leaf_hash=merkle::hash_leaf(icon_address, amount, defi_user);
 			let is_valid_proof = <T as Config>::MerkelProofValidator::validate(
-				icon_address,
-				amount,
-				defi_user,
-				crate::MERKLE_ROOT,
 				leaf_hash,
+				crate::MERKLE_ROOT,
 				proof_hashes,
 			);
 			if !is_valid_proof {
@@ -553,6 +542,12 @@ pub mod pallet {
 			}
 
 			Ok(true)
+		}
+
+		pub fn to_account_id(ice_bytes:[u8;32])->Result<types::AccountIdOf<T>,Error<T>>{
+			<T as frame_system::Config>::AccountId::decode(&mut &ice_bytes[..])
+			.map_err(|_e|Error::<T>::InvalidIceAddress)
+
 		}
 
 		/// Split total amount to chunk of 3 amount
@@ -599,7 +594,7 @@ pub mod pallet {
 				types::BalanceOf<T>,
 			>>::convert(total_amount);
 			let creditor = Self::get_creditor_account();
-			let claimer = snapshot.ice_address.clone();
+			let claimer = Self::to_account_id(snapshot.ice_address.clone())?;
 			if !snapshot.done_instant {
 				<T as Config>::Currency::transfer(
 					&creditor,
@@ -669,8 +664,9 @@ pub mod pallet {
 			let creditor_origin = <T as frame_system::Config>::Origin::from(
 				frame_system::RawOrigin::Signed(creditor.clone()),
 			);
+			let claimer_account = Self::to_account_id(claimer)?;
 			let claimer_origin =
-				<T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(claimer.clone());
+				<T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(claimer_account.clone());
 
 			match transfer_shcedule {
 				// Apply vesting
@@ -729,7 +725,7 @@ pub mod pallet {
 			if !snapshot.done_instant {
 				<T as Config>::Currency::transfer(
 					&creditor,
-					&claimer,
+					&claimer_account,
 					instant_amount,
 					ExistenceRequirement::KeepAlive,
 				)

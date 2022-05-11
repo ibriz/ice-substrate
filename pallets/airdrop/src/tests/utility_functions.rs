@@ -196,7 +196,7 @@ fn making_vesting_transfer() {
 			let mut snapshot = types::SnapshotInfo::<Test> {
 				done_instant: false,
 				done_vesting: false,
-				ice_address: claimer.clone(),
+				ice_address: claimer.clone().into(),
 				..Default::default()
 			};
 
@@ -224,7 +224,7 @@ fn making_vesting_transfer() {
 			let mut snapshot = types::SnapshotInfo::<Test> {
 				done_instant: true,
 				done_vesting: false,
-				ice_address: claimer.clone(),
+				ice_address: claimer.clone().into(),
 				..Default::default()
 			};
 
@@ -264,7 +264,7 @@ fn making_vesting_transfer() {
 			let mut snapshot = types::SnapshotInfo::<Test> {
 				done_instant: false,
 				done_vesting: true,
-				ice_address: claimer.clone(),
+				ice_address: claimer.clone().into(),
 				..Default::default()
 			};
 
@@ -302,7 +302,7 @@ fn making_vesting_transfer() {
 			let mut snapshot = types::SnapshotInfo::<Test> {
 				done_instant: true,
 				done_vesting: true,
-				ice_address: claimer.clone(),
+				ice_address: claimer.clone().into(),
 				..Default::default()
 			};
 
@@ -341,7 +341,6 @@ fn respect_airdrop_state() {
 		assert_ok!(AirdropModule::update_airdrop_state(
 			Origin::root(),
 			types::AirdropState {
-				avoid_claim_processing: false,
 				block_claim_request: true,
 			}
 		));

@@ -35,9 +35,9 @@ use frame_support::{BoundedVec, traits::ConstU32};
 use mock::System;
 use prelude::*;
 
-pub struct UserClaimTestCase <T:pallet_airdrop::Config>{
+pub struct UserClaimTestCase {
 	pub icon_address: [u8; 20],
-	pub ice_address: AccountIdOf<T>,
+	pub ice_address: types::IceAddress,
 	pub message: Vec<u8>,
 	pub icon_signature: [u8; 65],
 	pub ice_signature: [u8; 64],
@@ -55,17 +55,15 @@ let icon_signature = VALID_ICON_SIGNATURE.clone();
 		let ice_signature = VALID_ICE_SIGNATURE.clone();
  */
 
-impl<T:pallet_airdrop::Config> Default for UserClaimTestCase<T> {
+impl Default for UserClaimTestCase{
     fn default() -> Self {
-		use codec::Decode;
 		let (root,proofs)=to_test_case(get_merkle_proof_sample());
 		let ice_address=samples::VALID_ICE_ADDRESS.clone();
-		let account=<T as frame_system::Config>::AccountId::decode(&mut &ice_address[..]).unwrap();
 		let bounded_proofs = 
 		BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(proofs).unwrap();
         Self {
 			 icon_address: samples::VALID_ICON_WALLET.clone(), 
-			 ice_address: account, 
+			 ice_address: ice_address, 
 			 message: samples::VALID_MESSAGE.as_bytes().to_vec(), 
 			 icon_signature: samples::VALID_ICON_SIGNATURE.clone(), 
 			 ice_signature: samples::VALID_ICE_SIGNATURE.clone(), 
@@ -82,7 +80,7 @@ impl<T:pallet_airdrop::Config> Default for UserClaimTestCase<T> {
 pub mod samples {
 
 	use super::decode_hex;
-	use super::types::{IconAddress,IconSignature, ServerResponse};
+	use super::types::{IconAddress,IconSignature};
 	use sp_core::sr25519;
 
 	pub const ACCOUNT_ID: &[sr25519::Public] = &[
@@ -91,21 +89,6 @@ pub mod samples {
 		sr25519::Public([3; 32]),
 		sr25519::Public([4; 32]),
 		sr25519::Public([5; 32]),
-	];
-
-	pub const SERVER_DATA: &[ServerResponse] = &[
-		ServerResponse {
-			omm: 1234443,
-			amount: 345323,
-			stake: 8437566,
-			defi_user: true,
-		},
-		ServerResponse {
-			omm: 8548467,
-			amount: 928333,
-			stake: 298329,
-			defi_user: false,
-		},
 	];
 
 	pub const ICON_ADDRESS: &[IconAddress] = &[

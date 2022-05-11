@@ -8,7 +8,6 @@ use sp_runtime::{
 	AccountId32,
 };
 use sp_std::vec::Vec;
-use sp_core::sr25519::Signature;
 
 /// Reuturns an optional vesting schedule which when applied release given amount
 /// which will be complete in given block. If
@@ -47,20 +46,6 @@ where
 	}
 
 	(vesting, remainding_amount)
-}
-
-/// Returns total sum of amount returned from server
-pub fn get_response_sum(
-	server_response: &types::ServerResponse,
-) -> Result<types::ServerBalance, sp_runtime::ArithmeticError> {
-	use sp_runtime::ArithmeticError::Overflow;
-
-	server_response
-		.amount
-		.checked_add(server_response.stake)
-		.ok_or(Overflow)?
-		.checked_add(server_response.omm)
-		.ok_or(Overflow)
 }
 
 /// Implement IconVerifiable for Anything that can be decoded into Vec<u8>

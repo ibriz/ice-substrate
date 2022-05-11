@@ -71,16 +71,13 @@ pub struct SnapshotInfo<T: Config> {
 	/// Icon address of this snapshot
 	// TODO:
 	// change this to [u8; _]
-	pub ice_address: AccountIdOf<T>,
+	pub ice_address: IceAddress,
 
 	/// Total airdroppable-amount this icon_address hold
 	pub amount: BalanceOf<T>,
 
 	/// Indicator wather this icon_address holder is defi-user
 	pub defi_user: bool,
-
-	/// TODO: add description of this filed
-	pub vesting_percentage: u32,
 
 	/// indicator wather the user have claimmed the balance
 	/// which will be given through instant transfer
@@ -99,7 +96,7 @@ pub struct SnapshotInfo<T: Config> {
 impl<T: Config> SnapshotInfo<T> {
 	/// Helper function to set ice_address in builder-pattern way
 	/// so that initilisation can be done in single line
-	pub fn ice_address(mut self, val: AccountIdOf<T>) -> Self {
+	pub fn ice_address(mut self, val: IceAddress) -> Self {
 		self.ice_address = val;
 		self
 	}
@@ -109,10 +106,9 @@ impl<T: Config> SnapshotInfo<T> {
 impl<T: Config> Default for SnapshotInfo<T> {
 	fn default() -> Self {
 		Self {
-			ice_address: AccountIdOf::<T>::default(),
+			ice_address: [0u8;32],
 			amount: 0_u32.into(),
 			defi_user: false,
-			vesting_percentage: 0,
 			done_instant: false,
 			done_vesting: false,
 			vesting_block_number: None,
@@ -142,45 +138,6 @@ pub enum ClaimError {
 	CallingError(CallDispatchableError),
 }
 
-/// Structure expected to return from server when doing a request for details of icon_address
-#[derive(Deserialize, Encode, Decode, Clone, Default, Eq, PartialEq, TypeInfo, Copy)]
-#[cfg_attr(feature = "std", derive(Debug))]
-#[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
-#[cfg_attr(test, derive(serde::Serialize))]
-pub struct ServerResponse {
-	// TODO: Add description of this field
-	pub omm: ServerBalance,
-
-	/// Amount to transfer in this claim
-	#[serde(rename = "balanced")]
-	pub amount: ServerBalance,
-
-	// TODO: add description of this field
-	pub stake: ServerBalance,
-
-	/// Indicator weather this icon_address is defi_user or not
-	pub defi_user: bool,
-}
-
-impl ServerResponse {
-	pub fn get_total_balance<T: Config>(&self) -> Result<BalanceOf<T>, Error<T>> {
-		let total = self.get_total().map_err(|e| Error::<T>::from(e))?;
-		let balance =
-			<T::BalanceTypeConversion as Convert<ServerBalance, BalanceOf<T>>>::convert(total);
-		Ok(balance)
-	}
-
-	pub fn get_total(&self) -> Result<ServerBalance, ArithmeticError> {
-		use sp_runtime::ArithmeticError::Overflow;
-		let total = self
-			.amount
-			.checked_add(self.stake)
-			.ok_or(Overflow)?
-			.checked_add(self.omm)
-			.ok_or(Overflow);
-		total
-	}
-}
 
 impl<T: Config> From<ArithmeticError> for Error<T> {
 	fn from(_: ArithmeticError) -> Self {
@@ -237,30 +194,21 @@ pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
 pub struct AirdropState {
 	// Only receive claim request when this flag is true
 	pub block_claim_request: bool,
-
-	// Only process already received claim request when this flag is true
-	#[deprecated(note = "This pallet no longer user offchain so this flag is not needed")]
-	pub avoid_claim_processing: bool,
 }
 
 impl Default for AirdropState {
 	fn default() -> Self {
 		AirdropState {
 			block_claim_request: false,
-			avoid_claim_processing: false,
 		}
 	}
 }
 
 pub trait MerkelProofValidator<T: Config> {
 	fn validate(
-		icon_address: &IconAddress,
-		amount: u64,
-		defi_user: bool,
+		leaf_hash:MerkleHash,
 		root_hash: MerkleHash,
-		leaf_hash: MerkleHash,
 		proofs: MerkleProofs<T>,
 	) -> bool;
 
-	// fn proof_root(leaf_hash: types::MerkleHash, proofs: types::MerkleProofs<T>) -> [u8; 32];
 }

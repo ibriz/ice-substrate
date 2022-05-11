@@ -17,19 +17,11 @@ pub struct AirdropMerkleValidator<T>(PhantomData<T>);
 
 impl<T: Config> MerkelProofValidator<T> for AirdropMerkleValidator<T> {
 	fn validate(
-		icon_address: &types::IconAddress,
-		amount: u64,
-		defi_user: bool,
+		leaf_hash:types::MerkleHash,
 		root_hash: types::MerkleHash,
-		leaf_hash: types::MerkleHash,
 		proofs: types::MerkleProofs<T>,
 	) -> bool {
-		let computed_leaf = hex::encode(hash_leaf(icon_address, amount, defi_user));
-		let input_leaf = hex::encode(leaf_hash);
-
-		if computed_leaf.ne(&input_leaf) {
-			return false;
-		}
+		
 		let computed_root = hex::encode(proof_root(leaf_hash, proofs.to_vec()));
 		let root_hex = hex::encode(root_hash);
 
