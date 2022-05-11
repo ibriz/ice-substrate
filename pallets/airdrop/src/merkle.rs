@@ -24,11 +24,7 @@ impl<T: Config> MerkelProofValidator<T> for AirdropMerkleValidator<T> {
 		let computed_root = hex::encode(proof_root(leaf_hash, proofs.to_vec()));
 		let root_hex = hex::encode(root_hash);
 
-		if computed_root.ne(&root_hex) {
-			return false;
-		}
-
-		return true;
+		computed_root.eq(&root_hex)
 	}
 }
 
@@ -38,10 +34,8 @@ pub struct Blake2bAlgorithm {}
 impl Hasher for Blake2bAlgorithm {
 	type Hash = [u8; 32];
 
-	fn hash(data: &[u8]) -> [u8; 32] {
-		use sp_io::hashing::blake2_256;
-		let val = blake2_256(data);
-		return val;
+	fn hash(data: &[u8]) -> Self::Hash {
+		sp_io::hashing::blake2_256(data)
 	}
 }
 
@@ -50,11 +44,13 @@ pub fn hash_leaf(
 	amount: types::ServerBalance,
 	defi_user: bool,
 ) -> [u8; 32] {
-	let defi_str: &str = if defi_user { "1" } else { "0" };
+	let defi_str = if defi_user { "1" } else { "0" };
+
 	let mut byte_vec = icon_address.to_vec();
 	byte_vec.extend_from_slice(amount.to_string().as_bytes());
 	byte_vec.extend_from_slice(&defi_str.as_bytes());
-	return Blake2bAlgorithm::hash(&byte_vec);
+
+	Blake2bAlgorithm::hash(&byte_vec)
 }
 
 pub fn proof_root(leaf_hash: types::MerkleHash, proofs: Vec<types::MerkleHash>) -> [u8; 32] {
@@ -62,7 +58,8 @@ pub fn proof_root(leaf_hash: types::MerkleHash, proofs: Vec<types::MerkleHash>) 
 	for proof in proofs {
 		one = create_hash(one, proof);
 	}
-	return one;
+
+	one
 }
 
 pub fn create_hash(one: types::MerkleHash, other: types::MerkleHash) -> [u8; 32] {
@@ -81,7 +78,7 @@ pub fn sort_array(one: types::MerkleHash, other: types::MerkleHash, pos: usize) 
 			if pos == max_pos {
 				return [one, other].concat();
 			}
-			pos = pos + 1;
+			pos += 1;
 			sort_array(one, other, pos)
 		}
 	}

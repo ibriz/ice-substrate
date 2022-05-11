@@ -35,7 +35,7 @@ where
 
 	let per_block = primary_transfer_amount
 		.checked_div(&idol_transfer_multiple)
-		.unwrap_or(Bounded::min_value());
+		.unwrap_or_else(Bounded::min_value);
 
 	if per_block > Bounded::min_value() {
 		vesting = Some(types::VestingInfoOf::<T>::new(
@@ -111,7 +111,7 @@ impl types::IconVerifiable for sp_runtime::AccountId32 {
 		};
 
 		ensure!(
-			&ice_address == &extracted_ice_address,
+			ice_address == extracted_ice_address,
 			SignatureValidationError::InvalidIceAddress
 		);
 		// ==== Verfiied that ice_address in encoded message
@@ -121,7 +121,7 @@ impl types::IconVerifiable for sp_runtime::AccountId32 {
 			verify thet this message is being signed by same
 			icon_address as passed in this function
 		*/
-		let (_exit_status, message_hash) = Sha3FIPS256::execute(&message, COST)
+		let (_exit_status, message_hash) = Sha3FIPS256::execute(message, COST)
 			.map_err(|_| SignatureValidationError::Sha3Execution)?;
 		let formatted_icon_signature = {
 			let sig_r = &icon_signature[..32];

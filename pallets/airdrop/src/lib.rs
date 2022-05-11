@@ -21,8 +21,6 @@ pub mod weights;
 
 pub mod merkle;
 
-use hex_literal::hex;
-
 /// An identifier for a type of cryptographic key.
 /// For this pallet, account associated with this key must be same as
 /// Key stored in pallet_sudo. So that the calls made from offchain worker
@@ -57,7 +55,6 @@ pub mod pallet {
 	use frame_support::traits::{
 		Currency, ExistenceRequirement, LockableCurrency, ReservableCurrency,
 	};
-	use frame_system::offchain::CreateSignedTransaction;
 	use sp_runtime::traits::{IdentifyAccount, Member, Verify};
 	use types::IconVerifiable;
 	use weights::WeightInfo;
@@ -76,15 +73,6 @@ pub mod pallet {
 			+ ReservableCurrency<types::AccountIdOf<Self>>
 			+ LockableCurrency<types::AccountIdOf<Self>>
 			+ IsType<<Self as pallet_vesting::Config>::Currency>;
-
-		#[deprecated(note = "Do tight coupling or expanded loose coupling of vesting_pallet")]
-		type VestingModule: pallet_vesting::Config + IsType<Self>;
-
-		/// The overarching dispatch call type.
-		// type Call: From<Call<Self>>;
-
-		/// The identifier type for an offchain worker.
-		// type AuthorityId: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>;
 
 		/// Weight information for extrinsics in this pallet.
 		type AirdropWeightInfo: WeightInfo;
@@ -180,8 +168,11 @@ pub mod pallet {
 		/// Claim has already been made so can't be made again at this time
 		ClaimAlreadyMade,
 
+		/// Coversion between partially-compatible type failed
 		FailedConversion,
 
+		/// Creditor account do not have enough USABLE balance to
+		/// undergo this transaction
 		InsufficientCreditorBalance,
 
 		/// Some operation while applying vesting failed
@@ -193,17 +184,19 @@ pub mod pallet {
 		/// Currently processing of exchange request is blocked
 		NewExchangeRequestBlocked,
 
-		ArithmeticError,
-
-		FailedMappingAccount,
-
+		/// Given proof set was invalid to expected tree root
 		InvalidMerkleProof,
 
+		/// Provided proof size excced the maximum limit
 		ProofTooLarge,
+
 		InvalidIceAddress,
 		InvalidIceSignature,
 		FailedExtractingIceAddress,
 		InvalidMessagePayload,
+		ArithmeticError,
+
+		/// Claim amount was not expected in this exchanged airdrop
 		InvalidClaimAmount,
 	}
 
@@ -228,7 +221,7 @@ pub mod pallet {
 			proofs: types::MerkleProofs<T>,
 		) -> DispatchResultWithPostInfo {
 			// Make sure its callable by sudo or offchain
-			Self::ensure_root_or_server(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
+			Self::ensure_root_or_server(origin).map_err(|_| Error::<T>::DeniedOperation)?;
 
 			Self::ensure_request_acceptance()?;
 
@@ -263,8 +256,7 @@ pub mod pallet {
 			defi_user: bool,
 			proofs: types::MerkleProofs<T>,
 		) -> DispatchResultWithPostInfo {
-			// Make sure its callable by sudo or offchain
-			ensure_root(origin.clone()).map_err(|_| Error::<T>::DeniedOperation)?;
+			ensure_root(origin).map_err(|_| Error::<T>::DeniedOperation)?;
 			Self::ensure_exchange_acceptance()?;
 
 			let amount = Self::validate_whitelisted(&icon_address)?;
@@ -341,15 +333,17 @@ pub mod pallet {
 		/// 		or cancel the donation
 		/// This function can be used as a mean to credit our creditor if being donated from
 		/// any node operator owned account
-
-		#[pallet::weight(<T as Config>::AirdropWeightInfo::donate_to_creditor(types::balance_to_u32::<T>(amount.clone())))]
+		#[pallet::weight(
+			<T as Config>::AirdropWeightInfo::donate_to_creditor(
+				types::balance_to_u32::<T>(*amount)
+			)
+		)]
 		pub fn donate_to_creditor(
 			origin: OriginFor<T>,
 			amount: types::BalanceOf<T>,
 			allow_death: bool,
 		) -> DispatchResult {
 			let sponser = ensure_signed(origin)?;
-			let amount = types::BalanceOf::<T>::from(amount);
 
 			let creditor_account = Self::get_creditor_account();
 			let existance_req = if allow_death {
@@ -372,6 +366,8 @@ pub mod pallet {
 			Self::creditor_account().expect("Creditor Account Not Set")
 		}
 
+		/// Check weather node is set to block incoming claim request
+		/// Return error in that case else return Ok
 		pub fn ensure_request_acceptance() -> DispatchResult {
 			let is_disabled = Self::get_airdrop_state().block_claim_request;
 
@@ -382,6 +378,8 @@ pub mod pallet {
 			}
 		}
 
+		/// Check weather node is set to block incoming exchange request
+		/// Return error in that case else return Ok
 		pub fn ensure_exchange_acceptance() -> DispatchResult {
 			let is_disabled = Self::get_airdrop_state().block_exchange_request;
 
@@ -393,7 +391,7 @@ pub mod pallet {
 		}
 
 		/// Helper function to create similar interface like `ensure_root`
-		/// but which instead check for sudo key
+		/// but which instead check for server key
 		pub fn ensure_root_or_server(origin: OriginFor<T>) -> DispatchResult {
 			let is_root = ensure_root(origin.clone()).is_ok();
 			let is_offchain = {
@@ -420,13 +418,12 @@ pub mod pallet {
 			let snapshot = Self::get_icon_snapshot_map(icon_address);
 			if let Some(saved) = snapshot {
 				if saved.done_vesting && saved.done_instant {
-					return Err(Error::<T>::ClaimAlreadyMade.into());
+					return Err(Error::<T>::ClaimAlreadyMade);
 				}
 				return Ok(saved);
 			}
 
-			let mut new_snapshot =
-				types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
+			let mut new_snapshot = types::SnapshotInfo::<T>::default().ice_address(*ice_address);
 
 			new_snapshot.defi_user = defi_user;
 			new_snapshot.amount = types::to_balance::<T>(amount);
@@ -446,13 +443,13 @@ pub mod pallet {
 			let snapshot = Self::get_icon_snapshot_map(icon_address);
 			if let Some(saved) = snapshot {
 				if saved.done_instant {
-					return Err(Error::<T>::ClaimAlreadyMade.into());
+					return Err(Error::<T>::ClaimAlreadyMade);
 				}
 				return Ok(saved);
 			}
 
 			let mut new_snapshot =
-				types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
+				types::SnapshotInfo::<T>::default().ice_address(*ice_address);
 
 			new_snapshot.defi_user = defi_user;
 			new_snapshot.amount = types::to_balance::<T>(amount);
@@ -477,7 +474,7 @@ pub mod pallet {
 		}
 
 		pub fn validate_whitelisted(icon_address: &types::IconAddress) -> Result<u64, Error<T>> {
-			Self::get_exchange_account(icon_address).ok_or_else(|| Error::<T>::DeniedOperation)
+			Self::get_exchange_account(icon_address).ok_or(Error::<T>::DeniedOperation)
 		}
 
 		pub fn validate_icon_address(
@@ -504,7 +501,7 @@ pub mod pallet {
 			if is_valid {
 				Ok(true)
 			} else {
-				Err(Error::<T>::InvalidIceSignature.into())
+				Err(Error::<T>::InvalidIceSignature)
 			}
 		}
 
@@ -526,8 +523,8 @@ pub mod pallet {
 			msg: &[u8],
 			account_bytes: &[u8; 32],
 		) -> bool {
-			let signature = sp_core::sr25519::Signature::from_raw(signature_raw.clone());
-			let public = sp_core::sr25519::Public::from_raw(account_bytes.clone());
+			let signature = sp_core::sr25519::Signature::from_raw(*signature_raw);
+			let public = sp_core::sr25519::Public::from_raw(*account_bytes);
 			signature.verify(msg, &public)
 		}
 
@@ -607,7 +604,7 @@ pub mod pallet {
 				types::BalanceOf<T>,
 			>>::convert(total_amount);
 			let creditor = Self::get_creditor_account();
-			let claimer = Self::to_account_id(snapshot.ice_address.clone())?;
+			let claimer = Self::to_account_id(snapshot.ice_address)?;
 			if !snapshot.done_instant {
 				<T as Config>::Currency::transfer(
 					&creditor,
@@ -649,7 +646,7 @@ pub mod pallet {
 			const BLOCKS_IN_YEAR: u32 = 5_256_000u32;
 			// Block number after which enable to do vesting
 			const VESTING_APPLICABLE_FROM: u32 = 1u32;
-			let claimer = snapshot.ice_address.clone();
+			let claimer = snapshot.ice_address;
 			let creditor = Self::get_creditor_account();
 
 			let (mut instant_amount, vesting_amount) =
@@ -685,8 +682,8 @@ pub mod pallet {
 				// Apply vesting
 				Some(schedule) if !snapshot.done_vesting => {
 					let vest_res = pallet_vesting::Pallet::<T>::vested_transfer(
-						creditor_origin.clone(),
-						claimer_origin.clone(),
+						creditor_origin,
+						claimer_origin,
 						schedule,
 					);
 
