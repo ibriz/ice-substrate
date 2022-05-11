@@ -241,10 +241,12 @@ pub mod pallet {
 			log::trace!("[Airdrop pallet] Leaf Hash Is: {:?}",&leaf_hash);
 
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, leaf_hash, proofs)?;
-			Self::validate_creditor_fund(total_amount)?;
+			
 			Self::validate_icon_address(&icon_address, &icon_signature, &message)?;
 
 			Self::validate_ice_signature(&ice_signature, &icon_signature, &ice_address)?;
+			
+			Self::validate_creditor_fund(total_amount)?;
 			//  write starts here so payload should be validated before this.
 			let mut snapshot =
 				Self::validate_unclaimed(&icon_address, &ice_address, total_amount, defi_user)?;

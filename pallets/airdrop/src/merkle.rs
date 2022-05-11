@@ -70,8 +70,7 @@ pub fn proof_root(leaf_hash: types::MerkleHash, proofs: Vec<types::MerkleHash>) 
 	let mut one = leaf_hash;
 	for proof in proofs {
 		one = create_hash(one, proof);
-		let one_hex = hex::encode(one);
-		log::info!("Calculated: {:?}", one_hex);
+		
 	}
 	return one;
 }

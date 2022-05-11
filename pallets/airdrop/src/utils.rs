@@ -8,6 +8,7 @@ use sp_runtime::{
 	AccountId32,
 };
 use sp_std::vec::Vec;
+use sp_core::sr25519::Signature;
 
 /// Reuturns an optional vesting schedule which when applied release given amount
 /// which will be complete in given block. If
