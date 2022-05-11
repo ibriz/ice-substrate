@@ -220,26 +220,42 @@ pub mod pallet {
 			defi_user: bool,
 			proofs: types::MerkleProofs<T>,
 		) -> DispatchResultWithPostInfo {
-			// Make sure its callable by sudo or offchain
+			// Make sure only root or server account call call this
 			Self::ensure_root_or_server(origin).map_err(|_| Error::<T>::DeniedOperation)?;
 
+			// Make sure node is accepting new claimrequest
 			Self::ensure_request_acceptance()?;
 
+			// Verify the integrity of message
 			Self::validate_message_payload(&message, &ice_address)?;
 
+			// We expect a valid proof of this exchange call
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs)?;
 
+			// Validate icon signature
 			Self::validate_icon_address(&icon_address, &icon_signature, &message)?;
 
+			// Validate ice signature
 			Self::validate_ice_signature(&ice_signature, &icon_signature, &ice_address)?;
 
-			Self::validate_creditor_fund(total_amount)?;
-			//  write starts here so payload should be validated before this.
+			// Now this address pair is verified,
+			// we can insert it to the map if this pair is new
 			let mut snapshot =
-				Self::validate_unclaimed(&icon_address, &ice_address, total_amount, defi_user)?;
-			Self::do_transfer(&mut snapshot, &icon_address, total_amount, defi_user)?;
-			Self::deposit_event(Event::ClaimSuccess(icon_address));
+				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount);
 
+			// Make sure this user is eligible for claim.
+			Self::ensure_claimable(&snapshot)?;
+
+			// We also make sure creditor have enough fund to complete this airdrop
+			Self::validate_creditor_fund(total_amount)?;
+
+			// Do the actual transfer if eligible
+			Self::do_transfer(&mut snapshot, &icon_address, total_amount, defi_user)?;
+
+			// do_transfer might have updated the snapshot. Write it,
+			<IceSnapshotMap<T>>::insert(&icon_address, snapshot.clone());
+
+			Self::deposit_event(Event::ClaimSuccess(icon_address));
 			Ok(Pays::No.into())
 		}
 
@@ -265,9 +281,10 @@ pub mod pallet {
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs)?;
 			Self::validate_creditor_fund(total_amount)?;
 
-			// check if claim has already been processed
 			let mut snapshot =
-				Self::validate_unclaimed(&icon_address, &ice_address, total_amount, defi_user)?;
+				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount);
+
+			Self::ensure_claimable(&snapshot)?;
 			Self::do_transfer(&mut snapshot, &icon_address, total_amount, defi_user)?;
 
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
@@ -408,55 +425,40 @@ pub mod pallet {
 			<frame_system::Pallet<T>>::block_number()
 		}
 
-		#[cfg(not(feature = "no-vesting"))]
-		pub fn validate_unclaimed(
+		// Insert this address pair if it is new
+		pub fn insert_or_get_snapshot(
 			icon_address: &types::IconAddress,
 			ice_address: &types::IceAddress,
-			amount: types::ServerBalance,
 			defi_user: bool,
-		) -> Result<types::SnapshotInfo<T>, Error<T>> {
-			let snapshot = Self::get_icon_snapshot_map(icon_address);
-			if let Some(saved) = snapshot {
-				if saved.done_vesting && saved.done_instant {
-					return Err(Error::<T>::ClaimAlreadyMade);
+			amount: types::ServerBalance,
+		) -> types::SnapshotInfo<T> {
+			let old_snapshot = Self::get_icon_snapshot_map(icon_address);
+
+			match old_snapshot {
+				// As this pair is already on map,
+				// we can just return it
+				Some(old_snapshot) => old_snapshot,
+
+				// This pair is new to the crew, add it
+				None => {
+					let mut new_snapshot =
+						types::SnapshotInfo::<T>::default().ice_address(*ice_address);
+					new_snapshot.amount = types::to_balance::<T>(amount);
+					new_snapshot.defi_user = defi_user;
+
+					<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
+
+					new_snapshot
 				}
-				return Ok(saved);
 			}
-
-			let mut new_snapshot = types::SnapshotInfo::<T>::default().ice_address(*ice_address);
-
-			new_snapshot.defi_user = defi_user;
-			new_snapshot.amount = types::to_balance::<T>(amount);
-
-			<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
-
-			Ok(new_snapshot)
 		}
 
-		#[cfg(feature = "no-vesting")]
-		pub fn validate_unclaimed(
-			icon_address: &types::IconAddress,
-			ice_address: &types::IceAddress,
-			amount: types::ServerBalance,
-			defi_user: bool,
-		) -> Result<types::SnapshotInfo<T>, Error<T>> {
-			let snapshot = Self::get_icon_snapshot_map(icon_address);
-			if let Some(saved) = snapshot {
-				if saved.done_instant {
-					return Err(Error::<T>::ClaimAlreadyMade);
-				}
-				return Ok(saved);
+		pub fn ensure_claimable(snapshot: &types::SnapshotInfo<T>) -> DispatchResult {
+			if snapshot.done_instant && snapshot.done_vesting {
+				Err(Error::<T>::ClaimAlreadyMade.into())
+			} else {
+				Ok(())
 			}
-
-			let mut new_snapshot =
-				types::SnapshotInfo::<T>::default().ice_address(*ice_address);
-
-			new_snapshot.defi_user = defi_user;
-			new_snapshot.amount = types::to_balance::<T>(amount);
-
-			<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
-
-			Ok(new_snapshot)
 		}
 
 		pub fn validate_creditor_fund(amount: types::ServerBalance) -> DispatchResult {
@@ -605,33 +607,39 @@ pub mod pallet {
 			>>::convert(total_amount);
 			let creditor = Self::get_creditor_account();
 			let claimer = Self::to_account_id(snapshot.ice_address)?;
-			if !snapshot.done_instant {
-				<T as Config>::Currency::transfer(
-					&creditor,
-					&claimer,
-					total_balance,
-					ExistenceRequirement::KeepAlive,
-				)
-				.map_err(|err| {
-					log::error!(
-						"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
-						claimer,
-						err
-					);
-					err
-				})?;
 
-				// Everything went ok. Update flag
-				snapshot.done_instant = true;
-				snapshot.initial_transfer = total_balance;
-				<IceSnapshotMap<T>>::insert(&icon_address, snapshot.clone());
-			} else {
+			// Here we do not need vesting so we can always set done_vesting to true
+			snapshot.done_vesting = true;
+
+			if snapshot.done_instant {
 				log::trace!(
 					"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
 					claimer,
 					Self::get_current_block_number()
 				);
+
+				return Err(Error::<T>::ClaimAlreadyMade);
 			}
+
+			<T as Config>::Currency::transfer(
+				&creditor,
+				&claimer,
+				total_balance,
+				ExistenceRequirement::KeepAlive,
+			)
+			.map_err(|err| {
+				log::error!(
+					"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
+					claimer,
+					err
+				);
+				err
+			})?;
+
+			// Everything went ok. Update flag
+			snapshot.done_instant = true;
+			snapshot.initial_transfer = total_balance;
+
 			Ok(())
 		}
 
@@ -646,6 +654,7 @@ pub mod pallet {
 			const BLOCKS_IN_YEAR: u32 = 5_256_000u32;
 			// Block number after which enable to do vesting
 			const VESTING_APPLICABLE_FROM: u32 = 1u32;
+
 			let claimer = snapshot.ice_address;
 			let creditor = Self::get_creditor_account();
 
@@ -692,7 +701,6 @@ pub mod pallet {
 						Ok(()) => {
 							snapshot.done_vesting = true;
 							snapshot.vesting_block_number = Some(Self::get_current_block_number());
-							<IceSnapshotMap<T>>::insert(&icon_address, snapshot.clone());
 							log::info!("[Airdrop pallet] Vesting applied for {:?}", claimer);
 						}
 						// log error
@@ -721,7 +729,6 @@ pub mod pallet {
 					// it will not be applicable ever. So mark it as done.
 					snapshot.done_vesting = true;
 					snapshot.vesting_block_number = Some(Self::get_current_block_number());
-					<IceSnapshotMap<T>>::insert(&icon_address, snapshot.clone());
 
 					log::trace!(
 						"[Airdrop pallet] Primary vesting not applicable for {:?}",
@@ -758,7 +765,6 @@ pub mod pallet {
 				// Everything went ok. Update flag
 				snapshot.done_instant = true;
 				snapshot.initial_transfer = instant_amount;
-				<IceSnapshotMap<T>>::insert(&icon_address, snapshot.clone());
 			} else {
 				log::trace!(
 					"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",

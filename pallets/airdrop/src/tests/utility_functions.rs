@@ -468,3 +468,51 @@ fn validate_creditor_fund() {
 		}
 	});
 }
+
+#[test]
+fn ensure_claimable_snapshot() {
+	minimal_test_ext().execute_with(|| {
+		// Fail when both are claimed
+		{
+			let snapshot = types::SnapshotInfo::<Test> {
+				done_instant: true,
+				done_vesting: true,
+				..Default::default()
+			};
+			assert_err!(
+				AirdropModule::ensure_claimable(&snapshot),
+				PalletError::ClaimAlreadyMade
+			);
+		}
+
+		// Pass when both are not done
+		{
+			let snapshot = types::SnapshotInfo::<Test> {
+				done_instant: false,
+				done_vesting: false,
+				..Default::default()
+			};
+			assert_ok!(AirdropModule::ensure_claimable(&snapshot));
+		}
+
+		// Pass when vesting is not claimed
+		{
+			let snapshot = types::SnapshotInfo::<Test> {
+				done_instant: false,
+				done_vesting: true,
+				..Default::default()
+			};
+			assert_ok!(AirdropModule::ensure_claimable(&snapshot));
+		}
+
+		// Pass when instant is not claimed
+		{
+			let snapshot = types::SnapshotInfo::<Test> {
+				done_instant: true,
+				done_vesting: false,
+				..Default::default()
+			};
+			assert_ok!(AirdropModule::ensure_claimable(&snapshot));
+		}
+	});
+}
