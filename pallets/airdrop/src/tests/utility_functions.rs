@@ -413,3 +413,58 @@ fn respect_airdrop_state() {
 		);
 	})
 }
+
+#[test]
+fn validate_creditor_fund() {
+	use frame_support::traits::Currency;
+
+	minimal_test_ext().execute_with(|| {
+		let exestinsial_balance = <Test as pallet_airdrop::Config>::Currency::minimum_balance();
+		let donator = samples::ACCOUNT_ID[1];
+		<Test as pallet_airdrop::Config>::Currency::deposit_creating(&donator, u64::MAX.into());
+
+		// When creditor balance is empty.
+		{
+			assert_err!(
+				AirdropModule::validate_creditor_fund(10),
+				PalletError::InsufficientCreditorBalance
+			);
+		}
+
+		// When creditor balance is exactly same as exestinsial balance
+		{
+			assert_ok!(AirdropModule::donate_to_creditor(
+				Origin::signed(donator.clone()),
+				exestinsial_balance,
+				false
+			));
+
+			assert_err!(
+				AirdropModule::validate_creditor_fund(exestinsial_balance.try_into().unwrap()),
+				PalletError::InsufficientCreditorBalance,
+			);
+		}
+
+		// When all of creditor balance is required
+		{
+			assert_ok!(AirdropModule::donate_to_creditor(
+				Origin::signed(donator.clone()),
+				u32::MAX.into(),
+				false
+			));
+			let required_balance = <Test as pallet_airdrop::Config>::Currency::free_balance(
+				&AirdropModule::get_creditor_account(),
+			);
+
+			assert_err!(
+				AirdropModule::validate_creditor_fund(required_balance.try_into().unwrap()),
+				PalletError::InsufficientCreditorBalance,
+			);
+		}
+
+		// When only a portion of balance is required
+		{
+			assert_ok!(AirdropModule::validate_creditor_fund(10_000_000),);
+		}
+	});
+}

@@ -462,17 +462,18 @@ pub mod pallet {
 			Ok(new_snapshot)
 		}
 
-		pub fn validate_creditor_fund(amount: types::ServerBalance) -> Result<(), Error<T>> {
-			use sp_std::cmp::Ordering;
+		pub fn validate_creditor_fund(amount: types::ServerBalance) -> DispatchResult {
 			let creditor_balance =
 				<T as Config>::Currency::free_balance(&Self::get_creditor_account());
-			let amount = types::to_balance::<T>(amount);
-			let ordering = creditor_balance.cmp(&amount);
-			if let Ordering::Less = ordering {
+			let required_amount = types::to_balance::<T>(amount);
+			let exestensial_deposit = <T as Config>::Currency::minimum_balance();
+
+			if creditor_balance > required_amount + exestensial_deposit {
+				Ok(())
+			} else {
 				Self::deposit_event(Event::<T>::CreditorBalanceLow);
-				return Err(Error::<T>::InsufficientCreditorBalance);
+				Err(Error::<T>::InsufficientCreditorBalance.into())
 			}
-			Ok(())
 		}
 
 		pub fn validate_whitelisted(icon_address: &types::IconAddress) -> Result<u64, Error<T>> {
