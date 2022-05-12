@@ -2,16 +2,10 @@ use crate::types;
 use crate::Config;
 use codec::alloc::string::ToString;
 use core::cmp::Ordering;
-use core::convert::TryFrom;
 use core::marker::PhantomData;
+use sp_io::hashing;
 use sp_std::prelude::*;
 use types::MerkelProofValidator;
-
-pub trait Hasher: Clone {
-	type Hash: Copy + PartialEq + Into<sp_std::vec::Vec<u8>> + TryFrom<sp_std::vec::Vec<u8>>;
-
-	fn hash(data: &[u8]) -> Self::Hash;
-}
 
 pub struct AirdropMerkleValidator<T>(PhantomData<T>);
 
@@ -24,18 +18,7 @@ impl<T: Config> MerkelProofValidator<T> for AirdropMerkleValidator<T> {
 		let computed_root = hex::encode(proof_root(leaf_hash, proofs.to_vec()));
 		let root_hex = hex::encode(root_hash);
 
-		computed_root.eq(&root_hex)
-	}
-}
-
-#[derive(Clone)]
-pub struct Blake2bAlgorithm {}
-
-impl Hasher for Blake2bAlgorithm {
-	type Hash = [u8; 32];
-
-	fn hash(data: &[u8]) -> Self::Hash {
-		sp_io::hashing::blake2_256(data)
+		computed_root == root_hex
 	}
 }
 
@@ -50,7 +33,7 @@ pub fn hash_leaf(
 	byte_vec.extend_from_slice(amount.to_string().as_bytes());
 	byte_vec.extend_from_slice(&defi_str.as_bytes());
 
-	Blake2bAlgorithm::hash(&byte_vec)
+	hashing::blake2_256(&byte_vec)
 }
 
 pub fn proof_root(leaf_hash: types::MerkleHash, proofs: Vec<types::MerkleHash>) -> [u8; 32] {
@@ -64,7 +47,7 @@ pub fn proof_root(leaf_hash: types::MerkleHash, proofs: Vec<types::MerkleHash>) 
 
 pub fn create_hash(one: types::MerkleHash, other: types::MerkleHash) -> [u8; 32] {
 	let sorted = sort_array(one, other, 0 as usize);
-	Blake2bAlgorithm::hash(&sorted)
+	hashing::blake2_256(&sorted)
 }
 
 pub fn sort_array(one: types::MerkleHash, other: types::MerkleHash, pos: usize) -> Vec<u8> {

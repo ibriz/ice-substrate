@@ -1,7 +1,5 @@
-use core::marker::PhantomData;
-
-use crate::types::MerkelProofValidator;
 use crate::{self as pallet_airdrop, types};
+use core::marker::PhantomData;
 
 use frame_support::{parameter_types, traits::ConstU32};
 use frame_system as system;
@@ -89,9 +87,7 @@ impl pallet_airdrop::Config for Test {
 	type VerifiableAccountId = AccountId;
 	type Currency = Balances;
 	type FetchIconEndpoint = FetchIconEndpoint;
-	// type AuthorityId = crate::airdrop_crypto::AuthId;
 	type Creditor = CreditorAccount;
-	type VestingModule = Test;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Test>;
 	type MerkelProofValidator = TestValidator<Test>;
