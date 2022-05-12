@@ -210,3 +210,15 @@ impl Default for AirdropState {
 pub trait MerkelProofValidator<T: Config> {
 	fn validate(leaf_hash: MerkleHash, root_hash: MerkleHash, proofs: MerkleProofs<T>) -> bool;
 }
+
+/// Trait to commit behaviour of do_transfer function
+/// this trait now can me implmeneted according to
+/// the node behaviour eg: vesting manner and direct manner
+pub trait DoTransfer {
+	fn do_transfer<T: Config>(
+		snapshot: &mut SnapshotInfo<T>,
+		icon_address: &IconAddress,
+		total_amount: ServerBalance,
+		defi_user: bool,
+	) -> Result<(), DispatchError>;
+}

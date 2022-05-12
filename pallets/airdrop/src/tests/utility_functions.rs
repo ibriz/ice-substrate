@@ -512,7 +512,15 @@ fn ensure_claimable_snapshot() {
 				done_vesting: false,
 				..Default::default()
 			};
+
+			#[cfg(not(feature = "no-vesting"))]
 			assert_ok!(AirdropModule::ensure_claimable(&snapshot));
+
+			#[cfg(feature = "no-vesting")]
+			assert_err!(
+				AirdropModule::ensure_claimable(&snapshot),
+				PalletError::ClaimAlreadyMade
+			);
 		}
 	});
 }
