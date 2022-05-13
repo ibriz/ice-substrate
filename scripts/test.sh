@@ -13,3 +13,5 @@ for d in $(ls -d ./pallets/*/) ; do
     fi
 
 done
+
+cargo check
