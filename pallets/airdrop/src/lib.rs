@@ -570,38 +570,6 @@ pub mod pallet {
 				.map_err(|_e| Error::<T>::InvalidIceAddress)
 		}
 
-		pub fn get_splitted_amounts(
-			total_amount: types::BalanceOf<T>,
-			is_defi_user: bool,
-		) -> Result<(types::BalanceOf<T>, types::VestingBalanceOf<T>), DispatchError> {
-			const DEFI_INSTANT_PER: u32 = 40_u32;
-			const NORMAL_INSTANT_PER: u32 = 30_u32;
-
-			let percentage = if is_defi_user {
-				DEFI_INSTANT_PER
-			} else {
-				NORMAL_INSTANT_PER
-			};
-
-			let instant_amount = total_amount
-				.checked_mul(&percentage.into())
-				.ok_or(sp_runtime::ArithmeticError::Overflow)?
-				.checked_div(&100_u32.into())
-				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
-
-			let vesting_amount = total_amount
-				.checked_sub(&instant_amount)
-				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
-
-			Ok((
-				instant_amount,
-				<T::BalanceTypeConversion as Convert<
-					types::BalanceOf<T>,
-					types::VestingBalanceOf<T>,
-				>>::convert(vesting_amount),
-			))
-		}
-
 		pub fn do_transfer(
 			snapshot: &mut types::SnapshotInfo<T>,
 			icon_address: &types::IconAddress,

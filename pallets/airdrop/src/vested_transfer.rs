@@ -21,7 +21,7 @@ impl types::DoTransfer for DOVestdTransfer {
 		let creditor = AirdropModule::<T>::get_creditor_account();
 
 		let (mut instant_amount, vesting_amount) =
-			AirdropModule::<T>::get_splitted_amounts(total_amount, defi_user)?;
+			utils::get_splitted_amounts::<T>(total_amount, defi_user)?;
 
 		let (transfer_shcedule, remainding_amount) = utils::new_vesting_with_deadline::<
 			T,
