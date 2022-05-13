@@ -1,7 +1,7 @@
 use crate as airdrop;
+use airdrop::{types, utils, Pallet as AirdropModule};
 use frame_support::pallet_prelude::*;
 use frame_support::traits::{Currency, ExistenceRequirement};
-use airdrop::{types, utils, Pallet as AirdropModule};
 use sp_runtime::traits::{CheckedAdd, Convert};
 
 pub struct DOVestdTransfer;
@@ -9,7 +9,7 @@ impl types::DoTransfer for DOVestdTransfer {
 	fn do_transfer<T: airdrop::Config>(
 		snapshot: &mut types::SnapshotInfo<T>,
 		icon_address: &types::IconAddress,
-		total_amount: types::ServerBalance,
+		total_amount: types::BalanceOf<T>,
 		defi_user: bool,
 	) -> Result<(), DispatchError> {
 		// TODO: put more relaible value

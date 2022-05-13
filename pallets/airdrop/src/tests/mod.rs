@@ -38,7 +38,7 @@ pub struct UserClaimTestCase {
 	pub message: Vec<u8>,
 	pub icon_signature: [u8; 65],
 	pub ice_signature: [u8; 64],
-	pub amount: u64,
+	pub amount: u128,
 	pub defi_user: bool,
 	pub merkle_proofs: BoundedVec<MerkleHash, ConstU32<10>>,
 	pub merkle_root: [u8; 32],

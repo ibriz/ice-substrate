@@ -12,7 +12,7 @@ fn claim_success() {
 			ofw_account
 		));
 		let mut case = UserClaimTestCase::default();
-		case.amount = 12_017_332_u64;
+		case.amount = 12_017_332_u64.into();
 
 		let creditor_account = AirdropModule::get_creditor_account();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
@@ -55,7 +55,7 @@ fn claim_success() {
 		));
 
 		let mut case = UserClaimTestCase::default();
-		case.amount = 12_017_332_u64;
+		case.amount = 12_017_332_u64.into();
 
 		let creditor_account = AirdropModule::get_creditor_account();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
@@ -98,7 +98,7 @@ fn insufficient_balance() {
 		));
 
 		let mut case = UserClaimTestCase::default();
-		case.amount = 10017332_u64;
+		case.amount = 10017332_u64.into();
 		let creditor_account = AirdropModule::get_creditor_account();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
@@ -135,7 +135,7 @@ fn already_claimed() {
 			ofw_account
 		));
 		let mut case = UserClaimTestCase::default();
-		case.amount = 10017332_u64;
+		case.amount = 10017332_u64.into();
 
 		let mut snapshot = types::SnapshotInfo::default();
 		snapshot.done_instant = true;

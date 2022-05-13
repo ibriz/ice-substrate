@@ -12,7 +12,7 @@ fn claim_success() {
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user = true;
-	let amount = 10017332_u64;
+	let amount: types::BalanceOf<Test> = 10017332_u64.into();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
 		let icon_wallet = VALID_ICON_WALLET;
@@ -33,7 +33,7 @@ fn claim_success() {
 			Origin::root(),
 			icon_wallet,
 			ice_address.clone(),
-			amount,
+			amount.into(),
 			defi_user,
 			bounded_proofs,
 		));
@@ -46,7 +46,7 @@ fn insufficient_balance() {
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user = true;
-	let amount = 10017332_u64;
+	let amount: types::BalanceOf<Test> = 10017332_u64.into();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
 		let icon_wallet = VALID_ICON_WALLET;
@@ -82,7 +82,7 @@ fn already_claimed() {
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user = true;
-	let amount = 10017332_u64;
+	let amount: types::BalanceOf<Test> = 10017332_u64.into();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
 		let icon_wallet = VALID_ICON_WALLET;
@@ -124,7 +124,7 @@ fn only_whitelisted_claim() {
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user = true;
-	let amount = 10017332_u64;
+	let amount: types::BalanceOf<Test> = 10017332_u64.into();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
 		let icon_wallet = VALID_ICON_WALLET;
@@ -157,14 +157,13 @@ fn only_whitelisted_claim() {
 	});
 }
 
-
 #[test]
 fn invalid_claim_amount() {
 	let sample = get_merkle_proof_sample();
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user = true;
-	let amount = 10017332_u64;
+	let amount: types::BalanceOf<Test> = 10017332_u64.into();
 	let mut test_ext = minimal_test_ext();
 	test_ext.execute_with(|| {
 		let icon_wallet = VALID_ICON_WALLET;
@@ -191,7 +190,7 @@ fn invalid_claim_amount() {
 				Origin::root(),
 				icon_wallet,
 				ice_address.clone(),
-				amount+10000,
+				amount + 10000,
 				defi_user,
 				bounded_proofs,
 			),

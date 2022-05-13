@@ -26,8 +26,22 @@ pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::B
 
 pub type SignatureOf<T> = <T as Config>::Signature;
 
-/// Balance type that will be returned from server
-pub type ServerBalance = u64;
+#[deprecated(
+	note = "Now we dont get balance from server that needs to be parsed seperately
+like one we needed to do when we had offchain worker. So this type is no longer required.
+Instead use types::BalanceOf<T>"
+)]
+pub type ServerBalance = u128;
+
+#[deprecated(note = "no longer needed when ServerBalance type is deprecated")]
+pub fn to_balance<T: Config>(amount: ServerBalance) -> BalanceOf<T> {
+	<T::BalanceTypeConversion as Convert<ServerBalance, BalanceOf<T>>>::convert(amount)
+}
+
+#[deprecated(note = "no longer needed when ServerBalance type is deprecated")]
+pub fn from_balance<T: Config>(amount: BalanceOf<T>) -> ServerBalance {
+	<T::BalanceTypeConversion as Convert<BalanceOf<T>, ServerBalance>>::convert(amount)
+}
 
 /// Type that represent IconAddress
 pub type IconAddress = [u8; 20];
@@ -150,10 +164,6 @@ impl<T: Config> From<SignatureValidationError> for Error<T> {
 	}
 }
 
-pub fn to_balance<T: Config>(amount: ServerBalance) -> BalanceOf<T> {
-	<T::BalanceTypeConversion as Convert<ServerBalance, BalanceOf<T>>>::convert(amount)
-}
-
 /// Error while calling On-chain calls from offchain worker
 #[cfg_attr(feature = "std", derive(Debug))]
 #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
@@ -218,7 +228,7 @@ pub trait DoTransfer {
 	fn do_transfer<T: Config>(
 		snapshot: &mut SnapshotInfo<T>,
 		icon_address: &IconAddress,
-		total_amount: ServerBalance,
+		total_amount: BalanceOf<T>,
 		defi_user: bool,
 	) -> Result<(), DispatchError>;
 }

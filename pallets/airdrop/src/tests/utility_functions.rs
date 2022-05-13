@@ -184,7 +184,7 @@ fn making_vesting_transfer() {
 	minimal_test_ext().execute_with(|| {
 		run_to_block(3);
 		let defi_user = true;
-		let amount = 9775129_u64;
+		let amount: types::BalanceOf<Test> = 9775129_u64.into();
 		let icon_address = samples::ICON_ADDRESS[0];
 		type Currency = <Test as pallet_airdrop::Config>::Currency;
 		// Fund creditor

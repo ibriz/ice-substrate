@@ -61,7 +61,7 @@ pub mod pallet {
 	use frame_support::traits::{
 		Currency, ExistenceRequirement, LockableCurrency, ReservableCurrency,
 	};
-	use sp_runtime::traits::{IdentifyAccount, Member, Verify};
+	use sp_runtime::traits::{CheckedDiv, CheckedMul, CheckedSub, IdentifyAccount, Member, Verify};
 	use types::IconVerifiable;
 	use weights::WeightInfo;
 
@@ -84,10 +84,11 @@ pub mod pallet {
 		type AirdropWeightInfo: WeightInfo;
 
 		/// Type that allows back and forth conversion
-		/// Server Balance type <==> Airdrop Balance <==> Vesting Balance
+		/// Airdrop Balance <==> Vesting Balance
 		type BalanceTypeConversion: Convert<types::ServerBalance, types::BalanceOf<Self>>
-			+ Convert<types::ServerBalance, types::VestingBalanceOf<Self>>
-			+ Convert<types::VestingBalanceOf<Self>, types::BalanceOf<Self>>;
+			+ Convert<types::BalanceOf<Self>, types::ServerBalance>
+			+ Convert<types::VestingBalanceOf<Self>, types::BalanceOf<Self>>
+			+ Convert<types::BalanceOf<Self>, types::VestingBalanceOf<Self>>;
 
 		/// Endpoint on where to send request url
 		#[pallet::constant]
@@ -96,6 +97,7 @@ pub mod pallet {
 		/// Id of account from which to send fund to claimers
 		/// This account should be credited enough to supply fund for all claim requests
 		#[pallet::constant]
+		#[deprecated(note = "Instead directly use creditor account from storage")]
 		type Creditor: Get<frame_support::PalletId>;
 
 		type MerkelProofValidator: types::MerkelProofValidator<Self>;
@@ -153,7 +155,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_exchange_account)]
 	pub type ExchangeAccountsMap<T: Config> =
-		StorageMap<_, Twox64Concat, types::IconAddress, u64, OptionQuery>;
+		StorageMap<_, Twox64Concat, types::IconAddress, types::BalanceOf<T>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn creditor_account)]
@@ -222,7 +224,7 @@ pub mod pallet {
 			message: Vec<u8>,
 			icon_signature: types::IconSignature,
 			ice_signature: types::IceSignature,
-			total_amount: types::ServerBalance,
+			total_amount: types::BalanceOf<T>,
 			defi_user: bool,
 			proofs: types::MerkleProofs<T>,
 		) -> DispatchResultWithPostInfo {
@@ -274,7 +276,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
 			ice_address: types::IceAddress,
-			total_amount: types::ServerBalance,
+			total_amount: types::BalanceOf<T>,
 			defi_user: bool,
 			proofs: types::MerkleProofs<T>,
 		) -> DispatchResultWithPostInfo {
@@ -386,6 +388,11 @@ pub mod pallet {
 	// implement all the helper function that are called from pallet dispatchable
 	impl<T: Config> Pallet<T> {
 		pub fn get_creditor_account() -> types::AccountIdOf<T> {
+			// TODO:
+			// Panicing is probably a bad idea in runtime.
+			// Assumption might be that creditor account is always set
+			// To express this assumtion we can also change type of
+			// CreditorAccount from OptionQuery to ValueQuery
 			Self::creditor_account().expect("Creditor Account Not Set")
 		}
 
@@ -436,7 +443,7 @@ pub mod pallet {
 			icon_address: &types::IconAddress,
 			ice_address: &types::IceAddress,
 			defi_user: bool,
-			amount: types::ServerBalance,
+			amount: types::BalanceOf<T>,
 		) -> types::SnapshotInfo<T> {
 			let old_snapshot = Self::get_icon_snapshot_map(icon_address);
 
@@ -449,7 +456,7 @@ pub mod pallet {
 				None => {
 					let mut new_snapshot =
 						types::SnapshotInfo::<T>::default().ice_address(*ice_address);
-					new_snapshot.amount = types::to_balance::<T>(amount);
+					new_snapshot.amount = amount;
 					new_snapshot.defi_user = defi_user;
 
 					<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
@@ -473,10 +480,9 @@ pub mod pallet {
 			}
 		}
 
-		pub fn validate_creditor_fund(amount: types::ServerBalance) -> DispatchResult {
+		pub fn validate_creditor_fund(required_amount: types::BalanceOf<T>) -> DispatchResult {
 			let creditor_balance =
 				<T as Config>::Currency::free_balance(&Self::get_creditor_account());
-			let required_amount = types::to_balance::<T>(amount);
 			let exestensial_deposit = <T as Config>::Currency::minimum_balance();
 
 			if creditor_balance > required_amount + exestensial_deposit {
@@ -487,7 +493,9 @@ pub mod pallet {
 			}
 		}
 
-		pub fn validate_whitelisted(icon_address: &types::IconAddress) -> Result<u64, Error<T>> {
+		pub fn validate_whitelisted(
+			icon_address: &types::IconAddress,
+		) -> Result<types::BalanceOf<T>, Error<T>> {
 			Self::get_exchange_account(icon_address).ok_or(Error::<T>::DeniedOperation)
 		}
 
@@ -552,10 +560,11 @@ pub mod pallet {
 
 		pub fn validate_merkle_proof(
 			icon_address: &types::IconAddress,
-			amount: types::ServerBalance,
+			amount: types::BalanceOf<T>,
 			defi_user: bool,
 			proof_hashes: types::MerkleProofs<T>,
 		) -> Result<bool, Error<T>> {
+			let amount = types::from_balance::<T>(amount);
 			let leaf_hash = merkle::hash_leaf(icon_address, amount, defi_user);
 			let is_valid_proof = <T as Config>::MerkelProofValidator::validate(
 				leaf_hash,
@@ -574,11 +583,8 @@ pub mod pallet {
 				.map_err(|_e| Error::<T>::InvalidIceAddress)
 		}
 
-		/// Split total amount to chunk of 3 amount
-		/// These are the amounts that are to be vested in next
-		/// 3 lot.
 		pub fn get_splitted_amounts(
-			total_amount: types::ServerBalance,
+			total_amount: types::BalanceOf<T>,
 			is_defi_user: bool,
 		) -> Result<(types::BalanceOf<T>, types::VestingBalanceOf<T>), DispatchError> {
 			const DEFI_INSTANT_PER: u32 = 40_u32;
@@ -591,25 +597,28 @@ pub mod pallet {
 			};
 
 			let instant_amount = total_amount
-				.checked_mul(percentage.into())
+				.checked_mul(&percentage.into())
 				.ok_or(sp_runtime::ArithmeticError::Overflow)?
-				.checked_div(100_u32.into())
+				.checked_div(&100_u32.into())
 				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
 
 			let vesting_amount = total_amount
-				.checked_sub(instant_amount)
+				.checked_sub(&instant_amount)
 				.ok_or(sp_runtime::ArithmeticError::Underflow)?;
 
 			Ok((
-				<T::BalanceTypeConversion as Convert<_, _>>::convert(instant_amount),
-				<T::BalanceTypeConversion as Convert<_, _>>::convert(vesting_amount),
+				instant_amount,
+				<T::BalanceTypeConversion as Convert<
+					types::BalanceOf<T>,
+					types::VestingBalanceOf<T>,
+				>>::convert(vesting_amount),
 			))
 		}
 
 		pub fn do_transfer(
 			snapshot: &mut types::SnapshotInfo<T>,
 			icon_address: &types::IconAddress,
-			total_amount: types::ServerBalance,
+			total_amount: types::BalanceOf<T>,
 			defi_user: bool,
 		) -> Result<(), DispatchError> {
 			use types::DoTransfer;
@@ -641,7 +650,7 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub exchange_accounts: Vec<(types::IconAddress, u64)>,
+		pub exchange_accounts: Vec<(types::IconAddress, types::BalanceOf<T>)>,
 		pub creditor_account: Option<types::AccountIdOf<T>>,
 	}
 

@@ -9,13 +9,9 @@ impl types::DoTransfer for AllInstantTransfer {
 	fn do_transfer<T: airdrop::Config>(
 		snapshot: &mut types::SnapshotInfo<T>,
 		icon_address: &types::IconAddress,
-		total_amount: types::ServerBalance,
+		total_balance: types::BalanceOf<T>,
 		_defi_user: bool,
 	) -> Result<(), DispatchError> {
-		let total_balance = <T::BalanceTypeConversion as Convert<
-			types::ServerBalance,
-			types::BalanceOf<T>,
-		>>::convert(total_amount);
 		let creditor = AirdropModule::<T>::get_creditor_account();
 		let claimer = AirdropModule::<T>::to_account_id(snapshot.ice_address)?;
 
