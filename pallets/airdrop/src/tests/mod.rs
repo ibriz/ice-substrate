@@ -94,19 +94,6 @@ pub mod samples {
 	pub const VALID_ICE_SIGNATURE : [u8;64] =decode_hex!("901bda07fb98882a4944f50925b45d041a8a05751a45501eab779416bb55ca5537276dad3c68627a7ddb96956a17ae0d89ca27901a9638ad26426d0e2fbf7e8a");
 }
 
-/// Dummy implementation for IconVerififable trait for test AccountId
-/// This implementation always passes so should not be dependent upon
-impl types::IconVerifiable for sp_core::sr25519::Public {
-	fn verify_with_icon(
-		&self,
-		_icon_wallet: &types::IconAddress,
-		_icon_signature: &types::IconSignature,
-		_message: &[u8],
-	) -> Result<(), types::SignatureValidationError> {
-		Ok(())
-	}
-}
-
 // Build genesis storage according to the mock runtime.
 pub fn minimal_test_ext() -> sp_io::TestExternalities {
 	use codec::Decode;

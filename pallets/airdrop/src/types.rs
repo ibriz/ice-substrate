@@ -174,18 +174,6 @@ pub enum CallDispatchableError {
 	CantDispatch,
 }
 
-/// Trait that marks something is verifable agains the given icon data
-// This was originally created to be implemented against AccountId of airdrop-pallet
-// as a way to ensure that the ice & icon address pair is authorised
-pub trait IconVerifiable {
-	fn verify_with_icon(
-		&self,
-		icon_wallet: &IconAddress,
-		icon_signature: &IconSignature,
-		message: &[u8],
-	) -> Result<(), SignatureValidationError>;
-}
-
 pub fn balance_to_u32<T: Config>(input: BalanceOf<T>) -> u32 {
 	TryInto::<u32>::try_into(input).ok().unwrap()
 }

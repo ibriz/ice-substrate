@@ -61,17 +61,12 @@ pub mod pallet {
 	use frame_support::traits::{
 		Currency, ExistenceRequirement, LockableCurrency, ReservableCurrency,
 	};
-	use sp_runtime::traits::{CheckedDiv, CheckedMul, CheckedSub, Verify};
-	use types::IconVerifiable;
+	use sp_runtime::traits::Verify;
 	use weights::WeightInfo;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_vesting::Config {
-		/// AccountIf type that is same as frame_system's accountId also
-		/// extended to be verifable against icon data
-		type VerifiableAccountId: IconVerifiable + IsType<<Self as frame_system::Config>::AccountId>;
-
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 

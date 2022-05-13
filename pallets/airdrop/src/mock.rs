@@ -82,7 +82,6 @@ parameter_types! {
 
 impl pallet_airdrop::Config for Test {
 	type Event = Event;
-	type VerifiableAccountId = AccountId;
 	type Currency = Balances;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Test>;
