@@ -77,8 +77,6 @@ impl system::Config for Test {
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 500;
 	pub const MaxLocks: u32 = 50;
-	pub const FetchIconEndpoint: &'static str = "http://35.175.202.72:5000/claimDetails?address=";
-	pub const CreditorAccount: frame_support::PalletId = frame_support::PalletId(*b"t-aidrop");
 	pub const VestingMinTransfer: Balance = 4_000_000;
 }
 
@@ -86,16 +84,10 @@ impl pallet_airdrop::Config for Test {
 	type Event = Event;
 	type VerifiableAccountId = AccountId;
 	type Currency = Balances;
-	type FetchIconEndpoint = FetchIconEndpoint;
-	type Creditor = CreditorAccount;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Test>;
 	type MerkelProofValidator = TestValidator<Test>;
-
 	type MaxProofSize = ConstU32<10>;
-
-	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
-	type Signature = Signature;
 }
 
 type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;

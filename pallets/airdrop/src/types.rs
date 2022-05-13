@@ -24,8 +24,6 @@ pub type VestingBalanceOf<T> =
 /// Type that represent the balance
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
-pub type SignatureOf<T> = <T as Config>::Signature;
-
 #[deprecated(
 	note = "Now we dont get balance from server that needs to be parsed seperately
 like one we needed to do when we had offchain worker. So this type is no longer required.

@@ -61,7 +61,7 @@ pub mod pallet {
 	use frame_support::traits::{
 		Currency, ExistenceRequirement, LockableCurrency, ReservableCurrency,
 	};
-	use sp_runtime::traits::{CheckedDiv, CheckedMul, CheckedSub, IdentifyAccount, Member, Verify};
+	use sp_runtime::traits::{CheckedDiv, CheckedMul, CheckedSub, Verify};
 	use types::IconVerifiable;
 	use weights::WeightInfo;
 
@@ -90,22 +90,9 @@ pub mod pallet {
 			+ Convert<types::VestingBalanceOf<Self>, types::BalanceOf<Self>>
 			+ Convert<types::BalanceOf<Self>, types::VestingBalanceOf<Self>>;
 
-		/// Endpoint on where to send request url
-		#[pallet::constant]
-		type FetchIconEndpoint: Get<&'static str>;
-
-		/// Id of account from which to send fund to claimers
-		/// This account should be credited enough to supply fund for all claim requests
-		#[pallet::constant]
-		#[deprecated(note = "Instead directly use creditor account from storage")]
-		type Creditor: Get<frame_support::PalletId>;
-
 		type MerkelProofValidator: types::MerkelProofValidator<Self>;
 
 		type MaxProofSize: Get<u32>;
-
-		type Public: IdentifyAccount<AccountId = Self::VerifiableAccountId> + Clone;
-		type Signature: Verify<Signer = Self::Public> + Member + Decode + Encode;
 	}
 
 	#[pallet::pallet]

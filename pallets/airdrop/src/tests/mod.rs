@@ -7,8 +7,8 @@ mod user_claim;
 mod utility_functions;
 pub mod prelude {
 	pub use super::{
-		assert_tx_call, credit_creditor, get_last_event, minimal_test_ext, not_offchain_account,
-		put_response, run_to_block, samples,
+		credit_creditor, get_last_event, minimal_test_ext, not_offchain_account, run_to_block,
+		samples,
 	};
 	pub use crate as pallet_airdrop;
 	pub use crate::tests;
@@ -150,58 +150,10 @@ pub fn run_to_block(n: types::BlockNumberOf<Test>) {
 	}
 }
 
-use sp_core::offchain::testing;
-pub fn put_response(
-	state: &mut testing::OffchainState,
-	icon_address: &types::IconAddress,
-	expected_response: &str,
-) {
-	let uri = String::from_utf8(
-		mock::FetchIconEndpoint::get()
-			.as_bytes()
-			.iter()
-			.chain(bytes::to_hex(icon_address, false).as_bytes().iter())
-			.cloned()
-			.collect::<Vec<u8>>(),
-	)
-	.unwrap();
-
-	let response = if expected_response.is_empty() {
-		None
-	} else {
-		Some(expected_response.to_string().as_bytes().to_vec())
-	};
-
-	state.expect_request(testing::PendingRequest {
-		method: "GET".to_string(),
-		uri,
-		response,
-		sent: true,
-		..Default::default()
-	});
-}
-
 pub fn get_last_event() -> Option<<Test as frame_system::Config>::Event> {
 	<frame_system::Pallet<Test>>::events()
 		.pop()
 		.map(|v| v.event)
-}
-
-pub fn assert_tx_call(expected_call: &[&PalletCall], pool_state: &testing::PoolState) {
-	use codec::Encode;
-
-	let all_calls_in_pool = &pool_state.transactions;
-	let expected_call_encoded = expected_call
-		.iter()
-		.map(|call| call.encode())
-		.collect::<Vec<_>>();
-	let all_calls_in_pool = all_calls_in_pool
-		.iter()
-		.enumerate()
-		.map(|(index, call)| &call[call.len() - expected_call_encoded[index].len()..])
-		.collect::<Vec<_>>();
-
-	assert_eq!(expected_call_encoded, all_calls_in_pool);
 }
 
 pub fn credit_creditor(balance: u64) {

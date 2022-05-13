@@ -239,34 +239,15 @@ where
 	type OverarchingCall = Call;
 }
 
-parameter_types! {
-	/// Server url from which to consume airdrop data from by sending GET request.
-	/// This should also conatins the endpoint path along with =
-	/// Only icon address in 0x format is appended to this. So keep url accordingly
-	pub const AirdropFetchIconEndpoint: &'static str = "http://35.175.202.72:5000/claimDetails?address=";
-
-	/// Account from which to credit the claim request
-	// TODO: Add real creditor account
-	pub const AirdropCreditor: frame_support::PalletId = AIRDROP_PALLETID;
-}
-
 /// Configure the pallet-template in pallets/airdrop
 impl pallet_airdrop::Config for Runtime {
 	type VerifiableAccountId = AccountId;
 	type Event = Event;
 	type Currency = Balances;
-	type FetchIconEndpoint = AirdropFetchIconEndpoint;
-	type Creditor = AirdropCreditor;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
-
 	type MerkelProofValidator = pallet_airdrop::merkle::AirdropMerkleValidator<Runtime>;
-
 	type MaxProofSize = ConstU32<10>;
-
-	type Signature = Signature;
-
-	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
 }
 
 parameter_types! {
