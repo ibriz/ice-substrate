@@ -24,19 +24,13 @@ pub type VestingBalanceOf<T> =
 /// Type that represent the balance
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
-#[deprecated(
-	note = "Now we dont get balance from server that needs to be parsed seperately
-like one we needed to do when we had offchain worker. So this type is no longer required.
-Instead use types::BalanceOf<T>"
-)]
 pub type ServerBalance = u128;
 
-#[deprecated(note = "no longer needed when ServerBalance type is deprecated")]
+
 pub fn to_balance<T: Config>(amount: ServerBalance) -> BalanceOf<T> {
 	<T::BalanceTypeConversion as Convert<ServerBalance, BalanceOf<T>>>::convert(amount)
 }
 
-#[deprecated(note = "no longer needed when ServerBalance type is deprecated")]
 pub fn from_balance<T: Config>(amount: BalanceOf<T>) -> ServerBalance {
 	<T::BalanceTypeConversion as Convert<BalanceOf<T>, ServerBalance>>::convert(amount)
 }

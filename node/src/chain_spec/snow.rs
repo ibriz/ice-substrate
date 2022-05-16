@@ -253,7 +253,7 @@ fn testnet_genesis(
 		},
 		treasury: Default::default(),
 		airdrop: AirdropConfig {
-			creditor_account: Some(creditor_account),
+			creditor_account: creditor_account,
 			exchange_accounts: vec![],
 		},
 	}

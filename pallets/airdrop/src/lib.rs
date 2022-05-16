@@ -142,7 +142,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn creditor_account)]
 	pub(super) type CreditorAccount<T: Config> =
-		StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
+		StorageValue<_, types::AccountIdOf<T>, ValueQuery>;
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -370,12 +370,7 @@ pub mod pallet {
 	// implement all the helper function that are called from pallet dispatchable
 	impl<T: Config> Pallet<T> {
 		pub fn get_creditor_account() -> types::AccountIdOf<T> {
-			// TODO:
-			// Panicing is probably a bad idea in runtime.
-			// Assumption might be that creditor account is always set
-			// To express this assumtion we can also change type of
-			// CreditorAccount from OptionQuery to ValueQuery
-			Self::creditor_account().expect("Creditor Account Not Set")
+			Self::creditor_account()
 		}
 
 		/// Check weather node is set to block incoming claim request
@@ -601,15 +596,17 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub exchange_accounts: Vec<(types::IconAddress, types::BalanceOf<T>)>,
-		pub creditor_account: Option<types::AccountIdOf<T>>,
+		pub creditor_account: types::AccountIdOf<T>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
+			let account_hex = hex_literal::hex!["d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"];
+	        let account_id = types::AccountIdOf::<T>::decode(&mut &account_hex[..]).unwrap();
 			Self {
 				exchange_accounts: Vec::new(),
-				creditor_account: None,
+				creditor_account: account_id
 			}
 		}
 	}
@@ -620,9 +617,8 @@ pub mod pallet {
 			for account in &self.exchange_accounts {
 				<ExchangeAccountsMap<T>>::insert(account.0, account.1);
 			}
-			if let Some(ref key) = self.creditor_account {
-				CreditorAccount::<T>::put(key);
-			}
+			CreditorAccount::<T>::put(self.creditor_account.clone());
+			
 		}
 	}
 }

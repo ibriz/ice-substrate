@@ -7,16 +7,14 @@ use pallet_balances;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
+	traits::{BlakeTwo256,IdentityLookup},
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type Balance = u128;
-type Signature = sp_core::sr25519::Signature;
 type Index = u64;
 type BlockNumber = u64;
-type Extrinsic = sp_runtime::testing::TestXt<Call, ()>;
 
 pub struct TestValidator<T>(PhantomData<T>);
 
@@ -77,6 +75,8 @@ impl system::Config for Test {
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 500;
 	pub const MaxLocks: u32 = 50;
+	// if this is too large vesting will error out and no vesting will be applied. 
+	// This should not be greater than 5M
 	pub const VestingMinTransfer: Balance = 4_000_000;
 }
 
@@ -89,34 +89,6 @@ impl pallet_airdrop::Config for Test {
 	type MaxProofSize = ConstU32<10>;
 }
 
-type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
-impl frame_system::offchain::SigningTypes for Test {
-	type Public = <Signature as Verify>::Signer;
-	type Signature = Signature;
-}
-
-impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
-where
-	Call: From<LocalCall>,
-{
-	type OverarchingCall = Call;
-	type Extrinsic = Extrinsic;
-}
-
-impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Test
-where
-	Call: From<LocalCall>,
-{
-	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-		call: Call,
-		_public: <Signature as Verify>::Signer,
-		_account: AccountId,
-		nonce: u64,
-	) -> Option<(Call, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
-		Some((call, (nonce, ())))
-	}
-}
 
 impl pallet_balances::Config for Test {
 	type MaxLocks = MaxLocks;

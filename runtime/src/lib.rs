@@ -241,7 +241,6 @@ where
 
 /// Configure the pallet-template in pallets/airdrop
 impl pallet_airdrop::Config for Runtime {
-	type VerifiableAccountId = AccountId;
 	type Event = Event;
 	type Currency = Balances;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;

@@ -105,7 +105,7 @@ pub fn minimal_test_ext() -> sp_io::TestExternalities {
 	let account_hex = hex!["d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"];
 	let account_id = types::AccountIdOf::<Test>::decode(&mut &account_hex[..]).unwrap();
 	pallet_airdrop::GenesisConfig::<Test> {
-		creditor_account: Some(account_id),
+		creditor_account: account_id,
 		exchange_accounts: vec![],
 	}
 	.assimilate_storage(&mut t)
