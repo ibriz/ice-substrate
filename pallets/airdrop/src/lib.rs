@@ -140,9 +140,9 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, types::IconAddress, types::BalanceOf<T>, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn creditor_account)]
+	#[pallet::getter(fn get_creditor_account)]
 	pub(super) type CreditorAccount<T: Config> =
-		StorageValue<_, types::AccountIdOf<T>, ValueQuery>;
+		StorageValue<_, types::AccountIdOf<T>, ValueQuery, utils::PanicOnNoCreditor>;
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -369,10 +369,6 @@ pub mod pallet {
 
 	// implement all the helper function that are called from pallet dispatchable
 	impl<T: Config> Pallet<T> {
-		pub fn get_creditor_account() -> types::AccountIdOf<T> {
-			Self::creditor_account()
-		}
-
 		/// Check weather node is set to block incoming claim request
 		/// Return error in that case else return Ok
 		pub fn ensure_request_acceptance() -> DispatchResult {
@@ -602,11 +598,13 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			let account_hex = hex_literal::hex!["d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"];
-	        let account_id = types::AccountIdOf::<T>::decode(&mut &account_hex[..]).unwrap();
+			let account_hex = hex_literal::hex![
+				"d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"
+			];
+			let account_id = types::AccountIdOf::<T>::decode(&mut &account_hex[..]).unwrap();
 			Self {
 				exchange_accounts: Vec::new(),
-				creditor_account: account_id
+				creditor_account: account_id,
 			}
 		}
 	}
@@ -618,7 +616,6 @@ pub mod pallet {
 				<ExchangeAccountsMap<T>>::insert(account.0, account.1);
 			}
 			CreditorAccount::<T>::put(self.creditor_account.clone());
-			
 		}
 	}
 }

@@ -1,6 +1,7 @@
 use crate as airdrop;
 use airdrop::types;
 use codec::alloc::string::String;
+use frame_support::pallet_prelude::*;
 use hex::FromHexError;
 use sp_core::H160;
 use sp_runtime::{
@@ -159,4 +160,18 @@ pub fn wrap_bytes(payload: &[u8]) -> Vec<u8> {
 	wrapped_message.extend_from_slice(payload);
 	wrapped_message.extend_from_slice("</Bytes>".as_bytes());
 	wrapped_message
+}
+
+/// Struct that panics with given message
+/// This is intended to use as ValueQuery's OnEmpty holder
+pub struct PanicOnNoCreditor;
+impl<T> Get<T> for PanicOnNoCreditor {
+	fn get() -> T {
+		panic!(
+			"No creditor account configured.\
+		This call was expected to return default value,\
+		which will inturn produce undesired behaviour as\
+		using default AccountId as creditor is not unexpected"
+		);
+	}
 }
