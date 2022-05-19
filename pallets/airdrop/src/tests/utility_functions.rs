@@ -1,75 +1,43 @@
 use super::prelude::*;
 
 #[test]
-fn pool_dispatchable_from_offchain() {
-	let (mut test_ext, _, pool_state, _) = offchain_test_ext();
-
-	test_ext.execute_with(|| {
-		let calls = [
-			&PalletCall::claim_request {
-				icon_address: samples::ICON_ADDRESS[0],
-				message: b"icx_sendTransaction.data.{method.transfer.params.{wallet.da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c}}.dataType.call.from.hxdd9ecb7d3e441d25e8c4f03cd20a80c502f0c374.nid.0x1.nonce.0x1..timestamp.0x5d56f3231f818.to.cx8f87a4ce573a2e1377545feabac48a960e8092bb.version.0x3".to_vec(),
-				icon_signature: [0u8; 65],
-			},
-			&PalletCall::donate_to_creditor {
-				amount: 10_00_u32.into(),
-				allow_death: true,
-			},
-			&PalletCall::register_failed_claim {
-				block_number: 1_u32.into(),
-				icon_address: types::IconAddress::default(),
-			},
-		];
-
-		assert_ok!(AirdropModule::make_signed_call(&calls[0]));
-		assert_tx_call(&calls[..1], &pool_state.read());
-
-		assert_ok!(AirdropModule::make_signed_call(&calls[1]));
-		assert_tx_call(&calls[..2], &pool_state.read());
-
-		assert_ok!(AirdropModule::make_signed_call(&calls[2]));
-		assert_tx_call(&calls[..3], &pool_state.read());
-	});
-}
-
-#[test]
-fn update_offchain_account() {
+fn update_server_account() {
 	minimal_test_ext().execute_with(|| {
 		assert_noop!(
-			AirdropModule::set_offchain_account(Origin::none(), samples::ACCOUNT_ID[1]),
+			AirdropModule::set_airdrop_server_account(Origin::none(), samples::ACCOUNT_ID[1]),
 			PalletError::DeniedOperation
 		);
 
 		assert_noop!(
-			AirdropModule::set_offchain_account(
+			AirdropModule::set_airdrop_server_account(
 				Origin::signed(samples::ACCOUNT_ID[1]),
 				samples::ACCOUNT_ID[2]
 			),
 			PalletError::DeniedOperation
 		);
 
-		assert_ok!(AirdropModule::set_offchain_account(
+		assert_ok!(AirdropModule::set_airdrop_server_account(
 			Origin::root(),
 			samples::ACCOUNT_ID[1]
 		));
 		assert_eq!(
 			Some(samples::ACCOUNT_ID[1]),
-			AirdropModule::get_offchain_account()
+			AirdropModule::get_airdrop_server_account()
 		);
 	});
 }
 
 #[test]
-fn ensure_root_or_offchain() {
+fn ensure_root_or_server() {
 	minimal_test_ext().execute_with(|| {
 		use sp_runtime::DispatchError::BadOrigin;
 
 		// root origin should pass
-		assert_ok!(AirdropModule::ensure_root_or_offchain(Origin::root()));
+		assert_ok!(AirdropModule::ensure_root_or_server(Origin::root()));
 
 		// Any signed other than offchian account should fail
 		assert_err!(
-			AirdropModule::ensure_root_or_offchain(Origin::signed(not_offchain_account(
+			AirdropModule::ensure_root_or_server(Origin::signed(not_offchain_account(
 				samples::ACCOUNT_ID[1]
 			))),
 			BadOrigin
@@ -77,260 +45,67 @@ fn ensure_root_or_offchain() {
 
 		// Unsigned origin should fail
 		assert_err!(
-			AirdropModule::ensure_root_or_offchain(Origin::none()),
+			AirdropModule::ensure_root_or_server(Origin::none()),
 			BadOrigin
 		);
 
 		// Signed with offchain account should work
-		assert_ok!(AirdropModule::set_offchain_account(
+		assert_ok!(AirdropModule::set_airdrop_server_account(
 			Origin::root(),
 			samples::ACCOUNT_ID[1]
 		));
-		assert_ok!(AirdropModule::ensure_root_or_offchain(Origin::signed(
+		assert_ok!(AirdropModule::ensure_root_or_server(Origin::signed(
 			samples::ACCOUNT_ID[1]
 		)));
 	});
 }
 
 #[test]
-fn making_correct_http_request() {
-	let icon_address = samples::ICON_ADDRESS[0];
-
-	let (mut test_ext, offchain_state, _, _) = offchain_test_ext();
-	put_response(
-		&mut offchain_state.write(),
-		&icon_address,
-		&serde_json::to_string(&samples::SERVER_DATA[0]).unwrap(),
-	);
-
-	test_ext.execute_with(|| {
-		let fetch_res = AirdropModule::fetch_from_server(&icon_address);
-		assert_ok!(fetch_res);
-	});
-}
-
-#[test]
-fn failed_entry_regestration() {
-	minimal_test_ext().execute_with(|| {
-		let bl_num: types::BlockNumberOf<Test> = 2_u32.into();
-		let claimer = samples::ICON_ADDRESS[0];
-		let retry = 2_u8;
-		let running_bl_num = bl_num + 6;
-
-		// Simulate we running in block running_bl_num;
-		mock::System::set_block_number(running_bl_num);
-
-		// Be sure access is controlled
-		{
-			assert_storage_noop!(assert_eq! {
-				AirdropModule::register_failed_claim(
-					Origin::signed(not_offchain_account(samples::ACCOUNT_ID[1])),
-					bl_num.into(),
-					claimer.clone(),
-				)
-				.unwrap_err(),
-
-				PalletError::DeniedOperation.into()
-			});
-
-			assert_storage_noop!(assert_eq! {
-				AirdropModule::register_failed_claim(
-					Origin::none(),
-					bl_num.into(),
-					claimer.clone(),
-				)
-				.unwrap_err(),
-
-				PalletError::DeniedOperation.into()
-			});
-
-			assert_ok!(AirdropModule::set_offchain_account(
-				Origin::root(),
-				samples::ACCOUNT_ID[2]
-			));
-			assert_storage_noop!(assert_ne! {
-				AirdropModule::register_failed_claim(
-					Origin::signed(AirdropModule::get_offchain_account().unwrap()),
-					bl_num.into(),
-					claimer.clone(),
-				)
-				.unwrap_err(),
-
-				PalletError::DeniedOperation.into()
-			});
-		}
-
-		// When there is no data in map
-		{
-			assert_noop!(
-				AirdropModule::register_failed_claim(Origin::root(), bl_num, claimer.clone()),
-				PalletError::IncompleteData
-			);
-		}
-
-		// Insert sample data in map
-		pallet_airdrop::IceSnapshotMap::insert(&claimer, types::SnapshotInfo::<Test>::default());
-
-		// When there is something in map but not in queue
-		{
-			assert_noop!(
-				AirdropModule::register_failed_claim(Origin::root(), bl_num, claimer.clone()),
-				PalletError::NotInQueue
-			);
-		}
-
-		// Insert a sample data in queue with 0 retry remaining
-		pallet_airdrop::PendingClaims::<Test>::insert(bl_num, &claimer, 0_u8);
-
-		// When there are no more retry left in this entry
-		{
-			assert_ok!(AirdropModule::register_failed_claim(
-				Origin::root(),
-				bl_num,
-				claimer.clone()
-			));
-			// Still entry should be removed from queue
-			assert_eq!(None, AirdropModule::get_pending_claims(bl_num, &claimer));
-		}
-
-		// Reinsert in queue with some retry count left
-		pallet_airdrop::PendingClaims::<Test>::insert(bl_num, &claimer, retry);
-
-		// This should now succeed
-		{
-			assert_ok!(AirdropModule::register_failed_claim(
-				Origin::root(),
-				bl_num,
-				claimer.clone()
-			));
-
-			// Make sure entry is no longer in old key
-			assert_eq!(None, AirdropModule::get_pending_claims(bl_num, &claimer));
-
-			// Make sure entry is shifter to another key with retry decremented
-			assert_eq!(
-				Some(retry - 1),
-				AirdropModule::get_pending_claims(running_bl_num + 1, &claimer)
-			);
-		}
-	});
-}
-
-#[test]
-fn pending_claims_getter() {
-	type PendingClaimsOf = types::PendingClaimsOf<Test>;
-	use samples::ICON_ADDRESS;
-
-	let get_flattened_vec = |mut walker: PendingClaimsOf| {
-		let mut res: Vec<(types::BlockNumberOf<Test>, types::IconAddress)> = vec![];
-
-		while let Some((bl_num, mut inner_walker)) = walker.next() {
-			while let Some(entry) = inner_walker.next() {
-				res.push((bl_num, entry));
-			}
-		}
-
-		res
-	};
-
-	let sample_entries: &[(types::BlockNumberOf<Test>, types::IconAddress)] = &[
-		(1_u32.into(), ICON_ADDRESS[0]),
-		(1_u32.into(), ICON_ADDRESS[1]),
-		(2_u32.into(), ICON_ADDRESS[3]),
-		(10_u32.into(), ICON_ADDRESS[2]),
-	];
-
-	const EMPTY: [(types::BlockNumberOf<Test>, types::IconAddress); 0] = [];
-
-	minimal_test_ext().execute_with(|| {
-		// When there is nothing in storage it should always return empty entry
-		{
-			let entries = get_flattened_vec(PendingClaimsOf::new(1_u32.into()..5_u32.into()));
-			assert_eq!(EMPTY.to_vec(), entries);
-		}
-
-		// Make some data entry with dummy retry count
-		for (k1, k2) in sample_entries {
-			pallet_airdrop::PendingClaims::<Test>::insert(k1, k2, 1_u8);
-		}
-
-		// Make sure range is treated as exclusive
-		{
-			let entries = get_flattened_vec(PendingClaimsOf::new(0_u32.into()..1_u32.into()));
-			assert_eq!(EMPTY.to_vec(), entries);
-
-			let entries = get_flattened_vec(PendingClaimsOf::new(10_u32.into()..10_u32.into()));
-			assert_eq!(EMPTY.to_vec(), entries);
-
-			let entries = get_flattened_vec(PendingClaimsOf::new(10_u32.into()..20_u32.into()));
-			assert_eq!(vec![(10_u32.into(), ICON_ADDRESS[2])], entries);
-		}
-
-		// Make sure out of range is always empty
-		{
-			let entries = get_flattened_vec(PendingClaimsOf::new(20_u32.into()..30_u32.into()));
-			assert_eq!(EMPTY.to_vec(), entries);
-		}
-
-		// Make sure correct data is returned
-		{
-			let entries = get_flattened_vec(PendingClaimsOf::new(1_u32.into()..3_u32.into()));
-			assert_eq!(
-				vec![
-					(1_u32.into(), ICON_ADDRESS[0]),
-					(1_u32.into(), ICON_ADDRESS[1]),
-					(2_u32.into(), ICON_ADDRESS[3])
-				],
-				entries
-			);
-		}
-	})
-}
-
-#[test]
 fn get_vesting_amounts_splitted() {
 	minimal_test_ext().execute_with(|| {
 		use sp_runtime::ArithmeticError;
+		let get_splitted_amounts: _ = utils::get_splitted_amounts::<Test>;
 
 		assert_err!(
-			AirdropModule::get_splitted_amounts(types::ServerBalance::max_value(), true),
+			get_splitted_amounts(types::ServerBalance::max_value(), true),
 			ArithmeticError::Overflow
 		);
 		assert_eq!(
 			Ok((0_u32.into(), 0_u32.into())),
-			AirdropModule::get_splitted_amounts(0_u32.into(), true)
+			get_splitted_amounts(0_u32.into(), true)
 		);
 
 		assert_eq!(
 			Ok((900_u32.into(), 2100_u32.into())),
-			AirdropModule::get_splitted_amounts(3_000_u32.into(), false)
+			get_splitted_amounts(3_000_u32.into(), false)
 		);
 		assert_eq!(
 			Ok((1200_u32.into(), 1800_u32.into())),
-			AirdropModule::get_splitted_amounts(3_000_u32.into(), true)
+			get_splitted_amounts(3_000_u32.into(), true)
 		);
 
 		assert_eq!(
 			Ok((0_u32.into(), 1_u32.into())),
-			AirdropModule::get_splitted_amounts(1_u32.into(), false)
+			get_splitted_amounts(1_u32.into(), false)
 		);
 		assert_eq!(
 			Ok((0_u32.into(), 1_u32.into())),
-			AirdropModule::get_splitted_amounts(1_u32.into(), true)
+			get_splitted_amounts(1_u32.into(), true)
 		);
 
 		assert_eq!(
 			Ok((2932538_u32.into(), 6842591_u32.into())),
-			AirdropModule::get_splitted_amounts(9775129_u32.into(), false)
+			get_splitted_amounts(9775129_u32.into(), false)
 		);
 		assert_eq!(
 			Ok((3910051_u32.into(), 5865078_u32.into())),
-			AirdropModule::get_splitted_amounts(9775129_u32.into(), true)
+			get_splitted_amounts(9775129_u32.into(), true)
 		);
 	});
 }
 
 #[test]
+#[cfg(not(feature = "no-vesting"))]
 fn cook_vesting_schedule() {
 	type BlockToBalance = <Test as pallet_vesting::Config>::BlockNumberToBalance;
 	minimal_test_ext().execute_with(|| {
@@ -405,26 +180,33 @@ fn cook_vesting_schedule() {
 }
 
 #[test]
+#[cfg(not(feature = "no-vesting"))]
 fn making_vesting_transfer() {
 	minimal_test_ext().execute_with(|| {
 		run_to_block(3);
-
-		let server_response = samples::SERVER_DATA[1];
+		let defi_user = true;
+		let amount: types::BalanceOf<Test> = 9775129_u64.into();
+		let icon_address = samples::ICON_ADDRESS[0];
 		type Currency = <Test as pallet_airdrop::Config>::Currency;
 		// Fund creditor
-		credit_creditor(u32::MAX);
-		credit_creditor(u32::MAX);
+		credit_creditor(u64::MAX);
+		credit_creditor(u64::MAX);
 
 		{
 			let claimer = samples::ACCOUNT_ID[1];
 			let mut snapshot = types::SnapshotInfo::<Test> {
 				done_instant: false,
 				done_vesting: false,
-				ice_address: claimer.clone(),
+				ice_address: claimer.clone().into(),
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot));
+			assert_ok!(AirdropModule::do_transfer(
+				&mut snapshot,
+				&icon_address,
+				amount,
+				defi_user
+			));
 
 			// Ensure all amount is being transferred
 			assert_eq!(9775129_u128, Currency::free_balance(&claimer));
@@ -443,32 +225,35 @@ fn making_vesting_transfer() {
 			let mut snapshot = types::SnapshotInfo::<Test> {
 				done_instant: true,
 				done_vesting: false,
-				ice_address: claimer.clone(),
+				ice_address: claimer.clone().into(),
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot));
+			assert_ok!(AirdropModule::do_transfer(
+				&mut snapshot,
+				&icon_address,
+				amount,
+				defi_user
+			));
 
 			// Ensure amount only accounting to vesting is transfererd
+
 			let expected_transfer = {
 				let vesting_amount: types::VestingBalanceOf<Test> =
-					AirdropModule::get_splitted_amounts(
-						utils::get_response_sum(&server_response).unwrap(),
-						server_response.defi_user,
-					)
-					.unwrap()
-					.1;
-				let schedule = utils::new_vesting_with_deadline::<Test, 100u32>(
+					utils::get_splitted_amounts::<Test>(amount, defi_user)
+						.unwrap()
+						.1;
+				let schedule = utils::new_vesting_with_deadline::<Test, 1u32>(
 					vesting_amount,
-					10_000u32.into(),
+					5256000u32.into(),
 				)
 				.0
 				.unwrap();
 
 				schedule.locked()
 			};
-
-			assert_eq!(expected_transfer, Currency::free_balance(&claimer));
+			let user_balance = Currency::free_balance(&claimer);
+			assert_eq!(expected_transfer, user_balance);
 
 			// Ensure flag is updates
 			assert!(snapshot.done_vesting && snapshot.done_instant);
@@ -480,28 +265,32 @@ fn making_vesting_transfer() {
 			let mut snapshot = types::SnapshotInfo::<Test> {
 				done_instant: false,
 				done_vesting: true,
-				ice_address: claimer.clone(),
+				ice_address: claimer.clone().into(),
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot));
+			assert_ok!(AirdropModule::do_transfer(
+				&mut snapshot,
+				&icon_address,
+				amount,
+				defi_user
+			));
 
 			// Ensure amount only accounting to instant is transferred
 			let expected_transfer = {
-				let (instant_amount, vesting_amount) = AirdropModule::get_splitted_amounts(
-					utils::get_response_sum(&server_response).unwrap(),
-					server_response.defi_user,
-				)
-				.unwrap();
-				let remainder = utils::new_vesting_with_deadline::<Test, 100u32>(
+				let (instant_amount, vesting_amount) =
+					utils::get_splitted_amounts::<Test>(amount, defi_user).unwrap();
+				let remainder = utils::new_vesting_with_deadline::<Test, 1u32>(
 					vesting_amount,
-					10_000u32.into(),
+					5256000u32.into(),
 				)
 				.1;
 
 				instant_amount + remainder
 			};
-			assert_eq!(expected_transfer, Currency::free_balance(&claimer));
+			let user_balance = Currency::free_balance(&claimer);
+
+			assert_eq!(expected_transfer, user_balance);
 
 			// Ensure flag is updated
 			assert!(snapshot.done_vesting && snapshot.done_instant);
@@ -514,17 +303,225 @@ fn making_vesting_transfer() {
 			let mut snapshot = types::SnapshotInfo::<Test> {
 				done_instant: true,
 				done_vesting: true,
-				ice_address: claimer.clone(),
+				ice_address: claimer.clone().into(),
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(&server_response, &mut snapshot));
+			assert_ok!(AirdropModule::do_transfer(
+				&mut snapshot,
+				&icon_address,
+				amount,
+				defi_user
+			));
 
 			// Ensure amount only accounting to instant is transfererd
 			assert_eq!(0_u128, Currency::free_balance(&claimer));
 
 			// Ensure flag is updates
 			assert!(snapshot.done_vesting && snapshot.done_instant);
+		}
+	});
+}
+
+#[test]
+fn test_extract_address() {
+	let payload = "icx_sendTransaction.data.{method.transfer.params.{wallet.b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3".as_bytes();
+	let expected_address =
+		hex_literal::hex!("b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48");
+	let extracted_address = utils::extract_ice_address(payload, &expected_address).unwrap();
+	assert_eq!(extracted_address, expected_address);
+}
+
+#[test]
+fn respect_airdrop_state() {
+	// First verify thet initially everything is allowed
+	assert_eq!(
+		types::AirdropState::default(),
+		types::AirdropState {
+			block_claim_request: false,
+			block_exchange_request: false,
+		}
+	);
+
+	// Tests types::AirdropState::block_claim_request
+	minimal_test_ext().execute_with(|| {
+		// By default we shall allow it
+		assert_ok!(AirdropModule::ensure_request_acceptance());
+
+		// Set the state to block incoming request
+		assert_ok!(AirdropModule::update_airdrop_state(
+			Origin::root(),
+			types::AirdropState {
+				block_exchange_request: false,
+				block_claim_request: true,
+			}
+		));
+
+		// Call the helper function
+		assert_err!(
+			AirdropModule::ensure_request_acceptance(),
+			PalletError::NewClaimRequestBlocked
+		);
+
+		// Call the actual dispatchable
+		assert_err!(
+			AirdropModule::dispatch_user_claim(
+				Origin::root(),
+				Default::default(),
+				Default::default(),
+				Default::default(),
+				[0; 65],
+				[0; 64],
+				Default::default(),
+				Default::default(),
+				Default::default(),
+			),
+			PalletError::NewClaimRequestBlocked,
+		);
+	});
+
+	// Tests types::AirdropState::block_exchange_request
+	minimal_test_ext().execute_with(|| {
+		// By default we shall allow it
+		assert_ok!(AirdropModule::ensure_exchange_acceptance());
+
+		// Set the state to block incoming request
+		assert_ok!(AirdropModule::update_airdrop_state(
+			Origin::root(),
+			types::AirdropState {
+				block_exchange_request: true,
+				block_claim_request: false,
+			}
+		));
+
+		// Call the helper function
+		assert_err!(
+			AirdropModule::ensure_exchange_acceptance(),
+			PalletError::NewExchangeRequestBlocked
+		);
+
+		// Call teh actual dispatchable
+		assert_noop!(
+			AirdropModule::dispatch_exchange_claim(
+				Origin::root(),
+				Default::default(),
+				Default::default(),
+				Default::default(),
+				Default::default(),
+				Default::default(),
+			),
+			PalletError::NewExchangeRequestBlocked
+		);
+	})
+}
+
+#[test]
+fn validate_creditor_fund() {
+	use frame_support::traits::Currency;
+
+	minimal_test_ext().execute_with(|| {
+		let exestinsial_balance = <Test as pallet_airdrop::Config>::Currency::minimum_balance();
+		let donator = samples::ACCOUNT_ID[1];
+		<Test as pallet_airdrop::Config>::Currency::deposit_creating(&donator, u64::MAX.into());
+
+		// When creditor balance is empty.
+		{
+			assert_err!(
+				AirdropModule::validate_creditor_fund(10),
+				PalletError::InsufficientCreditorBalance
+			);
+		}
+
+		// When creditor balance is exactly same as exestinsial balance
+		{
+			assert_ok!(AirdropModule::donate_to_creditor(
+				Origin::signed(donator.clone()),
+				exestinsial_balance,
+				false
+			));
+
+			assert_err!(
+				AirdropModule::validate_creditor_fund(exestinsial_balance.try_into().unwrap()),
+				PalletError::InsufficientCreditorBalance,
+			);
+		}
+
+		// When all of creditor balance is required
+		{
+			assert_ok!(AirdropModule::donate_to_creditor(
+				Origin::signed(donator.clone()),
+				u32::MAX.into(),
+				false
+			));
+			let required_balance = <Test as pallet_airdrop::Config>::Currency::free_balance(
+				&AirdropModule::get_creditor_account(),
+			);
+
+			assert_err!(
+				AirdropModule::validate_creditor_fund(required_balance.try_into().unwrap()),
+				PalletError::InsufficientCreditorBalance,
+			);
+		}
+
+		// When only a portion of balance is required
+		{
+			assert_ok!(AirdropModule::validate_creditor_fund(10_000_000),);
+		}
+	});
+}
+
+#[test]
+fn ensure_claimable_snapshot() {
+	minimal_test_ext().execute_with(|| {
+		// Fail when both are claimed
+		{
+			let snapshot = types::SnapshotInfo::<Test> {
+				done_instant: true,
+				done_vesting: true,
+				..Default::default()
+			};
+			assert_err!(
+				AirdropModule::ensure_claimable(&snapshot),
+				PalletError::ClaimAlreadyMade
+			);
+		}
+
+		// Pass when both are not done
+		{
+			let snapshot = types::SnapshotInfo::<Test> {
+				done_instant: false,
+				done_vesting: false,
+				..Default::default()
+			};
+			assert_ok!(AirdropModule::ensure_claimable(&snapshot));
+		}
+
+		// Pass when vesting is not claimed
+		{
+			let snapshot = types::SnapshotInfo::<Test> {
+				done_instant: false,
+				done_vesting: true,
+				..Default::default()
+			};
+			assert_ok!(AirdropModule::ensure_claimable(&snapshot));
+		}
+
+		// Pass when instant is not claimed
+		{
+			let snapshot = types::SnapshotInfo::<Test> {
+				done_instant: true,
+				done_vesting: false,
+				..Default::default()
+			};
+
+			#[cfg(not(feature = "no-vesting"))]
+			assert_ok!(AirdropModule::ensure_claimable(&snapshot));
+
+			#[cfg(feature = "no-vesting")]
+			assert_err!(
+				AirdropModule::ensure_claimable(&snapshot),
+				PalletError::ClaimAlreadyMade
+			);
 		}
 	});
 }

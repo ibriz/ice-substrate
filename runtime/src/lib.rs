@@ -35,6 +35,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 use frame_support::inherent::Vec;
+use frame_support::traits::ConstU32;
 use sp_core::u32_trait::{_1, _2, _5};
 use sp_std::boxed::Box;
 
@@ -238,86 +239,14 @@ where
 	type OverarchingCall = Call;
 }
 
-/// Implemented as dependency for CreateSignedTransaction
-impl frame_system::offchain::SigningTypes for Runtime {
-	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
-	type Signature = Signature;
-}
-
-/// Implement CreateSignedTransaction for pallets/airdrop
-/// to enable the pallet to call dispatchable from offchain worker
-impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
-where
-	Call: From<LocalCall>,
-{
-	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-		call: Call,
-		public: <Signature as sp_runtime::traits::Verify>::Signer,
-		account: AccountId,
-		index: Index,
-	) -> Option<(
-		Call,
-		<UncheckedExtrinsic as sp_runtime::traits::Extrinsic>::SignaturePayload,
-	)> {
-		let period = BlockHashCount::get() as u64;
-		let current_block = System::block_number()
-			.saturated_into::<BlockNumber>()
-			.saturating_sub(1);
-		let tip = 0;
-		let extra: SignedExtra = (
-			frame_system::CheckSpecVersion::<Runtime>::new(),
-			frame_system::CheckTxVersion::<Runtime>::new(),
-			frame_system::CheckGenesis::<Runtime>::new(),
-			frame_system::CheckEra::<Runtime>::from(generic::Era::mortal(period, current_block)),
-			frame_system::CheckNonce::<Runtime>::from(index),
-			frame_system::CheckWeight::<Runtime>::new(),
-			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
-		);
-
-		let raw_payload = SignedPayload::new(call, extra)
-			.map_err(|e| {
-				log::warn!("Unable to create signed payload: {:?}", e);
-			})
-			.ok()?;
-		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
-		let address = account;
-		let (call, extra, _) = raw_payload.deconstruct();
-		Some((
-			call,
-			(
-				sp_runtime::MultiAddress::Id(address),
-				signature.into(),
-				extra,
-			),
-		))
-	}
-}
-
-parameter_types! {
-	/// Server url from which to consume airdrop data from by sending GET request.
-	/// This should also conatins the endpoint path along with =
-	/// Only icon address in 0x format is appended to this. So keep url accordingly
-	pub const AirdropFetchIconEndpoint: &'static str = "http://35.175.202.72:5000/claimDetails?address=";
-
-	/// Account from which to credit the claim request
-	// TODO: Add real creditor account
-	pub const AirdropCreditor: frame_support::PalletId = AIRDROP_PALLETID;
-}
-
 /// Configure the pallet-template in pallets/airdrop
 impl pallet_airdrop::Config for Runtime {
-	type AccountId = AccountId;
 	type Event = Event;
 	type Currency = Balances;
-	type FetchIconEndpoint = AirdropFetchIconEndpoint;
-	// TODO:
-	// Ensure that using app_crypto! generated pairs are safe to use
-	// Also ensure effect of (not)enabling full-crypto feature
-	type AuthorityId = pallet_airdrop::airdrop_crypto::AuthId;
-	type Creditor = AirdropCreditor;
-	type VestingModule = Runtime;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
+	type MerkelProofValidator = pallet_airdrop::merkle::AirdropMerkleValidator<Runtime>;
+	type MaxProofSize = ConstU32<10>;
 }
 
 parameter_types! {
@@ -479,7 +408,7 @@ impl pallet_assets::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MinVestedTransfer: Balance = 100 * DOLLARS;
+	pub const MinVestedTransfer: Balance = 4_000_000;
 }
 
 impl pallet_vesting::Config for Runtime {
@@ -600,8 +529,8 @@ construct_runtime!(
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Config<T>, Event<T>} = 32,
 		Assets: pallet_assets::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Airdrop: pallet_airdrop::{Pallet, Call, Storage, Event<T>, Config<T>},
-	    Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
+		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
 		SimpleInflation: pallet_simple_inflation::{Pallet}
 	}
 );

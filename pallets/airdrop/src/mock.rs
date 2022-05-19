@@ -1,21 +1,32 @@
-use crate as pallet_airdrop;
+use crate::{self as pallet_airdrop, types};
+use core::marker::PhantomData;
 
-use frame_support::parameter_types;
+use frame_support::{parameter_types, traits::ConstU32};
 use frame_system as system;
 use pallet_balances;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
+	traits::{BlakeTwo256,IdentityLookup},
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type Balance = u128;
-type Signature = sp_core::sr25519::Signature;
 type Index = u64;
 type BlockNumber = u64;
-type Extrinsic = sp_runtime::testing::TestXt<Call, ()>;
+
+pub struct TestValidator<T>(PhantomData<T>);
+
+impl types::MerkelProofValidator<Test> for TestValidator<Test> {
+	fn validate(
+		_root_hash: pallet_airdrop::types::MerkleHash,
+		_leaf_hash: pallet_airdrop::types::MerkleHash,
+		_proofs: pallet_airdrop::types::MerkleProofs<Test>,
+	) -> bool {
+		return true;
+	}
+}
 
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -64,52 +75,20 @@ impl system::Config for Test {
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 500;
 	pub const MaxLocks: u32 = 50;
-	pub const FetchIconEndpoint: &'static str = "http://35.175.202.72:5000/claimDetails?address=";
-	pub const CreditorAccount: frame_support::PalletId = frame_support::PalletId(*b"t-aidrop");
-	pub const VestingMinTransfer: Balance = 256 * 2;
+	// if this is too large vesting will error out and no vesting will be applied. 
+	// This should not be greater than 5M
+	pub const VestingMinTransfer: Balance = 4_000_000;
 }
 
 impl pallet_airdrop::Config for Test {
 	type Event = Event;
-	type AccountId = AccountId;
 	type Currency = Balances;
-	type FetchIconEndpoint = FetchIconEndpoint;
-	type AuthorityId = crate::airdrop_crypto::AuthId;
-	type Creditor = CreditorAccount;
-	type VestingModule = Test;
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Test>;
-
+	type MerkelProofValidator = TestValidator<Test>;
+	type MaxProofSize = ConstU32<10>;
 }
 
-type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
-impl frame_system::offchain::SigningTypes for Test {
-	type Public = <Signature as Verify>::Signer;
-	type Signature = Signature;
-}
-
-impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
-where
-	Call: From<LocalCall>,
-{
-	type OverarchingCall = Call;
-	type Extrinsic = Extrinsic;
-}
-
-impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Test
-where
-	Call: From<LocalCall>,
-{
-	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-		call: Call,
-		_public: <Signature as Verify>::Signer,
-		_account: AccountId,
-		nonce: u64,
-	) -> Option<(Call, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
-		Some((call, (nonce, ())))
-	}
-}
 
 impl pallet_balances::Config for Test {
 	type MaxLocks = MaxLocks;
@@ -130,19 +109,6 @@ impl pallet_vesting::Config for Test {
 	type MinVestedTransfer = VestingMinTransfer;
 	type WeightInfo = ();
 	const MAX_VESTING_SCHEDULES: u32 = u32::MAX;
-}
-
-/// Implement AppCrypto with airdrop_pallet::AuthId
-/// to enable Keystore with mock accounts (sr25519) pair
-impl
-	frame_system::offchain::AppCrypto<
-		<sp_core::sr25519::Signature as sp_runtime::traits::Verify>::Signer,
-		sp_core::sr25519::Signature,
-	> for crate::airdrop_crypto::AuthId
-{
-	type RuntimeAppPublic = crate::airdrop_crypto::Public;
-	type GenericSignature = sp_core::sr25519::Signature;
-	type GenericPublic = sp_core::sr25519::Public;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

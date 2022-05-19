@@ -1,12 +1,18 @@
 use crate as airdrop;
 use airdrop::pallet::Config;
+use airdrop::pallet::Error;
 use core::convert::Into;
 use frame_support::pallet_prelude::*;
 use frame_support::traits::Currency;
 use frame_system;
 use scale_info::TypeInfo;
 use serde::Deserialize;
+use sp_core::H160;
+use sp_runtime::traits::Convert;
+use sp_runtime::ArithmeticError;
 use sp_std::prelude::*;
+
+use frame_support::storage::bounded_vec::BoundedVec;
 
 /// AccountId of anything that implements frame_system::Config
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -18,17 +24,35 @@ pub type VestingBalanceOf<T> =
 /// Type that represent the balance
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
-/// Balance type that will be returned from server
-pub type ServerBalance = u64;
+pub type ServerBalance = u128;
+
+
+pub fn to_balance<T: Config>(amount: ServerBalance) -> BalanceOf<T> {
+	<T::BalanceTypeConversion as Convert<ServerBalance, BalanceOf<T>>>::convert(amount)
+}
+
+pub fn from_balance<T: Config>(amount: BalanceOf<T>) -> ServerBalance {
+	<T::BalanceTypeConversion as Convert<BalanceOf<T>, ServerBalance>>::convert(amount)
+}
 
 /// Type that represent IconAddress
 pub type IconAddress = [u8; 20];
 
+pub type IceAddress = [u8; 32];
+
+pub type IceEvmAddress = H160;
+
 /// Type that represent Icon signed message
 pub type IconSignature = [u8; 65];
 
+pub type IceSignature = [u8; 64];
+
 ///
 pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
+
+pub type MerkleHash = [u8; 32];
+// pub type MerkleProofs=Vec<MerkleHash>;
+pub type MerkleProofs<T> = BoundedVec<MerkleHash, <T as Config>::MaxProofSize>;
 
 ///
 pub type VestingInfoOf<T> = pallet_vesting::VestingInfo<VestingBalanceOf<T>, BlockNumberOf<T>>;
@@ -53,16 +77,13 @@ pub struct SnapshotInfo<T: Config> {
 	/// Icon address of this snapshot
 	// TODO:
 	// change this to [u8; _]
-	pub ice_address: AccountIdOf<T>,
+	pub ice_address: IceAddress,
 
 	/// Total airdroppable-amount this icon_address hold
 	pub amount: BalanceOf<T>,
 
 	/// Indicator wather this icon_address holder is defi-user
 	pub defi_user: bool,
-
-	/// TODO: add description of this filed
-	pub vesting_percentage: u32,
 
 	/// indicator wather the user have claimmed the balance
 	/// which will be given through instant transfer
@@ -71,12 +92,17 @@ pub struct SnapshotInfo<T: Config> {
 	/// Indicator weather vesting schedult have been applied
 	/// to this user
 	pub done_vesting: bool,
+
+	// blocknumber that started vesting
+	pub vesting_block_number: Option<BlockNumberOf<T>>,
+
+	pub initial_transfer: BalanceOf<T>,
 }
 
 impl<T: Config> SnapshotInfo<T> {
 	/// Helper function to set ice_address in builder-pattern way
 	/// so that initilisation can be done in single line
-	pub fn ice_address(mut self, val: AccountIdOf<T>) -> Self {
+	pub fn ice_address(mut self, val: IceAddress) -> Self {
 		self.ice_address = val;
 		self
 	}
@@ -86,12 +112,13 @@ impl<T: Config> SnapshotInfo<T> {
 impl<T: Config> Default for SnapshotInfo<T> {
 	fn default() -> Self {
 		Self {
-			ice_address: AccountIdOf::<T>::default(),
+			ice_address: [0u8; 32],
 			amount: 0_u32.into(),
 			defi_user: false,
-			vesting_percentage: 0,
 			done_instant: false,
 			done_vesting: false,
+			vesting_block_number: None,
+			initial_transfer: BalanceOf::<T>::from(0u32),
 		}
 	}
 }
@@ -108,10 +135,6 @@ pub enum ClaimError {
 	/// Error while doing an http request
 	/// Also might contains the actual error
 	HttpError,
-
-	/// Server returned an response that is actually an error
-	ServerError(ServerError),
-
 	/// Server returned an response in a format that couldn't be understood
 	/// this is set when response neither could not be deserialize into
 	/// valid server response or valid server error
@@ -121,39 +144,16 @@ pub enum ClaimError {
 	CallingError(CallDispatchableError),
 }
 
-/// Structure expected to return from server when doing a request for details of icon_address
-#[derive(Deserialize, Encode, Decode, Clone, Default, Eq, PartialEq, TypeInfo, Copy)]
-#[cfg_attr(feature = "std", derive(Debug))]
-#[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
-#[cfg_attr(test, derive(serde::Serialize))]
-pub struct ServerResponse {
-	// TODO: Add description of this field
-	pub omm: ServerBalance,
-
-	/// Amount to transfer in this claim
-	#[serde(rename = "balanced")]
-	pub amount: ServerBalance,
-
-	// TODO: add description of this field
-	pub stake: ServerBalance,
-
-	/// Indicator weather this icon_address is defi_user or not
-	pub defi_user: bool,
+impl<T: Config> From<ArithmeticError> for Error<T> {
+	fn from(_: ArithmeticError) -> Self {
+		Error::<T>::ArithmeticError
+	}
 }
 
-/// Known error server might respond with
-#[derive(Deserialize, Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Copy)]
-#[cfg_attr(feature = "std", derive(Debug))]
-#[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
-pub enum ServerError {
-	/// When the given icon address do not existsin server
-	InvalidAddress,
-
-	/// When server is in maintainance mode
-	HostOffline,
-
-	/// When there is not data about this icon address
-	NonExistentData,
+impl<T: Config> From<SignatureValidationError> for Error<T> {
+	fn from(_: SignatureValidationError) -> Self {
+		Error::<T>::InvalidSignature
+	}
 }
 
 /// Error while calling On-chain calls from offchain worker
@@ -168,18 +168,6 @@ pub enum CallDispatchableError {
 	CantDispatch,
 }
 
-/// Trait that marks something is verifable agains the given icon data
-// This was originally created to be implemented against AccountId of airdrop-pallet
-// as a way to ensure that the ice & icon address pair is authorised
-pub trait IconVerifiable {
-	fn verify_with_icon(
-		&self,
-		icon_wallet: &IconAddress,
-		icon_signature: &IconSignature,
-		message: &[u8],
-	) -> Result<(), SignatureValidationError>;
-}
-
 pub fn balance_to_u32<T: Config>(input: BalanceOf<T>) -> u32 {
 	TryInto::<u32>::try_into(input).ok().unwrap()
 }
@@ -187,11 +175,6 @@ pub fn balance_to_u32<T: Config>(input: BalanceOf<T>) -> u32 {
 pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
 	TryInto::<u32>::try_into(input).ok().unwrap()
 }
-
-pub struct PendingClaimsOf<T: Config> {
-	pub range: core::ops::Range<BlockNumberOf<T>>,
-}
-
 /// Chain state
 #[derive(Deserialize, Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -201,15 +184,31 @@ pub struct AirdropState {
 	// Only receive claim request when this flag is true
 	pub block_claim_request: bool,
 
-	// Only process already received claim request when this flag is true
-	pub avoid_claim_processing: bool,
+	// Only receive exchange request when this flag is true
+	pub block_exchange_request: bool,
 }
 
 impl Default for AirdropState {
 	fn default() -> Self {
 		AirdropState {
 			block_claim_request: false,
-			avoid_claim_processing: false,
+			block_exchange_request: false,
 		}
 	}
+}
+
+pub trait MerkelProofValidator<T: Config> {
+	fn validate(leaf_hash: MerkleHash, root_hash: MerkleHash, proofs: MerkleProofs<T>) -> bool;
+}
+
+/// Trait to commit behaviour of do_transfer function
+/// this trait now can me implmeneted according to
+/// the node behaviour eg: vesting manner and direct manner
+pub trait DoTransfer {
+	fn do_transfer<T: Config>(
+		snapshot: &mut SnapshotInfo<T>,
+		icon_address: &IconAddress,
+		total_amount: BalanceOf<T>,
+		defi_user: bool,
+	) -> Result<(), DispatchError>;
 }
