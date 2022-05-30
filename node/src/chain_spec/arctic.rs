@@ -184,7 +184,10 @@ fn make_genesis(
         ethereum: Default::default(),
         treasury: Default::default(),
         polkadot_xcm: Default::default(),
-        parachain_system: Default::default()
+        parachain_system: Default::default(),
+        // TODO:
+        // Add proper config
+        airdrop: Default::default(),
     }
 }
 
