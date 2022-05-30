@@ -1,7 +1,7 @@
 use cumulus_primitives_core::ParaId;
 use sc_service::ChainType;
 use arctic_runtime::{
-    wasm_binary_unwrap, AccountId, AuraConfig, AuraId, Balance, BalancesConfig,
+    wasm_binary_unwrap, AccountId,AirdropConfig, AuraConfig, AuraId, Balance, BalancesConfig,
     CollatorSelectionConfig, EVMConfig, GenesisConfig, ParachainInfoConfig, CouncilConfig,
     SessionConfig, Signature, SudoConfig, SystemConfig, VestingConfig, SessionKeys
 };
@@ -55,7 +55,9 @@ pub fn get_chain_spec(para_id: u32) -> ArcticChainSpec {
                 hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"].into()
             ],
             // Sudo account
-            hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"].into(), 
+            hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"].into(),
+            // Creditor Account
+            hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
             para_id.into()
         ),
         vec![],
@@ -108,6 +110,8 @@ pub fn get_dev_chain_spec(para_id: u32) -> ArcticChainSpec {
             ],
             // Sudo account
             sudo_key.clone(), 
+             // Creditor Account
+            hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
             para_id.into()
         ),
         vec![],
@@ -134,6 +138,7 @@ fn make_genesis(
     authorities: Vec<(AccountId, AuraId)>,
     council_members: Vec<AccountId>,
     root_key: AccountId,
+    creditor_account: AccountId,
     parachain_id: ParaId,
 ) -> GenesisConfig {
 
@@ -185,9 +190,10 @@ fn make_genesis(
         treasury: Default::default(),
         polkadot_xcm: Default::default(),
         parachain_system: Default::default(),
-        // TODO:
-        // Add proper config
-        airdrop: Default::default(),
+        airdrop: AirdropConfig {
+			creditor_account: creditor_account,
+			exchange_accounts: vec![],
+		},
     }
 }
 
