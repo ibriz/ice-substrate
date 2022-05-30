@@ -1,19 +1,19 @@
-use hex_literal::hex;
-use ice_runtime::{
-	currency::ICY, AccountId, AirdropConfig, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig,
-	EthereumConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY,
+use frost_runtime::{
+	AccountId, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig, GenesisConfig, GrandpaConfig,
+	Signature, SudoConfig, SystemConfig, WASM_BINARY, currency::ICY, SessionConfig, opaque::SessionKeys, PalletId
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::traits::{IdentifyAccount, Verify};
-use std::collections::BTreeMap;
+use sp_runtime::traits::{IdentifyAccount, Verify, AccountIdConversion};
+use std::{collections::BTreeMap};
+use hex_literal::hex;
 use std::marker::PhantomData;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const ICE_PROPERTIES: &str = r#"
+const FROST_PROPERTIES: &str = r#"
         {
             "ss58Format": 42,
             "tokenDecimals": 18,
@@ -21,7 +21,7 @@ const ICE_PROPERTIES: &str = r#"
         }"#;
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
+pub type FrostChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
 
 /// Generate a crypto pair from seed.
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -45,15 +45,19 @@ pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
 	(get_from_seed::<AuraId>(s), get_from_seed::<GrandpaId>(s))
 }
 
-pub fn testnet_config() -> Result<ChainSpec, String> {
+// Treasury Pallet ID
+const TREASURY_PALLET_ID: PalletId = PalletId(*b"py/trsry");
+
+/// Initialize frost testnet configuration
+pub fn testnet_config() -> Result<FrostChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
 
-	Ok(ChainSpec::from_genesis(
+	Ok(FrostChainSpec::from_genesis(
 		// Name
-		"Testnet",
+		"Frost Testnet",
 		// ID
-		"testnet",
-		ChainType::Custom(String::from("snow")),
+		"frost_testnet",
+		ChainType::Custom(String::from("frost")),
 		move || {
 			testnet_genesis(
 				wasm_binary,
@@ -61,32 +65,28 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
 				vec![
 					(
 						// AuraId
-						hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"]
-							.unchecked_into(),
+						hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"].unchecked_into(),
 						// GrandpaId
-						hex!["27c6da25d03bb6b3c751da3e8c5265b0bb357c15240602443cc286c0658b47f9"]
-							.unchecked_into(),
+						hex!["27c6da25d03bb6b3c751da3e8c5265b0bb357c15240602443cc286c0658b47f9"].unchecked_into(),
 					),
 					(
-						hex!["d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"]
-							.unchecked_into(),
-						hex!["85ec524aeacb6e558619a10da82cdf787026209211d1b7462cb176d58f2add86"]
-							.unchecked_into(),
-					),
+						hex!["d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"].unchecked_into(),
+						hex!["85ec524aeacb6e558619a10da82cdf787026209211d1b7462cb176d58f2add86"].unchecked_into()
+					)
 				],
 				// Council members
-				vec![
-					hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"].into(),
-				],
+                vec![
+                    hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"].into()
+                ],
 				// Sudo account
 				hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"].into(),
 				// Pre-funded accounts
 				vec![
+					TREASURY_PALLET_ID.into_account(),
 					hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"].into(),
 					hex!["d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"].into(),
 					hex!["98003761bff94c8c44af38b8a92c1d5992d061d41f700c76255c810d447d613f"].into(),
 				],
-				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				true,
 			)
 		},
@@ -96,19 +96,20 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
 		None,
 		// Protocol ID
 		None,
+		None,
 		// Properties
-		serde_json::from_str(ICE_PROPERTIES).unwrap(),
+		serde_json::from_str(FROST_PROPERTIES).unwrap(),
 		// Extensions
 		None,
 	))
 }
 
-pub fn development_config() -> Result<ChainSpec, String> {
+/// Initialize frost development configuration
+pub fn development_config() -> Result<FrostChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
-
-	Ok(ChainSpec::from_genesis(
+	Ok(FrostChainSpec::from_genesis(
 		// Name
-		"Development",
+		"Frost Development",
 		// ID
 		"dev",
 		ChainType::Development,
@@ -117,19 +118,20 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				wasm_binary,
 				// Initial PoA authorities
 				vec![authority_keys_from_seed("Alice")],
-				// Council members
-				vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
+                // Council members
+				vec![
+					get_account_id_from_seed::<sr25519::Public>("Alice")
+				],
 				// Sudo account
-				hex!["acdf36cd2c78b63d9702ab0173c310e295b8194791926dae28411f32372e7c1a"].into(),
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				// Pre-funded accounts
 				vec![
-					hex!["acdf36cd2c78b63d9702ab0173c310e295b8194791926dae28411f32372e7c1a"].into(),
+					TREASURY_PALLET_ID.into_account(),
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				],
-				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				true,
 			)
 		},
@@ -139,21 +141,23 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		None,
 		// Protocol ID
 		None,
+		None,
 		// Properties
-		serde_json::from_str(ICE_PROPERTIES).unwrap(),
+		serde_json::from_str(FROST_PROPERTIES).unwrap(),
 		// Extensions
 		None,
 	))
 }
 
-pub fn local_testnet_config() -> Result<ChainSpec, String> {
+/// Initialize frost local testnet configuration
+pub fn local_testnet_config() -> Result<FrostChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
 
-	Ok(ChainSpec::from_genesis(
+	Ok(FrostChainSpec::from_genesis(
 		// Name
-		"Local Testnet",
+		"Frost Local Testnet",
 		// ID
-		"local_testnet",
+		"frost_local_testnet",
 		ChainType::Local,
 		move || {
 			testnet_genesis(
@@ -164,12 +168,13 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 					authority_keys_from_seed("Bob"),
 				],
 				// Council members
-				vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
+                vec![
+                    get_account_id_from_seed::<sr25519::Public>("Alice")
+                ],
 				// Sudo account
-				hex!["acdf36cd2c78b63d9702ab0173c310e295b8194791926dae28411f32372e7c1a"].into(),
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				// Pre-funded accounts
 				vec![
-					hex!["acdf36cd2c78b63d9702ab0173c310e295b8194791926dae28411f32372e7c1a"].into(),
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie"),
@@ -183,7 +188,6 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				true,
 			)
 		},
@@ -197,7 +201,13 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		None,
 		// Extensions
 		None,
+		None,
 	))
+}
+
+/// Helper for session keys to map aura id
+fn session_keys(aura: AuraId, grandpa: GrandpaId) -> SessionKeys {
+    SessionKeys {aura, grandpa}
 }
 
 /// Configure initial storage state for FRAME modules.
@@ -207,35 +217,48 @@ fn testnet_genesis(
 	council_members: Vec<AccountId>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	creditor_account: AccountId,
 	_enable_println: bool,
 ) -> GenesisConfig {
+	let authorities = vec![
+        (
+            get_account_id_from_seed::<sr25519::Public>("Alice"),
+            authority_keys_from_seed("Alice").0,
+			authority_keys_from_seed("Alice").1,
+        ),
+        (
+            get_account_id_from_seed::<sr25519::Public>("Bob"),
+			authority_keys_from_seed("Bob").0,
+			authority_keys_from_seed("Bob").1,
+        ),
+    ];
 	GenesisConfig {
 		system: SystemConfig {
 			// Add Wasm runtime to storage.
 			code: wasm_binary.to_vec(),
-			changes_trie_config: Default::default(),
 		},
 		balances: BalancesConfig {
 			balances: endowed_accounts
 				.iter()
 				.cloned()
-				.map(|k| (k, ICY * 300_000_000))
-				.collect(),
+				.map(|k| (k, ICY * 40_000))
+				.collect()
 		},
 		aura: AuraConfig {
-			authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
+			authorities: vec![],
 		},
 		grandpa: GrandpaConfig {
-			authorities: initial_authorities
-				.iter()
-				.map(|x| (x.1.clone(), 1))
-				.collect(),
+			authorities: vec![],
 		},
 		sudo: SudoConfig {
 			// Assign network admin rights.
-			key: root_key,
+			key: Some(root_key),
 		},
+		session: SessionConfig {
+			keys: authorities
+			.iter()
+			.map(|x| (x.0.clone(), x.0.clone(), session_keys(x.1.clone(), x.2.clone())))
+			.collect::<Vec<_>>(),
+	      },
 		evm: EVMConfig {
 			accounts: {
 				let map = BTreeMap::new();
@@ -245,16 +268,12 @@ fn testnet_genesis(
 		ethereum: EthereumConfig {},
 		dynamic_fee: Default::default(),
 		base_fee: Default::default(),
-		vesting: Default::default(),
+		vesting:Default::default(),
 		assets: Default::default(),
-		council: CouncilConfig {
-			members: council_members,
-			phantom: PhantomData,
-		},
-		treasury: Default::default(),
-		airdrop: AirdropConfig {
-			creditor_account: creditor_account,
-			exchange_accounts: vec![],
-		},
+        council: CouncilConfig {
+            members: council_members,
+            phantom: PhantomData,
+        },
+        treasury: Default::default(),
 	}
 }

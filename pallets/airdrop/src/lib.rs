@@ -141,17 +141,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_creditor_account)]
-	// TODO:
-	// Currently, putting this as ValueQuery means,
-	// in case of no creditor account set, this storage will have
-	// default address, 0x0000... in case of current sig type.
-	// 
-	// Find a way to panic in such case at the first place.
-	// Doing unwrap at runtime will probably be bad idea
-	// and so will be to get default address
-	// StorageValue<_, types::AccountIdOf<T>, ValueQuery, PanicOnNoCreditor>
 	pub(super) type CreditorAccount<T: Config> =
-		StorageValue<_, types::AccountIdOf<T>, ValueQuery>;
+		StorageValue<_, types::AccountIdOf<T>, ValueQuery, utils::PanicOnNoCreditor>;
 
 	#[pallet::error]
 	pub enum Error<T> {

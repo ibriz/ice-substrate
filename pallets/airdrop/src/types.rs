@@ -99,6 +99,15 @@ pub struct SnapshotInfo<T: Config> {
 	pub initial_transfer: BalanceOf<T>,
 }
 
+impl<T> MaxEncodedLen for SnapshotInfo<T>
+where
+	T: Config
+{
+	fn max_encoded_len() -> usize {
+		todo!()
+	}
+}
+
 impl<T: Config> SnapshotInfo<T> {
 	/// Helper function to set ice_address in builder-pattern way
 	/// so that initilisation can be done in single line
@@ -186,6 +195,12 @@ pub struct AirdropState {
 
 	// Only receive exchange request when this flag is true
 	pub block_exchange_request: bool,
+}
+
+impl MaxEncodedLen for AirdropState {
+	fn max_encoded_len() -> usize {
+		<bool as MaxEncodedLen>::max_encoded_len() * 2
+	}
 }
 
 impl Default for AirdropState {
