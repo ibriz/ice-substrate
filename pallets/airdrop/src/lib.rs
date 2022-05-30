@@ -140,9 +140,18 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, types::IconAddress, types::BalanceOf<T>, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn get_creditor_account)]
+	#[pallet::getter(fn try_get_creditor_account)]
+	// TODO:
+	// Currently, putting this as ValueQuery means,
+	// in case of no creditor account set, this storage will have
+	// default address, 0x0000... in case of current sig type.
+	// 
+	// Find a way to panic in such case at the first place.
+	// Doing unwrap at runtime will probably be bad idea
+	// and so will be to get default address
+	// StorageValue<_, types::AccountIdOf<T>, ValueQuery, PanicOnNoCreditor>
 	pub(super) type CreditorAccount<T: Config> =
-		StorageValue<_, types::AccountIdOf<T>, ValueQuery, utils::PanicOnNoCreditor>;
+		StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -379,6 +388,10 @@ pub mod pallet {
 			} else {
 				Ok(())
 			}
+		}
+
+		pub fn get_creditor_account() -> types::AccountIdOf<T> {
+			Self::try_get_creditor_account().expect("Creditor account not set")
 		}
 
 		/// Check weather node is set to block incoming exchange request
