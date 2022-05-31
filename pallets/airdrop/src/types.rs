@@ -11,6 +11,7 @@ use sp_core::H160;
 use sp_runtime::traits::Convert;
 use sp_runtime::ArithmeticError;
 use sp_std::prelude::*;
+use codec::MaxEncodedLen;
 
 use frame_support::storage::bounded_vec::BoundedVec;
 
@@ -68,11 +69,19 @@ pub enum SignatureValidationError {
 	Sha3Execution,
 }
 
-#[derive(Encode, Decode, Clone, TypeInfo)]
+#[derive(Encode, Decode, Clone, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
+#[codec(mel_bound())]
 #[cfg_attr(feature = "std", derive(Debug))]
 #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
 #[derive(Eq, PartialEq)]
+// TODO:
+// use more specific Type rather than general T: Config
+// Doing this will define snapshotInfo's type as:
+// struct <Balance, BlockNumber> {}
+// Goal is to make the type as specific as it can be
+// Doing this will also get rid of #[codec(mel_bound)]
+// & possibly #[sclae_info(skip_type_params(T))]
 pub struct SnapshotInfo<T: Config> {
 	/// Icon address of this snapshot
 	// TODO:
@@ -97,15 +106,6 @@ pub struct SnapshotInfo<T: Config> {
 	pub vesting_block_number: Option<BlockNumberOf<T>>,
 
 	pub initial_transfer: BalanceOf<T>,
-}
-
-impl<T> MaxEncodedLen for SnapshotInfo<T>
-where
-	T: Config
-{
-	fn max_encoded_len() -> usize {
-		todo!()
-	}
 }
 
 impl<T: Config> SnapshotInfo<T> {
@@ -185,7 +185,7 @@ pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
 	TryInto::<u32>::try_into(input).ok().unwrap()
 }
 /// Chain state
-#[derive(Deserialize, Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
+#[derive(Deserialize, Encode, Decode, Clone, Eq, PartialEq, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Debug))]
 #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
 #[cfg_attr(test, derive(serde::Serialize))]
@@ -195,12 +195,6 @@ pub struct AirdropState {
 
 	// Only receive exchange request when this flag is true
 	pub block_exchange_request: bool,
-}
-
-impl MaxEncodedLen for AirdropState {
-	fn max_encoded_len() -> usize {
-		<bool as MaxEncodedLen>::max_encoded_len() * 2
-	}
 }
 
 impl Default for AirdropState {
