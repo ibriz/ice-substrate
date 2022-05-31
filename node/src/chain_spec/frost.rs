@@ -1,5 +1,5 @@
 use frost_runtime::{
-	AccountId, AirdropConfig, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig, GenesisConfig, GrandpaConfig,
+	AccountId, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig, GenesisConfig, GrandpaConfig,
 	Signature, SudoConfig, SystemConfig, WASM_BINARY, currency::ICY, SessionConfig, opaque::SessionKeys, PalletId
 };
 use sc_service::ChainType;
@@ -87,7 +87,6 @@ pub fn testnet_config() -> Result<FrostChainSpec, String> {
 					hex!["d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"].into(),
 					hex!["98003761bff94c8c44af38b8a92c1d5992d061d41f700c76255c810d447d613f"].into(),
 				],
-				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				true,
 			)
 		},
@@ -133,7 +132,6 @@ pub fn development_config() -> Result<FrostChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				],
-				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				true,
 			)
 		},
@@ -190,7 +188,6 @@ pub fn local_testnet_config() -> Result<FrostChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				true,
 			)
 		},
@@ -278,10 +275,6 @@ fn testnet_genesis(
             members: council_members,
             phantom: PhantomData,
         },
-        treasury: Default::default(),
-		airdrop: AirdropConfig {
-			creditor_account: creditor_account,
-			exchange_accounts: vec![],
-		},
+        treasury: Default::default()
 	}
 }
