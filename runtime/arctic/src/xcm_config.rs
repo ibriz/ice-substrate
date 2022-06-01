@@ -5,7 +5,7 @@ use super::{
 use frame_support::{
 	match_type, parameter_types,
 	traits::{Everything, Nothing},
-	weights::{IdentityFee, Weight},
+	weights::{IdentityFee, Weight}, match_types,
 };
 
 use cumulus_primitives_core::ParaId as CumulusParaId;
@@ -90,7 +90,7 @@ parameter_types! {
 	pub const MaxInstructions: u32 = 100;
 }
 
-match_type! {
+match_types! {
 	pub type ParentOrParentsExecutivePlurality: impl Contains<MultiLocation> = {
 		MultiLocation { parents: 1, interior: Here } |
 		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }

@@ -217,7 +217,6 @@ fn testnet_genesis(
 	council_members: Vec<AccountId>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	creditor_account: AccountId,
 	_enable_println: bool,
 ) -> GenesisConfig {
 	let authorities = vec![
