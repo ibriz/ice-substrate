@@ -75,17 +75,8 @@ pub enum SignatureValidationError {
 #[cfg_attr(feature = "std", derive(Debug))]
 #[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
 #[derive(Eq, PartialEq)]
-// TODO:
-// use more specific Type rather than general T: Config
-// Doing this will define snapshotInfo's type as:
-// struct <Balance, BlockNumber> {}
-// Goal is to make the type as specific as it can be
-// Doing this will also get rid of #[codec(mel_bound)]
-// & possibly #[sclae_info(skip_type_params(T))]
 pub struct SnapshotInfo<T: Config> {
 	/// Icon address of this snapshot
-	// TODO:
-	// change this to [u8; _]
 	pub ice_address: IceAddress,
 
 	/// Total airdroppable-amount this icon_address hold
