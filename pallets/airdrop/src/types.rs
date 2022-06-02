@@ -1,6 +1,7 @@
 use crate as airdrop;
 use airdrop::pallet::Config;
 use airdrop::pallet::Error;
+use codec::MaxEncodedLen;
 use core::convert::Into;
 use frame_support::pallet_prelude::*;
 use frame_support::traits::Currency;
@@ -11,7 +12,6 @@ use sp_core::H160;
 use sp_runtime::traits::Convert;
 use sp_runtime::ArithmeticError;
 use sp_std::prelude::*;
-use codec::MaxEncodedLen;
 
 use frame_support::storage::bounded_vec::BoundedVec;
 
@@ -26,7 +26,6 @@ pub type VestingBalanceOf<T> =
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
 
 pub type ServerBalance = u128;
-
 
 pub fn to_balance<T: Config>(amount: ServerBalance) -> BalanceOf<T> {
 	<T::BalanceTypeConversion as Convert<ServerBalance, BalanceOf<T>>>::convert(amount)
@@ -59,9 +58,7 @@ pub type MerkleProofs<T> = BoundedVec<MerkleHash, <T as Config>::MaxProofSize>;
 pub type VestingInfoOf<T> = pallet_vesting::VestingInfo<VestingBalanceOf<T>, BlockNumberOf<T>>;
 
 /// type that represnt the error that can occur while validation the signature
-#[derive(Eq, PartialEq)]
-#[cfg_attr(feature = "std", derive(Debug))]
-#[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
+#[derive(Eq, PartialEq, Debug)]
 pub enum SignatureValidationError {
 	InvalidIconAddress,
 	InvalidIconSignature,
@@ -69,11 +66,9 @@ pub enum SignatureValidationError {
 	Sha3Execution,
 }
 
-#[derive(Encode, Decode, Clone, TypeInfo, MaxEncodedLen)]
+#[derive(Encode, Decode, Clone, TypeInfo, MaxEncodedLen, Debug)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
-#[cfg_attr(feature = "std", derive(Debug))]
-#[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
 #[derive(Eq, PartialEq)]
 pub struct SnapshotInfo<T: Config> {
 	/// Icon address of this snapshot
@@ -123,27 +118,6 @@ impl<T: Config> Default for SnapshotInfo<T> {
 	}
 }
 
-/// Possible values of error that can occur when doing claim request from offchain worker
-#[cfg_attr(feature = "std", derive(Debug))]
-#[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
-#[derive(PartialEq, Eq)]
-pub enum ClaimError {
-	/// When there is no icon address in mapping corresponding
-	/// to the ice_address stored in queue
-	NoIconAddress,
-
-	/// Error while doing an http request
-	/// Also might contains the actual error
-	HttpError,
-	/// Server returned an response in a format that couldn't be understood
-	/// this is set when response neither could not be deserialize into
-	/// valid server response or valid server error
-	InvalidResponse,
-
-	/// Error was occured when making extrinsic call
-	CallingError(CallDispatchableError),
-}
-
 impl<T: Config> From<ArithmeticError> for Error<T> {
 	fn from(_: ArithmeticError) -> Self {
 		Error::<T>::ArithmeticError
@@ -156,18 +130,6 @@ impl<T: Config> From<SignatureValidationError> for Error<T> {
 	}
 }
 
-/// Error while calling On-chain calls from offchain worker
-#[cfg_attr(feature = "std", derive(Debug))]
-#[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
-#[derive(Eq, PartialEq)]
-pub enum CallDispatchableError {
-	/// No any account was found to send signed transaction from
-	NoAccount,
-
-	/// Error while dispatching the call
-	CantDispatch,
-}
-
 pub fn balance_to_u32<T: Config>(input: BalanceOf<T>) -> u32 {
 	TryInto::<u32>::try_into(input).ok().unwrap()
 }
@@ -176,9 +138,7 @@ pub fn block_number_to_u32<T: Config>(input: BlockNumberOf<T>) -> u32 {
 	TryInto::<u32>::try_into(input).ok().unwrap()
 }
 /// Chain state
-#[derive(Deserialize, Encode, Decode, Clone, Eq, PartialEq, TypeInfo, MaxEncodedLen)]
-#[cfg_attr(feature = "std", derive(Debug))]
-#[cfg_attr(not(feature = "std"), derive(RuntimeDebug))]
+#[derive(Deserialize, Encode, Decode, Clone, Eq, PartialEq, TypeInfo, MaxEncodedLen, Debug)]
 #[cfg_attr(test, derive(serde::Serialize))]
 pub struct AirdropState {
 	// Only receive claim request when this flag is true
