@@ -6,10 +6,7 @@ mod transfer;
 mod user_claim;
 mod utility_functions;
 pub mod prelude {
-	pub use super::{
-		credit_creditor, get_last_event, minimal_test_ext, not_offchain_account, run_to_block,
-		samples,
-	};
+	pub use super::{credit_creditor, get_last_event, minimal_test_ext, run_to_block, samples};
 	pub use crate as pallet_airdrop;
 	pub use crate::tests;
 	pub use frame_support::{
@@ -111,15 +108,6 @@ pub fn minimal_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 	t.into()
-}
-
-// Return the same address if it is not sudo
-pub fn not_offchain_account(account: types::AccountIdOf<Test>) -> types::AccountIdOf<Test> {
-	if Some(account) != AirdropModule::get_airdrop_server_account() {
-		account
-	} else {
-		panic!("This address must not be same as defined in offchian worker. Change test value.");
-	}
 }
 
 pub fn run_to_block(n: types::BlockNumberOf<Test>) {

@@ -32,14 +32,19 @@ fn ensure_root_or_server() {
 	minimal_test_ext().execute_with(|| {
 		use sp_runtime::DispatchError::BadOrigin;
 
+		// Set server account to be ACCOUNT_ID[0]
+		let server_account = samples::ACCOUNT_ID[0];
+		assert_ok!(AirdropModule::set_airdrop_server_account(
+			Origin::root(),
+			server_account.clone()
+		));
+
 		// root origin should pass
 		assert_ok!(AirdropModule::ensure_root_or_server(Origin::root()));
 
-		// Any signed other than offchian account should fail
+		// Any signed other than server account should fail
 		assert_err!(
-			AirdropModule::ensure_root_or_server(Origin::signed(not_offchain_account(
-				samples::ACCOUNT_ID[1]
-			))),
+			AirdropModule::ensure_root_or_server(Origin::signed(samples::ACCOUNT_ID[2])),
 			BadOrigin
 		);
 
@@ -49,13 +54,9 @@ fn ensure_root_or_server() {
 			BadOrigin
 		);
 
-		// Signed with offchain account should work
-		assert_ok!(AirdropModule::set_airdrop_server_account(
-			Origin::root(),
-			samples::ACCOUNT_ID[1]
-		));
+		// Signed with server account should pass
 		assert_ok!(AirdropModule::ensure_root_or_server(Origin::signed(
-			samples::ACCOUNT_ID[1]
+			server_account
 		)));
 	});
 }
