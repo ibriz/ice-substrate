@@ -7,7 +7,7 @@ use pallet_balances;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256,IdentityLookup},
+	traits::{BlakeTwo256, IdentityLookup},
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -76,7 +76,7 @@ impl system::Config for Test {
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 500;
 	pub const MaxLocks: u32 = 50;
-	// if this is too large vesting will error out and no vesting will be applied. 
+	// if this is too large vesting will error out and no vesting will be applied.
 	// This should not be greater than 5M
 	pub const VestingMinTransfer: Balance = 4_000_000;
 }
@@ -89,7 +89,6 @@ impl pallet_airdrop::Config for Test {
 	type MerkelProofValidator = TestValidator<Test>;
 	type MaxProofSize = ConstU32<10>;
 }
-
 
 impl pallet_balances::Config for Test {
 	type MaxLocks = MaxLocks;

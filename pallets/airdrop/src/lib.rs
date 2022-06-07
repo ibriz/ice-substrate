@@ -1,8 +1,4 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-pub use pallet::*;
-
-#[cfg(test)]
-pub mod mock;
 
 #[cfg(test)]
 pub mod tests;
@@ -30,6 +26,7 @@ mod non_vested_transfer;
 pub const MERKLE_ROOT: [u8; 32] =
 	hex_literal::hex!("4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672");
 
+pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::{types, utils, weights};

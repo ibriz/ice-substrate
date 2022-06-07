@@ -1,12 +1,12 @@
-use crate::{mock, types::MerkleHash};
 mod exchange_claim;
 mod merkle_tests;
+pub mod mock;
 mod signature_validation;
 mod user_claim;
 mod utility_functions;
 pub mod prelude {
 	pub use super::{
-		credit_creditor, get_last_event, minimal_test_ext, run_to_block, samples,
+		credit_creditor, get_last_event, minimal_test_ext, mock, run_to_block, samples,
 		tranfer_to_creditor,
 	};
 	pub use crate as pallet_airdrop;
@@ -16,7 +16,7 @@ pub mod prelude {
 		assert_storage_noop,
 	};
 	pub use hex_literal::hex as decode_hex;
-	pub use pallet_airdrop::mock::{self, AirdropModule, Origin, Test};
+	pub use mock::{AirdropModule, Origin, Test};
 	pub use pallet_airdrop::{types, utils};
 	pub use sp_core::bytes;
 	pub use sp_runtime::traits::{Bounded, IdentifyAccount, Saturating};
@@ -39,7 +39,7 @@ pub struct UserClaimTestCase {
 	pub ice_signature: [u8; 64],
 	pub amount: u128,
 	pub defi_user: bool,
-	pub merkle_proofs: BoundedVec<MerkleHash, ConstU32<10>>,
+	pub merkle_proofs: BoundedVec<types::MerkleHash, ConstU32<10>>,
 	pub merkle_root: [u8; 32],
 }
 
@@ -149,7 +149,7 @@ pub fn credit_creditor(balance: u64) {
 	);
 }
 
-pub fn to_test_case(sample: (String, Vec<String>)) -> (MerkleHash, Vec<MerkleHash>) {
+pub fn to_test_case(sample: (String, Vec<String>)) -> (types::MerkleHash, Vec<types::MerkleHash>) {
 	let mut hash_bytes = [0u8; 32];
 	hex::decode_to_slice(sample.0, &mut hash_bytes as &mut [u8]).unwrap();
 	let proofs = sample
@@ -160,21 +160,20 @@ pub fn to_test_case(sample: (String, Vec<String>)) -> (MerkleHash, Vec<MerkleHas
 			hex::decode_to_slice(p, &mut bytes as &mut [u8]).unwrap();
 			bytes
 		})
-		.collect::<Vec<MerkleHash>>();
+		.collect();
 
 	(hash_bytes, proofs)
 }
 
 pub fn get_merkle_proof_sample() -> (String, Vec<String>) {
-	let sample = (
+	(
 		"7fe522d63ebcabfa052eec3647366138c23c9870995f4af94d9b22b8c5923f49".to_owned(),
 		vec![
 			"813340daefd7f1ca705faf8318cf6455632259d113c06e97b70eeeccd43519a9".to_owned(),
 			"409519ab7129397bdc895e4da05871c9725697a5e092addf2fe90f6e795feb8f".to_owned(),
 			"38055bb872670c69ac3461707f8c0b4b8e436eecfc84cfd80db30db3030c489a".to_owned(),
 		],
-	);
-	return sample;
+	)
 }
 
 pub fn tranfer_to_creditor(sponser: &types::AccountIdOf<Test>, amount: types::BalanceOf<Test>) {
