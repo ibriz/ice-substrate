@@ -201,7 +201,7 @@ pub mod pallet {
 			Self::ensure_root_or_server(origin).map_err(|_| Error::<T>::DeniedOperation)?;
 
 			// Make sure node is accepting new claimrequest
-			Self::ensure_request_acceptance()?;
+			Self::ensure_user_claim_switch()?;
 
 			// Verify the integrity of message
 			Self::validate_message_payload(&message, &ice_address)?;
@@ -250,7 +250,7 @@ pub mod pallet {
 			proofs: types::MerkleProofs<T>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin).map_err(|_| Error::<T>::DeniedOperation)?;
-			Self::ensure_exchange_acceptance()?;
+			Self::ensure_exchange_claim_switch()?;
 
 			let amount = Self::validate_whitelisted(&icon_address)?;
 			ensure!(total_amount == amount, Error::<T>::InvalidClaimAmount);
@@ -322,7 +322,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Check weather node is set to block incoming claim request
 		/// Return error in that case else return Ok
-		pub fn ensure_request_acceptance() -> DispatchResult {
+		pub fn ensure_user_claim_switch() -> DispatchResult {
 			let is_disabled = Self::get_airdrop_state().block_claim_request;
 
 			if is_disabled {
@@ -338,7 +338,7 @@ pub mod pallet {
 
 		/// Check weather node is set to block incoming exchange request
 		/// Return error in that case else return Ok
-		pub fn ensure_exchange_acceptance() -> DispatchResult {
+		pub fn ensure_exchange_claim_switch() -> DispatchResult {
 			let is_disabled = Self::get_airdrop_state().block_exchange_request;
 
 			if is_disabled {

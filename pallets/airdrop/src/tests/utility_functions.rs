@@ -347,7 +347,7 @@ fn respect_airdrop_state() {
 	// Tests types::AirdropState::block_claim_request
 	minimal_test_ext().execute_with(|| {
 		// By default we shall allow it
-		assert_ok!(AirdropModule::ensure_request_acceptance());
+		assert_ok!(AirdropModule::ensure_user_claim_switch());
 
 		// Set the state to block incoming request
 		assert_ok!(AirdropModule::update_airdrop_state(
@@ -360,7 +360,7 @@ fn respect_airdrop_state() {
 
 		// Call the helper function
 		assert_err!(
-			AirdropModule::ensure_request_acceptance(),
+			AirdropModule::ensure_user_claim_switch(),
 			PalletError::NewClaimRequestBlocked
 		);
 
@@ -384,7 +384,7 @@ fn respect_airdrop_state() {
 	// Tests types::AirdropState::block_exchange_request
 	minimal_test_ext().execute_with(|| {
 		// By default we shall allow it
-		assert_ok!(AirdropModule::ensure_exchange_acceptance());
+		assert_ok!(AirdropModule::ensure_exchange_claim_switch());
 
 		// Set the state to block incoming request
 		assert_ok!(AirdropModule::update_airdrop_state(
@@ -397,7 +397,7 @@ fn respect_airdrop_state() {
 
 		// Call the helper function
 		assert_err!(
-			AirdropModule::ensure_exchange_acceptance(),
+			AirdropModule::ensure_exchange_claim_switch(),
 			PalletError::NewExchangeRequestBlocked
 		);
 
