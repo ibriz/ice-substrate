@@ -523,7 +523,7 @@ pub mod pallet {
 			use types::DoTransfer;
 
 			#[cfg(not(feature = "no-vesting"))]
-			type TransferType = super::vested_transfer::DOVestdTransfer;
+			type TransferType = super::vested_transfer::DoVestdTransfer;
 
 			#[cfg(feature = "no-vesting")]
 			type TransferType = super::non_vested_transfer::AllInstantTransfer;

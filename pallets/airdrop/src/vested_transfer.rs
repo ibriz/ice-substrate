@@ -4,8 +4,8 @@ use frame_support::pallet_prelude::*;
 use frame_support::traits::{Currency, ExistenceRequirement};
 use sp_runtime::traits::{CheckedAdd, Convert};
 
-pub struct DOVestdTransfer;
-impl types::DoTransfer for DOVestdTransfer {
+pub struct DoVestdTransfer;
+impl types::DoTransfer for DoVestdTransfer {
 	fn do_transfer<T: airdrop::Config>(
 		snapshot: &mut types::SnapshotInfo<T>,
 		icon_address: &types::IconAddress,
