@@ -6,7 +6,10 @@ mod transfer;
 mod user_claim;
 mod utility_functions;
 pub mod prelude {
-	pub use super::{credit_creditor, get_last_event, minimal_test_ext, run_to_block, samples};
+	pub use super::{
+		credit_creditor, get_last_event, minimal_test_ext, run_to_block, samples,
+		tranfer_to_creditor,
+	};
 	pub use crate as pallet_airdrop;
 	pub use crate::tests;
 	pub use frame_support::{
@@ -173,4 +176,12 @@ pub fn get_merkle_proof_sample() -> (String, Vec<String>) {
 		],
 	);
 	return sample;
+}
+
+pub fn tranfer_to_creditor(sponser: &types::AccountIdOf<Test>, amount: types::BalanceOf<Test>) {
+	assert_ok!(<Test as pallet_airdrop::Config>::Currency::transfer(
+		Origin::signed(sponser.clone()),
+		AirdropModule::get_creditor_account(),
+		amount,
+	));
 }

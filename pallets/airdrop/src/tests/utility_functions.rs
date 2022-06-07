@@ -435,12 +435,7 @@ fn validate_creditor_fund() {
 
 		// When creditor balance is exactly same as exestinsial balance
 		{
-			assert_ok!(AirdropModule::donate_to_creditor(
-				Origin::signed(donator.clone()),
-				exestinsial_balance,
-				false
-			));
-
+			tranfer_to_creditor(&donator, exestinsial_balance);
 			assert_err!(
 				AirdropModule::validate_creditor_fund(exestinsial_balance.try_into().unwrap()),
 				PalletError::InsufficientCreditorBalance,
@@ -449,11 +444,7 @@ fn validate_creditor_fund() {
 
 		// When all of creditor balance is required
 		{
-			assert_ok!(AirdropModule::donate_to_creditor(
-				Origin::signed(donator.clone()),
-				u32::MAX.into(),
-				false
-			));
+			tranfer_to_creditor(&donator, u32::MAX.into());
 			let required_balance = <Test as pallet_airdrop::Config>::Currency::free_balance(
 				&AirdropModule::get_creditor_account(),
 			);

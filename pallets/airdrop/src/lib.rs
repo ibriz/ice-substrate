@@ -27,22 +27,6 @@ mod vested_transfer;
 #[cfg(feature = "no-vesting")]
 mod non_vested_transfer;
 
-/// An identifier for a type of cryptographic key.
-/// For this pallet, account associated with this key must be same as
-/// Key stored in pallet_sudo. So that the calls made from offchain worker
-/// won't get discarded because of Denied Operation
-pub const KEY_TYPE_ID: sp_runtime::KeyTypeId = sp_runtime::KeyTypeId(*b"_air");
-
-/// Gap between on when to run offchain owrker between
-/// This is the number of ocw-run block to skip after running offchain worker
-/// Eg: if block is ran on block_number=3 then
-/// run offchain worker in 3+ENABLE_IN_EVERY block
-pub const OFFCHAIN_WORKER_BLOCK_GAP: u32 = 3;
-
-// Maximum number of time to retry a failed processing of claim entry
-// There is NO point of seeting this to high value
-pub const DEFAULT_RETRY_COUNT: u8 = 2;
-
 pub const MERKLE_ROOT: [u8; 32] =
 	hex_literal::hex!("4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672");
 
@@ -59,9 +43,7 @@ pub mod pallet {
 	use crate::merkle;
 	use crate::types::MerkelProofValidator;
 	use frame_support::storage::bounded_vec::BoundedVec;
-	use frame_support::traits::{
-		Currency, ExistenceRequirement, LockableCurrency, ReservableCurrency,
-	};
+	use frame_support::traits::{Currency, LockableCurrency, ReservableCurrency};
 	use sp_runtime::traits::Verify;
 	use weights::WeightInfo;
 
@@ -103,8 +85,6 @@ pub mod pallet {
 
 		/// Emit when an claim request was partially successful
 		ClaimPartialSuccess(types::IconAddress),
-
-		DonatedToCreditor(types::AccountIdOf<T>, types::BalanceOf<T>),
 
 		/// Value of ServerAccount sotrage have been changed
 		/// Return old value and new one
@@ -338,42 +318,6 @@ pub mod pallet {
 			});
 
 			Ok(Pays::No.into())
-		}
-
-		/// Public function to deposit some fund for our creditor
-		/// @parameter:
-		/// - origin: Signed Origin from which to credit
-		/// - amount: Amount to donate
-		/// - allow_death: when transferring amount,
-		/// 		if origin's balance drop below minimum balance
-		/// 		then weather to transfer (resulting origin account to vanish)
-		/// 		or cancel the donation
-		/// This function can be used as a mean to credit our creditor if being donated from
-		/// any node operator owned account
-		#[pallet::weight(
-			<T as Config>::AirdropWeightInfo::donate_to_creditor(
-				types::balance_to_u32::<T>(*amount)
-			)
-		)]
-		pub fn donate_to_creditor(
-			origin: OriginFor<T>,
-			amount: types::BalanceOf<T>,
-			allow_death: bool,
-		) -> DispatchResult {
-			let sponser = ensure_signed(origin)?;
-
-			let creditor_account = Self::get_creditor_account();
-			let existance_req = if allow_death {
-				ExistenceRequirement::AllowDeath
-			} else {
-				ExistenceRequirement::KeepAlive
-			};
-
-			<T as Config>::Currency::transfer(&sponser, &creditor_account, amount, existance_req)?;
-
-			Self::deposit_event(Event::<T>::DonatedToCreditor(sponser, amount));
-
-			Ok(())
 		}
 	}
 
