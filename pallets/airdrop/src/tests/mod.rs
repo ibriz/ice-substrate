@@ -2,7 +2,6 @@ use crate::{mock, types::MerkleHash};
 mod exchange_claim;
 mod merkle_tests;
 mod signature_validation;
-mod transfer;
 mod user_claim;
 mod utility_functions;
 pub mod prelude {
