@@ -49,6 +49,7 @@ pub const MERKLE_ROOT: [u8; 32] =
 #[frame_support::pallet]
 pub mod pallet {
 	use super::{types, utils, weights};
+	use hex_literal::hex;
 	use sp_runtime::traits::Convert;
 
 	use frame_support::pallet_prelude::*;
@@ -145,7 +146,7 @@ pub mod pallet {
 	// Currently, putting this as ValueQuery means,
 	// in case of no creditor account set, this storage will have
 	// default address, 0x0000... in case of current sig type.
-	// 
+	//
 	// Find a way to panic in such case at the first place.
 	// Doing unwrap at runtime will probably be bad idea
 	// and so will be to get default address
@@ -611,13 +612,16 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			let account_hex = hex_literal::hex![
-				"d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"
-			];
-			let account_id = types::AccountIdOf::<T>::decode(&mut &account_hex[..]).unwrap();
+			let creditor_account_hex =
+				hex!["d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"];
+			let creditor_account =
+				types::AccountIdOf::<T>::decode(&mut &creditor_account_hex[..]).unwrap();
+
+			let exchange_accounts = vec![];
+
 			Self {
-				exchange_accounts: Vec::new(),
-				creditor_account: account_id,
+				exchange_accounts,
+				creditor_account,
 			}
 		}
 	}
@@ -625,10 +629,11 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			for account in &self.exchange_accounts {
-				<ExchangeAccountsMap<T>>::insert(account.0, account.1);
+			for (address, balance) in &self.exchange_accounts {
+				<ExchangeAccountsMap<T>>::insert(address, balance);
 			}
-			CreditorAccount::<T>::put(self.creditor_account.clone());
+
+			CreditorAccount::<T>::put(&self.creditor_account);
 		}
 	}
 }
