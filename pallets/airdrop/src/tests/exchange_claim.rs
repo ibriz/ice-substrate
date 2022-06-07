@@ -1,6 +1,6 @@
 use frame_support::{traits::ConstU32, BoundedVec};
 
-use crate::tests::{get_merkle_proof_sample, to_test_case};
+use crate::tests::to_test_case;
 
 use super::prelude::*;
 const VALID_ICON_WALLET: types::IconAddress =
@@ -8,7 +8,7 @@ const VALID_ICON_WALLET: types::IconAddress =
 
 #[test]
 fn claim_success() {
-	let sample = get_merkle_proof_sample();
+	let sample = samples::MERKLE_PROOF_SAMPLE;
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user = true;
@@ -42,7 +42,7 @@ fn claim_success() {
 
 #[test]
 fn insufficient_balance() {
-	let sample = get_merkle_proof_sample();
+	let sample = samples::MERKLE_PROOF_SAMPLE;
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user = true;
@@ -78,7 +78,7 @@ fn insufficient_balance() {
 }
 #[test]
 fn already_claimed() {
-	let sample = get_merkle_proof_sample();
+	let sample = samples::MERKLE_PROOF_SAMPLE;
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user = true;
@@ -120,7 +120,7 @@ fn already_claimed() {
 
 #[test]
 fn only_whitelisted_claim() {
-	let sample = get_merkle_proof_sample();
+	let sample = samples::MERKLE_PROOF_SAMPLE;
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user = true;
@@ -159,7 +159,7 @@ fn only_whitelisted_claim() {
 
 #[test]
 fn invalid_claim_amount() {
-	let sample = get_merkle_proof_sample();
+	let sample = samples::MERKLE_PROOF_SAMPLE;
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user = true;

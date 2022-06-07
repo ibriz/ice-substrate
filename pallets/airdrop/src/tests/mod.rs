@@ -45,7 +45,7 @@ pub struct UserClaimTestCase {
 
 impl Default for UserClaimTestCase {
 	fn default() -> Self {
-		let (root, proofs) = to_test_case(get_merkle_proof_sample());
+		let (root, proofs) = to_test_case(samples::MERKLE_PROOF_SAMPLE);
 		let ice_address = samples::VALID_ICE_ADDRESS.clone();
 		let bounded_proofs =
 			BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(proofs).unwrap();
@@ -83,6 +83,15 @@ pub mod samples {
 		decode_hex!("ee12463586abb90e6589289a4b9c06ac4516a7ba"),
 		decode_hex!("ee02363546bcc50e643910104321c0623451a65a"),
 	];
+
+	pub const MERKLE_PROOF_SAMPLE: (&str, &[&str]) = (
+		"7fe522d63ebcabfa052eec3647366138c23c9870995f4af94d9b22b8c5923f49",
+		&[
+			"813340daefd7f1ca705faf8318cf6455632259d113c06e97b70eeeccd43519a9",
+			"409519ab7129397bdc895e4da05871c9725697a5e092addf2fe90f6e795feb8f",
+			"38055bb872670c69ac3461707f8c0b4b8e436eecfc84cfd80db30db3030c489a",
+		],
+	);
 
 	pub const VALID_ICON_SIGNATURE:IconSignature= decode_hex!("9ee3f663175691ad82f4fbb0cfd0594652e3a034e3b6934b0e4d4a60437ba4043c89d2ffcb7b0af49ed0744ce773612d7ebcdf3a5b035c247706050e0a0033e401");
 	pub const VALID_MESSAGE: &str = "icx_sendTransaction.data.{method.transfer.params.{wallet.b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3";
@@ -149,7 +158,9 @@ pub fn credit_creditor(balance: u64) {
 	);
 }
 
-pub fn to_test_case(sample: (String, Vec<String>)) -> (types::MerkleHash, Vec<types::MerkleHash>) {
+pub fn to_test_case(
+	sample: (&str, &'static [&str]),
+) -> (types::MerkleHash, Vec<types::MerkleHash>) {
 	let mut hash_bytes = [0u8; 32];
 	hex::decode_to_slice(sample.0, &mut hash_bytes as &mut [u8]).unwrap();
 	let proofs = sample
@@ -163,17 +174,6 @@ pub fn to_test_case(sample: (String, Vec<String>)) -> (types::MerkleHash, Vec<ty
 		.collect();
 
 	(hash_bytes, proofs)
-}
-
-pub fn get_merkle_proof_sample() -> (String, Vec<String>) {
-	(
-		"7fe522d63ebcabfa052eec3647366138c23c9870995f4af94d9b22b8c5923f49".to_owned(),
-		vec![
-			"813340daefd7f1ca705faf8318cf6455632259d113c06e97b70eeeccd43519a9".to_owned(),
-			"409519ab7129397bdc895e4da05871c9725697a5e092addf2fe90f6e795feb8f".to_owned(),
-			"38055bb872670c69ac3461707f8c0b4b8e436eecfc84cfd80db30db3030c489a".to_owned(),
-		],
-	)
 }
 
 pub fn tranfer_to_creditor(sponser: &types::AccountIdOf<Test>, amount: types::BalanceOf<Test>) {
