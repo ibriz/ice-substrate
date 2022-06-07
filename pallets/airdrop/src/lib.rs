@@ -190,7 +190,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			icon_address: types::IconAddress,
 			ice_address: types::IceAddress,
-			message: Vec<u8>,
+			message: types::RawPayload,
 			icon_signature: types::IconSignature,
 			ice_signature: types::IceSignature,
 			total_amount: types::BalanceOf<T>,

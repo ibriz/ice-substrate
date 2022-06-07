@@ -34,7 +34,7 @@ use prelude::*;
 pub struct UserClaimTestCase {
 	pub icon_address: [u8; 20],
 	pub ice_address: types::IceAddress,
-	pub message: Vec<u8>,
+	pub message: types::RawPayload,
 	pub icon_signature: [u8; 65],
 	pub ice_signature: [u8; 64],
 	pub amount: u128,
@@ -46,15 +46,14 @@ pub struct UserClaimTestCase {
 impl Default for UserClaimTestCase {
 	fn default() -> Self {
 		let (root, proofs) = to_test_case(samples::MERKLE_PROOF_SAMPLE);
-		let ice_address = samples::VALID_ICE_ADDRESS.clone();
 		let bounded_proofs =
 			BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(proofs).unwrap();
 		Self {
-			icon_address: samples::VALID_ICON_WALLET.clone(),
-			ice_address: ice_address,
-			message: samples::VALID_MESSAGE.as_bytes().to_vec(),
-			icon_signature: samples::VALID_ICON_SIGNATURE.clone(),
-			ice_signature: samples::VALID_ICE_SIGNATURE.clone(),
+			icon_address: samples::VALID_ICON_WALLET,
+			ice_address: samples::VALID_ICE_ADDRESS,
+			message: samples::VALID_MESSAGE,
+			icon_signature: samples::VALID_ICON_SIGNATURE,
+			ice_signature: samples::VALID_ICE_SIGNATURE,
 			amount: 12_000_000,
 			defi_user: true,
 			merkle_proofs: bounded_proofs,
@@ -66,7 +65,7 @@ impl Default for UserClaimTestCase {
 pub mod samples {
 
 	use super::decode_hex;
-	use super::types::{IconAddress, IconSignature};
+	use super::types::{IconAddress, IconSignature, RawPayload};
 	use sp_core::sr25519;
 
 	pub const ACCOUNT_ID: &[sr25519::Public] = &[
@@ -93,8 +92,8 @@ pub mod samples {
 		],
 	);
 
-	pub const VALID_ICON_SIGNATURE:IconSignature= decode_hex!("9ee3f663175691ad82f4fbb0cfd0594652e3a034e3b6934b0e4d4a60437ba4043c89d2ffcb7b0af49ed0744ce773612d7ebcdf3a5b035c247706050e0a0033e401");
-	pub const VALID_MESSAGE: &str = "icx_sendTransaction.data.{method.transfer.params.{wallet.b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3";
+	pub const VALID_ICON_SIGNATURE:IconSignature = decode_hex!("9ee3f663175691ad82f4fbb0cfd0594652e3a034e3b6934b0e4d4a60437ba4043c89d2ffcb7b0af49ed0744ce773612d7ebcdf3a5b035c247706050e0a0033e401");
+	pub const VALID_MESSAGE: RawPayload = *b"icx_sendTransaction.data.{method.transfer.params.{wallet.b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3";
 	pub const VALID_ICON_WALLET: IconAddress =
 		decode_hex!("b48f3bd3862d4a489fb3c9b761c4cfb20b34a645");
 	pub const VALID_ICE_ADDRESS: [u8; 32] =

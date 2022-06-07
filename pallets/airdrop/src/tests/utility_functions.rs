@@ -370,7 +370,7 @@ fn respect_airdrop_state() {
 				Origin::root(),
 				Default::default(),
 				Default::default(),
-				Default::default(),
+				[0; 289],
 				[0; 65],
 				[0; 64],
 				Default::default(),
