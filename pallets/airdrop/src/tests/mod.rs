@@ -6,7 +6,7 @@ mod user_claim;
 mod utility_functions;
 pub mod prelude {
 	pub use super::{
-		credit_creditor, get_last_event, minimal_test_ext, mock, run_to_block, samples,
+		set_creditor_balance, get_last_event, minimal_test_ext, mock, run_to_block, samples,
 		tranfer_to_creditor,
 	};
 	pub use crate as pallet_airdrop;
@@ -141,7 +141,7 @@ pub fn get_last_event() -> Option<<Test as frame_system::Config>::Event> {
 		.map(|v| v.event)
 }
 
-pub fn credit_creditor(balance: u64) {
+pub fn set_creditor_balance(balance: u64) {
 	let creditor_account = AirdropModule::get_creditor_account();
 	let deposit_res = <Test as pallet_airdrop::Config>::Currency::set_balance(
 		mock::Origin::root(),

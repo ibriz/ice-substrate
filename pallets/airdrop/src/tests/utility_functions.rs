@@ -190,8 +190,8 @@ fn making_vesting_transfer() {
 		let icon_address = samples::ICON_ADDRESS[0];
 		type Currency = <Test as pallet_airdrop::Config>::Currency;
 		// Fund creditor
-		credit_creditor(u64::MAX);
-		credit_creditor(u64::MAX);
+		set_creditor_balance(u64::MAX);
+		set_creditor_balance(u64::MAX);
 
 		{
 			let claimer = samples::ACCOUNT_ID[1];

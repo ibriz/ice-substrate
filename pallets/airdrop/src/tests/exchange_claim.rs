@@ -1,4 +1,4 @@
-use frame_support::{traits::ConstU32, BoundedVec};
+use frame_support::{dispatch::DispatchResult, traits::ConstU32, BoundedVec};
 
 use crate::tests::to_test_case;
 
@@ -21,13 +21,7 @@ fn claim_success() {
 
 		let creditor_account = AirdropModule::get_creditor_account();
 		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(icon_wallet, amount);
-		<Test as pallet_airdrop::Config>::Currency::set_balance(
-			mock::Origin::root(),
-			creditor_account,
-			10_000_0000_u32.into(),
-			10_000_00_u32.into(),
-		)
-		.unwrap();
+		set_creditor_balance(10_000_0000);
 
 		assert_ok!(AirdropModule::dispatch_exchange_claim(
 			Origin::root(),
@@ -37,6 +31,10 @@ fn claim_success() {
 			defi_user,
 			bounded_proofs,
 		));
+
+		let snapshot = AirdropModule::get_icon_snapshot_map(&icon_wallet).unwrap();
+		assert!(snapshot.done_vesting);
+		assert!(snapshot.done_instant);
 	});
 }
 
@@ -76,6 +74,43 @@ fn insufficient_balance() {
 		);
 	});
 }
+
+#[test]
+fn double_exchange() {
+	let exchange_once = || {
+		set_creditor_balance(10_00_00_0000);
+
+		let case = to_test_case(samples::MERKLE_PROOF_SAMPLE);
+		let bounded_proofs =
+			BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
+		let amount: types::BalanceOf<Test> = 10017332_u64.into();
+		let icon_wallet = VALID_ICON_WALLET;
+		let ice_address =
+			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
+		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet, amount);
+
+		AirdropModule::dispatch_exchange_claim(
+			Origin::root(),
+			icon_wallet,
+			ice_address.clone(),
+			amount,
+			true,
+			bounded_proofs,
+		)
+	};
+
+	let first_exchange = minimal_test_ext().execute_with(|| {
+		let first_exchange = exchange_once();
+		let second_exchange = exchange_once();
+
+		// First exchange should pass
+		assert_ok!(first_exchange);
+
+		// Second exchange should fail
+		assert_err!(second_exchange, PalletError::ClaimAlreadyMade);
+	});
+}
+
 #[test]
 fn already_claimed() {
 	let sample = samples::MERKLE_PROOF_SAMPLE;
