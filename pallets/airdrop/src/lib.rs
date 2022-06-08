@@ -229,9 +229,6 @@ pub mod pallet {
 			// Do the actual transfer if eligible
 			Self::do_transfer(&mut snapshot, &icon_address, total_amount, defi_user)?;
 
-			// do_transfer might have updated the snapshot. Write it,
-			<IceSnapshotMap<T>>::insert(&icon_address, snapshot.clone());
-
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
 			Ok(Pays::No.into())
 		}
@@ -525,7 +522,14 @@ pub mod pallet {
 			#[cfg(feature = "no-vesting")]
 			type TransferType = super::non_vested_transfer::AllInstantTransfer;
 
-			TransferType::do_transfer(snapshot, icon_address, total_amount, defi_user)
+			let transfer_result =
+				TransferType::do_transfer(snapshot, icon_address, total_amount, defi_user);
+
+			// No matter the result we will write the updated_snapshot
+			<IceSnapshotMap<T>>::insert(icon_address, snapshot);
+
+			// Now snapshot have been written, return result
+			transfer_result
 		}
 	}
 
