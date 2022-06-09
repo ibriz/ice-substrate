@@ -99,7 +99,7 @@ fn double_exchange() {
 		)
 	};
 
-	let first_exchange = minimal_test_ext().execute_with(|| {
+	minimal_test_ext().execute_with(|| {
 		let first_exchange = exchange_once();
 		let second_exchange = exchange_once();
 

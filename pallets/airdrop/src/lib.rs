@@ -540,9 +540,9 @@ pub mod pallet {
 			<T as Config>::Currency::make_free_balance_be(account, amount);
 		}
 
-		pub fn set_creditor_account(new_account: sr25519::Public) {
+		pub fn set_creditor_account(new_account: sp_core::sr25519::Public) {
 			let mut account_bytes = new_account.0.clone();
-			let account = T::AccountId::decode(&mut &account_bytes[..]).unwrap_or_default();
+			let account = T::AccountId::decode(&mut &account_bytes[..]).unwrap();
 
 			<CreditorAccount<T>>::set(Some(account.clone()));
 		}
