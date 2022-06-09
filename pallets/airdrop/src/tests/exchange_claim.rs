@@ -1,4 +1,5 @@
 use frame_support::{dispatch::DispatchResult, traits::ConstU32, BoundedVec};
+use codec::Encode;
 
 use crate::tests::to_test_case;
 
@@ -18,6 +19,7 @@ fn claim_success() {
 		let icon_wallet = VALID_ICON_WALLET;
 		let ice_address =
 			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
+		let ice_address = AirdropModule::to_account_id(ice_address.clone()).unwrap();
 
 		let creditor_account = AirdropModule::get_creditor_account();
 		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(icon_wallet, amount);
@@ -26,15 +28,20 @@ fn claim_success() {
 		assert_ok!(AirdropModule::dispatch_exchange_claim(
 			Origin::root(),
 			icon_wallet,
-			ice_address.clone(),
+			ice_address.encode().try_into().unwrap(),
 			amount.into(),
 			defi_user,
 			bounded_proofs,
 		));
 
 		let snapshot = AirdropModule::get_icon_snapshot_map(&icon_wallet).unwrap();
-		assert!(snapshot.done_instant);
 
+		// Ensure mapping in both storage are correct
+		let mapped_icon_wallet = AirdropModule::get_ice_to_icon_map(&ice_address);
+		assert_eq!(mapped_icon_wallet, Some(icon_wallet));
+
+		// Ensure transfer flag are updated
+		assert!(snapshot.done_instant);
 		#[cfg(not(feature = "no-vesting"))]
 		assert!(snapshot.done_vesting);
 	});

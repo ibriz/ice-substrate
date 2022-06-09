@@ -2,7 +2,6 @@ use super::prelude::*;
 use crate::tests::UserClaimTestCase;
 
 #[test]
-#[cfg(not(feature = "no-vesting"))]
 fn claim_success() {
 	let ofw_account = samples::ACCOUNT_ID[0].into_account();
 	let mut test_ext = minimal_test_ext();
@@ -38,52 +37,13 @@ fn claim_success() {
 		let claim_balance = <Test as pallet_airdrop::Config>::Currency::usable_balance(ice_account);
 		assert_eq!(claim_balance, 6761333);
 		let snapshot = <pallet_airdrop::IconSnapshotMap<Test>>::get(&case.icon_address).unwrap();
+
+		let mapped_icon_wallet = AirdropModule::get_ice_to_icon_map(&ice_account);
+		assert_eq!(mapped_icon_wallet, Some(case.icon_address));
+
+		assert_eq!(snapshot.done_instant, true);
+		#[cfg(not(feature = "no-vesting"))]
 		assert_eq!(snapshot.done_vesting, true);
-		assert_eq!(snapshot.done_instant, true);
-	});
-}
-
-#[test]
-#[cfg(feature = "no-vesting")]
-fn claim_success() {
-	let ofw_account = samples::ACCOUNT_ID[0].into_account();
-	let mut test_ext = minimal_test_ext();
-	test_ext.execute_with(|| {
-		assert_ok!(AirdropModule::set_airdrop_server_account(
-			Origin::root(),
-			ofw_account
-		));
-
-		let mut case = UserClaimTestCase::default();
-		case.amount = 12_017_332_u64.into();
-
-		let creditor_account = AirdropModule::get_creditor_account();
-		<Test as pallet_airdrop::Config>::Currency::set_balance(
-			mock::Origin::root(),
-			creditor_account,
-			10_000_0000_u32.into(),
-			10_000_00_u32.into(),
-		)
-		.unwrap();
-
-		assert_ok!(AirdropModule::dispatch_user_claim(
-			Origin::signed(AirdropModule::get_airdrop_server_account().unwrap()),
-			case.icon_address,
-			case.ice_address,
-			case.message,
-			case.icon_signature,
-			case.ice_signature,
-			case.amount,
-			case.defi_user,
-			case.merkle_proofs,
-		));
-		let ice_account = AirdropModule::to_account_id(case.ice_address.clone()).unwrap();
-		let claim_balance =
-			<Test as pallet_airdrop::Config>::Currency::usable_balance(&ice_account);
-		assert_eq!(claim_balance, 12_017_332);
-		let snapshot = <pallet_airdrop::IconSnapshotMap<Test>>::get(&case.icon_address).unwrap();
-		assert_eq!(snapshot.done_vesting, false);
-		assert_eq!(snapshot.done_instant, true);
 	});
 }
 
