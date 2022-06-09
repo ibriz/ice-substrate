@@ -32,6 +32,7 @@ use frame_support::{traits::ConstU32, BoundedVec};
 use mock::System;
 use prelude::*;
 
+#[derive(Clone)]
 pub struct UserClaimTestCase {
 	pub icon_address: [u8; 20],
 	pub ice_address: types::IceAddress,
@@ -130,9 +131,9 @@ pub fn run_to_block(n: types::BlockNumberOf<Test>) {
 			System::on_finalize(System::block_number());
 		}
 		System::set_block_number(System::block_number() + 1);
+
 		System::on_initialize(System::block_number());
 		AirdropModule::on_initialize(System::block_number());
-		//<Test as pallet_airdrop::Config>::VestingModule::on_initialize(System::block_number());
 	}
 }
 

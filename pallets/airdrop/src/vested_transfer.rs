@@ -4,6 +4,11 @@ use frame_support::pallet_prelude::*;
 use frame_support::traits::{Currency, ExistenceRequirement};
 use sp_runtime::traits::{CheckedAdd, Convert};
 
+// TODO: put more relaible value
+pub const BLOCKS_IN_YEAR: u32 = 5_256_000u32;
+// Block number after which enable to do vesting
+pub const VESTING_APPLICABLE_FROM: u32 = 1u32;
+
 pub struct DoVestdTransfer;
 impl types::DoTransfer for DoVestdTransfer {
 	fn do_transfer<T: airdrop::Config>(
@@ -12,11 +17,6 @@ impl types::DoTransfer for DoVestdTransfer {
 		total_amount: types::BalanceOf<T>,
 		defi_user: bool,
 	) -> Result<(), DispatchError> {
-		// TODO: put more relaible value
-		const BLOCKS_IN_YEAR: u32 = 5_256_000u32;
-		// Block number after which enable to do vesting
-		const VESTING_APPLICABLE_FROM: u32 = 1u32;
-
 		let claimer = snapshot.ice_address;
 		let creditor = AirdropModule::<T>::get_creditor_account();
 

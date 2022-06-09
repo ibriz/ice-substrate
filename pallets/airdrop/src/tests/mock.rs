@@ -76,9 +76,7 @@ impl system::Config for Test {
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 500;
 	pub const MaxLocks: u32 = 50;
-	// if this is too large vesting will error out and no vesting will be applied.
-	// This should not be greater than 5M
-	pub const VestingMinTransfer: Balance = 4_000_000;
+	pub const VestingMinTransfer: Balance = 10_000;
 }
 
 impl pallet_airdrop::Config for Test {
@@ -108,7 +106,7 @@ impl pallet_vesting::Config for Test {
 	type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
 	type MinVestedTransfer = VestingMinTransfer;
 	type WeightInfo = ();
-	const MAX_VESTING_SCHEDULES: u32 = u32::MAX;
+	const MAX_VESTING_SCHEDULES: u32 = 10;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

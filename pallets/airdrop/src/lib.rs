@@ -18,10 +18,10 @@ pub mod weights;
 pub mod merkle;
 
 #[cfg(not(feature = "no-vesting"))]
-mod vested_transfer;
+pub mod vested_transfer;
 
 #[cfg(feature = "no-vesting")]
-mod non_vested_transfer;
+pub mod non_vested_transfer;
 
 pub const MERKLE_ROOT: [u8; 32] =
 	hex_literal::hex!("4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672");
