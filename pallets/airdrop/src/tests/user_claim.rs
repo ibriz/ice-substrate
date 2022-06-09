@@ -35,7 +35,13 @@ fn claim_success() {
 		));
 		let ice_account = AirdropModule::to_account_id(case.ice_address.clone()).unwrap();
 		let claim_balance = <Test as pallet_airdrop::Config>::Currency::usable_balance(ice_account);
+
+		#[cfg(not(feature = "no-vesting"))]
 		assert_eq!(claim_balance, 6761333);
+
+		#[cfg(feature = "no-vesting")]
+		assert_eq!(claim_balance, case.amount);
+
 		let snapshot = <pallet_airdrop::IconSnapshotMap<Test>>::get(&case.icon_address).unwrap();
 
 		let mapped_icon_wallet = AirdropModule::get_ice_to_icon_map(&ice_account);
@@ -97,7 +103,7 @@ fn already_claimed() {
 		let mut case = UserClaimTestCase::default();
 		case.amount = 10017332_u64.into();
 
-		let mut snapshot = types::SnapshotInfo::default();
+		let mut snapshot = types::SnapshotInfo::default().ice_address(case.ice_address.clone());
 		snapshot.done_instant = true;
 		snapshot.done_vesting = true;
 

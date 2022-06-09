@@ -1,5 +1,5 @@
-use frame_support::{dispatch::DispatchResult, traits::ConstU32, BoundedVec};
 use codec::Encode;
+use frame_support::{dispatch::DispatchResult, traits::ConstU32, BoundedVec};
 
 use crate::tests::to_test_case;
 
@@ -21,7 +21,6 @@ fn claim_success() {
 			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
 		let ice_address = AirdropModule::to_account_id(ice_address.clone()).unwrap();
 
-		let creditor_account = AirdropModule::get_creditor_account();
 		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(icon_wallet, amount);
 		set_creditor_balance(10_000_0000);
 
@@ -126,27 +125,21 @@ fn already_claimed() {
 	let case = to_test_case(sample);
 	let bounded_proofs = BoundedVec::<types::MerkleHash, ConstU32<10>>::try_from(case.1).unwrap();
 	let defi_user = true;
-	let amount: types::BalanceOf<Test> = 10017332_u64.into();
-	let mut test_ext = minimal_test_ext();
-	test_ext.execute_with(|| {
+	let amount: types::BalanceOf<Test> = 1;
+
+	minimal_test_ext().execute_with(|| {
+		set_creditor_balance(10_000_0000_u32.into());
+
 		let icon_wallet = VALID_ICON_WALLET;
 		let ice_address =
 			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
 
-		let mut snapshot = types::SnapshotInfo::default();
+		let mut snapshot = types::SnapshotInfo::default().ice_address(ice_address.clone());
 		snapshot.done_instant = true;
 		snapshot.done_vesting = true;
 
 		pallet_airdrop::IconSnapshotMap::<Test>::insert(&icon_wallet, snapshot);
-		let creditor_account = AirdropModule::get_creditor_account();
 		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet, amount);
-		<Test as pallet_airdrop::Config>::Currency::set_balance(
-			mock::Origin::root(),
-			creditor_account,
-			10_000_0000_u32.into(),
-			10_000_00_u32.into(),
-		)
-		.unwrap();
 
 		assert_err!(
 			AirdropModule::dispatch_exchange_claim(

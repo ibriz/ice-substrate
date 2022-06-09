@@ -229,7 +229,7 @@ pub mod pallet {
 			// Now this address pair is verified,
 			// we can insert it to the map if this pair is new
 			let mut snapshot =
-				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount);
+				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount)?;
 
 			// Make sure this user is eligible for claim.
 			Self::ensure_claimable(&snapshot)?;
@@ -267,7 +267,7 @@ pub mod pallet {
 			Self::validate_creditor_fund(total_amount)?;
 
 			let mut snapshot =
-				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount);
+				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount)?;
 
 			Self::ensure_claimable(&snapshot)?;
 			Self::do_transfer(&mut snapshot, &icon_address, total_amount, defi_user)?;
@@ -374,20 +374,17 @@ pub mod pallet {
 			<frame_system::Pallet<T>>::block_number()
 		}
 
-		/// Ensure this ice & icon both address are new
-		pub fn ensure_unique_address(
-			ice_address: &types::AccountIdOf<T>,
+		// Insert this address pair if it is new
+		pub fn insert_or_get_snapshot(
 			icon_address: &types::IconAddress,
-		) -> DispatchResult {
-			let old_ice_address = Self::get_icon_snapshot_map(icon_address).map(|v| v.ice_address);
-			let old_icon_address = Self::get_ice_to_icon_map(ice_address);
-
-			if let Some(old_ice_address) = old_ice_address {
-				ensure!(
-					old_ice_address == ice_address.encode().as_slice(),
-					Error::<T>::IceAddressInUse
-				);
-			}
+			ice_address: &types::IceAddress,
+			defi_user: bool,
+			amount: types::BalanceOf<T>,
+		) -> Result<types::SnapshotInfo<T>, DispatchError> {
+			let ice_account =
+				Self::to_account_id(ice_address.to_vec().try_into().unwrap()).unwrap();
+			let old_snapshot = Self::get_icon_snapshot_map(&icon_address);
+			let old_icon_address = Self::get_ice_to_icon_map(&ice_account);
 
 			if let Some(old_icon_address) = old_icon_address {
 				ensure!(
@@ -396,35 +393,31 @@ pub mod pallet {
 				);
 			}
 
-			Ok(())
-		}
-
-		// Insert this address pair if it is new
-		pub fn insert_or_get_snapshot(
-			icon_address: &types::IconAddress,
-			ice_address: &types::IceAddress,
-			defi_user: bool,
-			amount: types::BalanceOf<T>,
-		) -> types::SnapshotInfo<T> {
-			let old_snapshot = Self::get_icon_snapshot_map(icon_address);
-
-			match old_snapshot {
-				// As this pair is already on map,
-				// we can just return it
-				Some(old_snapshot) => old_snapshot,
-
-				// This pair is new to the crew, add it
-				None => {
-					let mut new_snapshot =
-						types::SnapshotInfo::<T>::default().ice_address(*ice_address);
-					new_snapshot.amount = amount;
-					new_snapshot.defi_user = defi_user;
-
-					<IconSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
-
-					new_snapshot
-				}
+			if let Some(old_snapshot) = &old_snapshot {
+				let old_ice_address = old_snapshot.ice_address;
+				ensure!(
+					old_ice_address == ice_address.encode().as_slice(),
+					Error::<T>::IceAddressInUse
+				);
 			}
+
+			let icon_address = old_icon_address.as_ref().unwrap_or_else(|| {
+				<IceIconMap<T>>::insert(ice_account, icon_address);
+				icon_address
+			});
+
+			let snapshot = old_snapshot.unwrap_or_else(|| {
+				let mut new_snapshot =
+					types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
+				new_snapshot.defi_user = defi_user;
+				new_snapshot.amount = amount;
+
+				<IconSnapshotMap<T>>::insert(icon_address, &new_snapshot);
+
+				new_snapshot
+			});
+
+			Ok(snapshot)
 		}
 
 		pub fn ensure_claimable(snapshot: &types::SnapshotInfo<T>) -> DispatchResult {

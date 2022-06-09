@@ -6,11 +6,12 @@ mod user_claim;
 mod utility_functions;
 pub mod prelude {
 	pub use super::{
-		set_creditor_balance, get_last_event, minimal_test_ext, mock, run_to_block, samples,
+		get_last_event, minimal_test_ext, mock, run_to_block, samples, set_creditor_balance,
 		tranfer_to_creditor,
 	};
 	pub use crate as pallet_airdrop;
 	pub use crate::tests;
+	pub use codec::Encode;
 	pub use frame_support::{
 		assert_err, assert_err_ignore_postinfo, assert_err_with_weight, assert_noop, assert_ok,
 		assert_storage_noop,

@@ -106,7 +106,6 @@ fn get_vesting_amounts_splitted() {
 }
 
 #[test]
-#[cfg(not(feature = "no-vesting"))]
 fn cook_vesting_schedule() {
 	type BlockToBalance = <Test as pallet_vesting::Config>::BlockNumberToBalance;
 	minimal_test_ext().execute_with(|| {
@@ -191,7 +190,6 @@ fn making_vesting_transfer() {
 		type Currency = <Test as pallet_airdrop::Config>::Currency;
 		// Fund creditor
 		set_creditor_balance(u64::MAX);
-		set_creditor_balance(u64::MAX);
 
 		{
 			let claimer = samples::ACCOUNT_ID[1];
@@ -217,7 +215,7 @@ fn making_vesting_transfer() {
 			assert!(Currency::usable_balance(&claimer) >= 2932538_u32.into());
 
 			// Make sure flags are updated
-			assert!(snapshot.done_vesting && snapshot.done_instant);
+			assert!(snapshot.done_instant && snapshot.done_vesting);
 		}
 
 		// When instant transfer is true but not vesting
@@ -256,7 +254,7 @@ fn making_vesting_transfer() {
 			let user_balance = Currency::free_balance(&claimer);
 			assert_eq!(expected_transfer, user_balance);
 
-			// Ensure flag is updates
+			// Ensure flag is updated
 			assert!(snapshot.done_vesting && snapshot.done_instant);
 		}
 
@@ -515,5 +513,109 @@ fn ensure_claimable_snapshot() {
 				PalletError::ClaimAlreadyMade
 			);
 		}
+	});
+}
+
+#[test]
+fn insert_or_get_snapshot() {
+	use crate::{IceIconMap, IconSnapshotMap};
+
+	// When there is previous record of this ice address
+	// and new call do not match that ice_address
+	minimal_test_ext().execute_with(|| {
+		let ice_address = samples::ACCOUNT_ID[1];
+		let icon_address_one = samples::ICON_ADDRESS[0];
+		let icon_address_two = samples::ICON_ADDRESS[1];
+		assert_ne!(icon_address_one, icon_address_two);
+
+		<IceIconMap<Test>>::insert(&ice_address, icon_address_one);
+
+		assert_noop!(
+			AirdropModule::insert_or_get_snapshot(
+				&icon_address_two,
+				&ice_address.encode().try_into().unwrap(),
+				false,
+				0u32.into()
+			),
+			PalletError::IconAddressInUse,
+		);
+	});
+
+	// There is previous record old this icon address
+	// and new call do not match that icon_address
+	minimal_test_ext().execute_with(|| {
+		let icon_address = samples::ICON_ADDRESS[1];
+		let ice_address_one = samples::ACCOUNT_ID[1];
+		let ice_address_two = samples::ACCOUNT_ID[2];
+		assert_ne!(ice_address_one, ice_address_two);
+
+		let snapshot = types::SnapshotInfo::<Test>::default()
+			.ice_address(ice_address_one.encode().try_into().unwrap());
+		<IconSnapshotMap<Test>>::insert(&icon_address, snapshot);
+
+		assert_noop!(
+			AirdropModule::insert_or_get_snapshot(
+				&icon_address,
+				&ice_address_two.encode().try_into().unwrap(),
+				false,
+				0u32.into()
+			),
+			PalletError::IceAddressInUse,
+		);
+	});
+
+	// There is previous old record of both address
+	// and new call match that addresses
+	minimal_test_ext().execute_with(|| {
+		let icon_address = samples::ICON_ADDRESS[1];
+		let ice_address = samples::ACCOUNT_ID[1];
+
+		let snapshot = types::SnapshotInfo::<Test>::default()
+			.ice_address(ice_address.encode().try_into().unwrap());
+		<IconSnapshotMap<Test>>::insert(&icon_address, snapshot.clone());
+		<IceIconMap<Test>>::insert(&ice_address, &icon_address);
+
+		let expected_snapshot = snapshot;
+		let call_result = AirdropModule::insert_or_get_snapshot(
+			&icon_address,
+			&ice_address.encode().try_into().unwrap(),
+			false,
+			0u32.into(),
+		);
+
+		assert_eq!(call_result.as_ref(), Ok(&expected_snapshot));
+		assert_eq!(
+			AirdropModule::get_icon_snapshot_map(&icon_address),
+			Some(expected_snapshot)
+		);
+		assert_eq!(
+			AirdropModule::get_ice_to_icon_map(&ice_address),
+			Some(icon_address)
+		);
+	});
+
+	// No previous record of both address
+	minimal_test_ext().execute_with(|| {
+		let icon_address = samples::ICON_ADDRESS[1];
+		let ice_address = samples::ACCOUNT_ID[1];
+
+		let expected_snapshot = types::SnapshotInfo::<Test>::default()
+			.ice_address(ice_address.encode().try_into().unwrap());
+		let call_result = AirdropModule::insert_or_get_snapshot(
+			&icon_address,
+			&ice_address.encode().try_into().unwrap(),
+			false,
+			0u32.into(),
+		);
+
+		assert_eq!(call_result.as_ref(), Ok(&expected_snapshot));
+		assert_eq!(
+			AirdropModule::get_icon_snapshot_map(&icon_address),
+			Some(expected_snapshot)
+		);
+		assert_eq!(
+			AirdropModule::get_ice_to_icon_map(&ice_address),
+			Some(icon_address)
+		);
 	});
 }
