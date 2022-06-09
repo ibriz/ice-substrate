@@ -172,6 +172,12 @@ pub mod pallet {
 		/// Provided proof size excced the maximum limit
 		ProofTooLarge,
 
+		/// This icon address have already been mapped to another ice address
+		IconAddressInUse,
+
+		// This ice address have already been mapped to another icon address
+		IceAddressInUse,
+
 		InvalidIceAddress,
 		InvalidIceSignature,
 		FailedExtractingIceAddress,
@@ -366,6 +372,31 @@ pub mod pallet {
 		/// Return block height of Node from which this was called
 		pub fn get_current_block_number() -> types::BlockNumberOf<T> {
 			<frame_system::Pallet<T>>::block_number()
+		}
+
+		/// Ensure this ice & icon both address are new
+		pub fn ensure_unique_address(
+			ice_address: &types::AccountIdOf<T>,
+			icon_address: &types::IconAddress,
+		) -> DispatchResult {
+			let old_ice_address = Self::get_icon_snapshot_map(icon_address).map(|v| v.ice_address);
+			let old_icon_address = Self::get_ice_to_icon_map(ice_address);
+
+			if let Some(old_ice_address) = old_ice_address {
+				ensure!(
+					old_ice_address == ice_address.encode().as_slice(),
+					Error::<T>::IceAddressInUse
+				);
+			}
+
+			if let Some(old_icon_address) = old_icon_address {
+				ensure!(
+					&old_icon_address == icon_address,
+					Error::<T>::IconAddressInUse
+				);
+			}
+
+			Ok(())
 		}
 
 		// Insert this address pair if it is new
