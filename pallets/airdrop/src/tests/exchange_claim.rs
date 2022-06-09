@@ -33,8 +33,10 @@ fn claim_success() {
 		));
 
 		let snapshot = AirdropModule::get_icon_snapshot_map(&icon_wallet).unwrap();
-		assert!(snapshot.done_vesting);
 		assert!(snapshot.done_instant);
+
+		#[cfg(not(feature = "no-vesting"))]
+		assert!(snapshot.done_vesting);
 	});
 }
 
@@ -128,7 +130,7 @@ fn already_claimed() {
 		snapshot.done_instant = true;
 		snapshot.done_vesting = true;
 
-		pallet_airdrop::IceSnapshotMap::<Test>::insert(&icon_wallet, snapshot);
+		pallet_airdrop::IconSnapshotMap::<Test>::insert(&icon_wallet, snapshot);
 		let creditor_account = AirdropModule::get_creditor_account();
 		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet, amount);
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
@@ -168,7 +170,7 @@ fn only_whitelisted_claim() {
 
 		let snapshot = types::SnapshotInfo::default();
 
-		pallet_airdrop::IceSnapshotMap::<Test>::insert(&icon_wallet, snapshot);
+		pallet_airdrop::IconSnapshotMap::<Test>::insert(&icon_wallet, snapshot);
 		let creditor_account = AirdropModule::get_creditor_account();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
@@ -209,7 +211,7 @@ fn invalid_claim_amount() {
 		snapshot.done_instant = true;
 		snapshot.done_vesting = true;
 
-		pallet_airdrop::IceSnapshotMap::<Test>::insert(&icon_wallet, snapshot);
+		pallet_airdrop::IconSnapshotMap::<Test>::insert(&icon_wallet, snapshot);
 		let creditor_account = AirdropModule::get_creditor_account();
 		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet, amount);
 		<Test as pallet_airdrop::Config>::Currency::set_balance(

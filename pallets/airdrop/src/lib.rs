@@ -105,8 +105,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_icon_snapshot_map)]
-	pub(super) type IceSnapshotMap<T: Config> =
-		StorageMap<_, Twox64Concat, types::IconAddress, types::SnapshotInfo<T>, OptionQuery>;
+	pub(super) type IconSnapshotMap<T: Config> =
+		StorageMap<_, Blake2_128, types::IconAddress, types::SnapshotInfo<T>, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_ice_to_icon_map)]
+	pub(super) type IceIconMap<T: Config> =
+		StorageMap<_, Twox64Concat, types::AccountIdOf<T>, types::IconAddress, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_airdrop_server_account)]
@@ -384,7 +389,7 @@ pub mod pallet {
 					new_snapshot.amount = amount;
 					new_snapshot.defi_user = defi_user;
 
-					<IceSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
+					<IconSnapshotMap<T>>::insert(&icon_address, &new_snapshot);
 
 					new_snapshot
 				}
@@ -526,7 +531,7 @@ pub mod pallet {
 				TransferType::do_transfer(snapshot, icon_address, total_amount, defi_user);
 
 			// No matter the result we will write the updated_snapshot
-			<IceSnapshotMap<T>>::insert(icon_address, snapshot);
+			<IconSnapshotMap<T>>::insert(icon_address, snapshot);
 
 			// Now snapshot have been written, return result
 			transfer_result

@@ -37,7 +37,7 @@ fn claim_success() {
 		let ice_account = AirdropModule::to_account_id(case.ice_address.clone()).unwrap();
 		let claim_balance = <Test as pallet_airdrop::Config>::Currency::usable_balance(ice_account);
 		assert_eq!(claim_balance, 6761333);
-		let snapshot = <pallet_airdrop::IceSnapshotMap<Test>>::get(&case.icon_address).unwrap();
+		let snapshot = <pallet_airdrop::IconSnapshotMap<Test>>::get(&case.icon_address).unwrap();
 		assert_eq!(snapshot.done_vesting, true);
 		assert_eq!(snapshot.done_instant, true);
 	});
@@ -81,7 +81,7 @@ fn claim_success() {
 		let claim_balance =
 			<Test as pallet_airdrop::Config>::Currency::usable_balance(&ice_account);
 		assert_eq!(claim_balance, 12_017_332);
-		let snapshot = <pallet_airdrop::IceSnapshotMap<Test>>::get(&case.icon_address).unwrap();
+		let snapshot = <pallet_airdrop::IconSnapshotMap<Test>>::get(&case.icon_address).unwrap();
 		assert_eq!(snapshot.done_vesting, false);
 		assert_eq!(snapshot.done_instant, true);
 	});
@@ -141,7 +141,7 @@ fn already_claimed() {
 		snapshot.done_instant = true;
 		snapshot.done_vesting = true;
 
-		pallet_airdrop::IceSnapshotMap::<Test>::insert(&case.icon_address, snapshot);
+		pallet_airdrop::IconSnapshotMap::<Test>::insert(&case.icon_address, snapshot);
 		let creditor_account = AirdropModule::get_creditor_account();
 
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
