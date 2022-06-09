@@ -243,3 +243,137 @@ fn invalid_icon_signature() {
 		);
 	});
 }
+
+
+#[test]
+fn claim_fails_by_used_ice_address() {
+	let ofw_account = samples::ACCOUNT_ID[0].into_account();
+	let mut test_ext = minimal_test_ext();
+	test_ext.execute_with(|| {
+		assert_ok!(AirdropModule::set_airdrop_server_account(
+			Origin::root(),
+			ofw_account
+		));
+		let mut case = UserClaimTestCase::default();
+
+		let ice_account = AirdropModule::to_account_id(case.ice_address.clone()).unwrap();
+		pallet_airdrop::IceIconMap::<Test>::insert(&ice_account, [0u8;20]);
+
+		let creditor_account = AirdropModule::get_creditor_account();
+		<Test as pallet_airdrop::Config>::Currency::set_balance(
+			mock::Origin::root(),
+			creditor_account,
+			10_000_0000_u32.into(),
+			10_000_00_u32.into(),
+		)
+		.unwrap();
+
+		assert_err!(
+			AirdropModule::dispatch_user_claim(
+				Origin::signed(AirdropModule::get_airdrop_server_account().unwrap()),
+				case.icon_address,
+				case.ice_address.clone(),
+				case.message,
+				case.icon_signature,
+				case.ice_signature,
+				case.amount,
+				case.defi_user,
+				case.merkle_proofs
+			),
+			PalletError::IceAddressInUse
+		);
+	});
+}
+
+#[test]
+fn claim_fails_by_used_icon_address() {
+	let ofw_account = samples::ACCOUNT_ID[0].into_account();
+	let mut test_ext = minimal_test_ext();
+	test_ext.execute_with(|| {
+		assert_ok!(AirdropModule::set_airdrop_server_account(
+			Origin::root(),
+			ofw_account
+		));
+		let mut case = UserClaimTestCase::default();
+
+		let mut snapshot = types::SnapshotInfo::default();
+		snapshot.done_instant = true;
+		snapshot.done_vesting = false;
+		snapshot.ice_address=[0u8;32];
+
+		pallet_airdrop::IconSnapshotMap::<Test>::insert(&case.icon_address, snapshot);
+		
+		let creditor_account = AirdropModule::get_creditor_account();
+		<Test as pallet_airdrop::Config>::Currency::set_balance(
+			mock::Origin::root(),
+			creditor_account,
+			10_000_0000_u32.into(),
+			10_000_00_u32.into(),
+		)
+		.unwrap();
+
+		assert_err!(
+			AirdropModule::dispatch_user_claim(
+				Origin::signed(AirdropModule::get_airdrop_server_account().unwrap()),
+				case.icon_address,
+				case.ice_address.clone(),
+				case.message,
+				case.icon_signature,
+				case.ice_signature,
+				case.amount,
+				case.defi_user,
+				case.merkle_proofs
+			),
+			PalletError::IconAddressInUse
+		);
+	});
+}
+
+#[test]
+fn same_pair_can_make_partial_claim() {
+	let ofw_account = samples::ACCOUNT_ID[0].into_account();
+	let mut test_ext = minimal_test_ext();
+	test_ext.execute_with(|| {
+		assert_ok!(AirdropModule::set_airdrop_server_account(
+			Origin::root(),
+			ofw_account
+		));
+		let mut case = UserClaimTestCase::default();
+
+		let mut snapshot = types::SnapshotInfo::default();
+		snapshot.done_instant = false;
+		snapshot.done_vesting = true;
+		snapshot.ice_address=case.ice_address.clone();
+
+		pallet_airdrop::IconSnapshotMap::<Test>::insert(&case.icon_address, snapshot.clone());
+
+		let ice_account = AirdropModule::to_account_id(case.ice_address.clone()).unwrap();
+		pallet_airdrop::IceIconMap::<Test>::insert(&ice_account, case.icon_address.clone());
+
+
+		let creditor_account = AirdropModule::get_creditor_account();
+		<Test as pallet_airdrop::Config>::Currency::set_balance(
+			mock::Origin::root(),
+			creditor_account,
+			10_000_0000_u32.into(),
+			10_000_00_u32.into(),
+		)
+		.unwrap();
+
+		assert_ok!(
+			AirdropModule::dispatch_user_claim(
+				Origin::signed(AirdropModule::get_airdrop_server_account().unwrap()),
+				case.icon_address,
+				case.ice_address.clone(),
+				case.message,
+				case.icon_signature,
+				case.ice_signature,
+				case.amount,
+				case.defi_user,
+				case.merkle_proofs
+			)
+		);
+		assert_eq!(snapshot.done_instant, true);
+	});
+}
+
