@@ -66,41 +66,43 @@ fn get_vesting_amounts_splitted() {
 	minimal_test_ext().execute_with(|| {
 		use sp_runtime::ArithmeticError;
 		let get_splitted_amounts: _ = utils::get_splitted_amounts::<Test>;
+		let defi_instant = utils::get_instant_percentage::<Test>(true);
+		let non_defi_instant = utils::get_instant_percentage::<Test>(false);
 
 		assert_err!(
-			get_splitted_amounts(types::ServerBalance::max_value(), true),
+			get_splitted_amounts(types::ServerBalance::max_value(), defi_instant),
 			ArithmeticError::Overflow
 		);
 		assert_eq!(
 			Ok((0_u32.into(), 0_u32.into())),
-			get_splitted_amounts(0_u32.into(), true)
+			get_splitted_amounts(0_u32.into(), defi_instant)
 		);
 
 		assert_eq!(
 			Ok((900_u32.into(), 2100_u32.into())),
-			get_splitted_amounts(3_000_u32.into(), false)
+			get_splitted_amounts(3_000_u32.into(), non_defi_instant)
 		);
 		assert_eq!(
 			Ok((1200_u32.into(), 1800_u32.into())),
-			get_splitted_amounts(3_000_u32.into(), true)
+			get_splitted_amounts(3_000_u32.into(), defi_instant)
 		);
 
 		assert_eq!(
 			Ok((0_u32.into(), 1_u32.into())),
-			get_splitted_amounts(1_u32.into(), false)
+			get_splitted_amounts(1_u32.into(), non_defi_instant)
 		);
 		assert_eq!(
 			Ok((0_u32.into(), 1_u32.into())),
-			get_splitted_amounts(1_u32.into(), true)
+			get_splitted_amounts(1_u32.into(), defi_instant)
 		);
 
 		assert_eq!(
 			Ok((2932538_u32.into(), 6842591_u32.into())),
-			get_splitted_amounts(9775129_u32.into(), false)
+			get_splitted_amounts(9775129_u32.into(), non_defi_instant)
 		);
 		assert_eq!(
 			Ok((3910051_u32.into(), 5865078_u32.into())),
-			get_splitted_amounts(9775129_u32.into(), true)
+			get_splitted_amounts(9775129_u32.into(), defi_instant)
 		);
 	});
 }
@@ -182,6 +184,8 @@ fn cook_vesting_schedule() {
 #[test]
 #[cfg(not(feature = "no-vesting"))]
 fn making_vesting_transfer() {
+	let get_per: _ = utils::get_instant_percentage::<Test>;
+
 	minimal_test_ext().execute_with(|| {
 		run_to_block(3);
 		let defi_user = true;
@@ -239,7 +243,7 @@ fn making_vesting_transfer() {
 
 			let expected_transfer = {
 				let vesting_amount: types::VestingBalanceOf<Test> =
-					utils::get_splitted_amounts::<Test>(amount, defi_user)
+					utils::get_splitted_amounts::<Test>(amount, get_per(defi_user))
 						.unwrap()
 						.1;
 				let schedule = utils::new_vesting_with_deadline::<Test, 1u32>(
@@ -278,7 +282,7 @@ fn making_vesting_transfer() {
 			// Ensure amount only accounting to instant is transferred
 			let expected_transfer = {
 				let (instant_amount, vesting_amount) =
-					utils::get_splitted_amounts::<Test>(amount, defi_user).unwrap();
+					utils::get_splitted_amounts::<Test>(amount, get_per(defi_user)).unwrap();
 				let remainder = utils::new_vesting_with_deadline::<Test, 1u32>(
 					vesting_amount,
 					5256000u32.into(),

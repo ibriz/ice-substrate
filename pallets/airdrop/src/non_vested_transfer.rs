@@ -1,10 +1,14 @@
 use crate as airdrop;
-use airdrop::{types, utils, Pallet as AirdropModule};
+use airdrop::{types, Pallet as AirdropModule};
 use frame_support::pallet_prelude::*;
 use frame_support::traits::{Currency, ExistenceRequirement};
-use sp_runtime::traits::{CheckedAdd, Convert};
 
+#[deprecated(
+	note = "Instead of using two different modules to seperate (non-)vesting.
+Configure pallet_airdrop::Config::AirdropVariables::*instant_percentage"
+)]
 pub struct AllInstantTransfer;
+
 impl types::DoTransfer for AllInstantTransfer {
 	fn do_transfer<T: airdrop::Config>(
 		snapshot: &mut types::SnapshotInfo<T>,

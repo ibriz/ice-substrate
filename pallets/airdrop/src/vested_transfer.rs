@@ -17,16 +17,19 @@ impl types::DoTransfer for DoVestdTransfer {
 		total_amount: types::BalanceOf<T>,
 		defi_user: bool,
 	) -> Result<(), DispatchError> {
+		let vesting_should_end_in = <T as airdrop::Config>::AIRDROP_VARIABLES.vesting_period;
+
 		let claimer = snapshot.ice_address;
 		let creditor = AirdropModule::<T>::get_creditor_account();
 
+		let instant_percentage = utils::get_instant_percentage::<T>(defi_user);
 		let (mut instant_amount, vesting_amount) =
-			utils::get_splitted_amounts::<T>(total_amount, defi_user)?;
+			utils::get_splitted_amounts::<T>(total_amount, instant_percentage)?;
 
 		let (transfer_shcedule, remainding_amount) = utils::new_vesting_with_deadline::<
 			T,
 			VESTING_APPLICABLE_FROM,
-		>(vesting_amount, BLOCKS_IN_YEAR.into());
+		>(vesting_amount, vesting_should_end_in.into());
 
 		// Amount to be transferred is:
 		// x% of totoal amount

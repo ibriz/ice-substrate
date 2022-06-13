@@ -49,21 +49,20 @@ where
 	(vesting, remainding_amount)
 }
 
+pub fn get_instant_percentage<T: airdrop::Config>(is_defi_user: bool) -> u8 {
+	if is_defi_user {
+		T::AIRDROP_VARIABLES.defi_instant_percentage
+	} else {
+		T::AIRDROP_VARIABLES.non_defi_instant_percentage
+	}
+}
+
 pub fn get_splitted_amounts<T: airdrop::Config>(
 	total_amount: types::BalanceOf<T>,
-	is_defi_user: bool,
+	instant_percentage: u8,
 ) -> Result<(types::BalanceOf<T>, types::VestingBalanceOf<T>), DispatchError> {
-	const DEFI_INSTANT_PER: u32 = 40_u32;
-	const NORMAL_INSTANT_PER: u32 = 30_u32;
-
-	let percentage = if is_defi_user {
-		DEFI_INSTANT_PER
-	} else {
-		NORMAL_INSTANT_PER
-	};
-
 	let instant_amount = total_amount
-		.checked_mul(&percentage.into())
+		.checked_mul(&instant_percentage.into())
 		.ok_or(sp_runtime::ArithmeticError::Overflow)?
 		.checked_div(&100_u32.into())
 		.ok_or(sp_runtime::ArithmeticError::Underflow)?;

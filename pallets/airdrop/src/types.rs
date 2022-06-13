@@ -177,4 +177,10 @@ pub trait DoTransfer {
 	) -> Result<(), DispatchError>;
 }
 
+pub struct AirdropBehaviour {
+	pub defi_instant_percentage: u8,
+	pub non_defi_instant_percentage: u8,
+	pub vesting_period: u32,
+}
+
 pub const RAW_PAYLOAD_LENGTH: usize = b"icx_sendTransaction.data.{method.transfer.params.{wallet.b6e7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3".len();

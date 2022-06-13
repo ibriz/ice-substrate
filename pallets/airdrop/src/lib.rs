@@ -44,6 +44,9 @@ pub mod pallet {
 	use sp_runtime::traits::Verify;
 	use weights::WeightInfo;
 
+	// Re-exports
+	pub use types::AirdropBehaviour;
+
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_vesting::Config {
@@ -68,6 +71,8 @@ pub mod pallet {
 		type MerkelProofValidator: types::MerkelProofValidator<Self>;
 
 		type MaxProofSize: Get<u32>;
+
+		const AIRDROP_VARIABLES: AirdropBehaviour;
 	}
 
 	#[pallet::pallet]
