@@ -180,8 +180,14 @@ pub mod pallet {
 		/// This icon address have already been mapped to another ice address
 		IconAddressInUse,
 
-		// This ice address have already been mapped to another icon address
+		/// This ice address have already been mapped to another icon address
 		IceAddressInUse,
+
+		// Airdrop pallet expect AccountId32 as AccountId
+		// and all signature verification as well as Markle proff
+		// have been constructed with this assumption
+		/// Unexpected format of AccountId
+		IncompatibleAccountId,
 
 		InvalidIceAddress,
 		InvalidIceSignature,
@@ -386,8 +392,13 @@ pub mod pallet {
 			defi_user: bool,
 			amount: types::BalanceOf<T>,
 		) -> Result<types::SnapshotInfo<T>, DispatchError> {
-			let ice_account =
-				Self::to_account_id(ice_address.to_vec().try_into().unwrap()).unwrap();
+			let ice_account = Self::to_account_id(
+				ice_address
+					.to_vec()
+					.try_into()
+					.map_err(|_| Error::<T>::IncompatibleAccountId)?,
+			)
+			.map_err(|_| Error::<T>::IncompatibleAccountId)?;
 			let old_snapshot = Self::get_icon_snapshot_map(&icon_address);
 			let old_icon_address = Self::get_ice_to_icon_map(&ice_account);
 
@@ -399,23 +410,21 @@ pub mod pallet {
 			}
 
 			if let Some(old_snapshot) = &old_snapshot {
-				let old_ice_address = old_snapshot.ice_address;
+				let old_ice_address = &old_snapshot.ice_address;
 				ensure!(
-					old_ice_address == ice_address.encode().as_slice(),
+					old_ice_address.eq(&ice_account),
 					Error::<T>::IceAddressInUse
 				);
 			}
 
 			let icon_address = old_icon_address.as_ref().unwrap_or_else(|| {
-				<IceIconMap<T>>::insert(ice_account, icon_address);
+				<IceIconMap<T>>::insert(&ice_account, icon_address);
 				icon_address
 			});
 
 			let snapshot = old_snapshot.unwrap_or_else(|| {
-				let mut new_snapshot =
-					types::SnapshotInfo::<T>::default().ice_address(ice_address.clone());
-				new_snapshot.defi_user = defi_user;
-				new_snapshot.amount = amount;
+				let new_snapshot =
+					types::SnapshotInfo::<T>::new(ice_account.clone(), defi_user, amount);
 
 				<IconSnapshotMap<T>>::insert(icon_address, &new_snapshot);
 

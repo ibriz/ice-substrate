@@ -19,7 +19,7 @@ impl types::DoTransfer for DoVestdTransfer {
 	) -> Result<(), DispatchError> {
 		let vesting_should_end_in = <T as airdrop::Config>::AIRDROP_VARIABLES.vesting_period;
 
-		let claimer = snapshot.ice_address;
+		let claimer = &snapshot.ice_address;
 		let creditor = AirdropModule::<T>::get_creditor_account();
 
 		let instant_percentage = utils::get_instant_percentage::<T>(defi_user);
@@ -48,9 +48,8 @@ impl types::DoTransfer for DoVestdTransfer {
 		let creditor_origin = <T as frame_system::Config>::Origin::from(
 			frame_system::RawOrigin::Signed(creditor.clone()),
 		);
-		let claimer_account = AirdropModule::<T>::to_account_id(claimer)?;
 		let claimer_origin =
-			<T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(claimer_account.clone());
+			<T::Lookup as sp_runtime::traits::StaticLookup>::unlookup(claimer.clone());
 
 		match transfer_shcedule {
 			// Apply vesting
@@ -109,7 +108,7 @@ impl types::DoTransfer for DoVestdTransfer {
 		if !snapshot.done_instant {
 			<T as airdrop::Config>::Currency::transfer(
 				&creditor,
-				&claimer_account,
+				&claimer,
 				instant_amount,
 				ExistenceRequirement::KeepAlive,
 			)

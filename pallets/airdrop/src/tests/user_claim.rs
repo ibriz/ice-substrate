@@ -95,9 +95,10 @@ fn already_claimed() {
 			ofw_account
 		));
 		let mut case = UserClaimTestCase::default();
+		let ice_account = AirdropModule::to_account_id(case.ice_address).unwrap();
 		case.amount = 10017332_u64.into();
 
-		let mut snapshot = types::SnapshotInfo::default().ice_address(case.ice_address.clone());
+		let mut snapshot = types::SnapshotInfo::default().ice_address(ice_account.clone());
 		snapshot.done_instant = true;
 		snapshot.done_vesting = true;
 
@@ -246,7 +247,7 @@ fn invalid_icon_signature() {
 
 #[test]
 fn partail_transfer_can_reclaim() {
-	let get_per: _ = utils::get_instant_percentage::<Test>;
+	let get_per = utils::get_instant_percentage::<Test>;
 	minimal_test_ext().execute_with(|| {
 		// We are at block 1 now
 		run_to_block(1);

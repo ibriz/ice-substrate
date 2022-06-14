@@ -184,3 +184,23 @@ pub fn tranfer_to_creditor(sponser: &types::AccountIdOf<Test>, amount: types::Ba
 		amount,
 	));
 }
+
+impl Default for types::SnapshotInfo<Test> {
+	fn default() -> Self {
+		Self::new(
+			types::AccountIdOf::<Test>::from_raw([0u8; 32]),
+			false,
+			0u32.into(),
+		)
+	}
+}
+
+impl<T> types::SnapshotInfo<T>
+where
+	T: pallet_airdrop::Config,
+{
+	pub fn ice_address(mut self, val: types::AccountIdOf<T>) -> Self {
+		self.ice_address = val;
+		self
+	}
+}

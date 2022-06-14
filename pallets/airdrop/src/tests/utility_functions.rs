@@ -553,8 +553,7 @@ fn insert_or_get_snapshot() {
 		let ice_address_two = samples::ACCOUNT_ID[2];
 		assert_ne!(ice_address_one, ice_address_two);
 
-		let snapshot = types::SnapshotInfo::<Test>::default()
-			.ice_address(ice_address_one.encode().try_into().unwrap());
+		let snapshot = types::SnapshotInfo::<Test>::default().ice_address(ice_address_one.clone());
 		<IconSnapshotMap<Test>>::insert(&icon_address, snapshot);
 
 		assert_noop!(
@@ -574,8 +573,7 @@ fn insert_or_get_snapshot() {
 		let icon_address = samples::ICON_ADDRESS[1];
 		let ice_address = samples::ACCOUNT_ID[1];
 
-		let snapshot = types::SnapshotInfo::<Test>::default()
-			.ice_address(ice_address.encode().try_into().unwrap());
+		let snapshot = types::SnapshotInfo::<Test>::default().ice_address(ice_address.clone());
 		<IconSnapshotMap<Test>>::insert(&icon_address, snapshot.clone());
 		<IceIconMap<Test>>::insert(&ice_address, &icon_address);
 
@@ -603,8 +601,8 @@ fn insert_or_get_snapshot() {
 		let icon_address = samples::ICON_ADDRESS[1];
 		let ice_address = samples::ACCOUNT_ID[1];
 
-		let expected_snapshot = types::SnapshotInfo::<Test>::default()
-			.ice_address(ice_address.encode().try_into().unwrap());
+		let expected_snapshot =
+			types::SnapshotInfo::<Test>::default().ice_address(ice_address.clone());
 		let call_result = AirdropModule::insert_or_get_snapshot(
 			&icon_address,
 			&ice_address.encode().try_into().unwrap(),

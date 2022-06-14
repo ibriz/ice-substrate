@@ -17,7 +17,7 @@ impl types::DoTransfer for AllInstantTransfer {
 		_defi_user: bool,
 	) -> Result<(), DispatchError> {
 		let creditor = AirdropModule::<T>::get_creditor_account();
-		let claimer = AirdropModule::<T>::to_account_id(snapshot.ice_address)?;
+		let claimer = &snapshot.ice_address;
 
 		if !snapshot.done_instant {
 			<T as airdrop::Config>::Currency::transfer(

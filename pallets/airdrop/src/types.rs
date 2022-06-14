@@ -76,7 +76,7 @@ pub enum SignatureValidationError {
 #[derive(Eq, PartialEq)]
 pub struct SnapshotInfo<T: Config> {
 	/// Icon address of this snapshot
-	pub ice_address: IceAddress,
+	pub ice_address: AccountIdOf<T>,
 
 	/// Total airdroppable-amount this icon_address hold
 	pub amount: BalanceOf<T>,
@@ -99,25 +99,15 @@ pub struct SnapshotInfo<T: Config> {
 }
 
 impl<T: Config> SnapshotInfo<T> {
-	/// Helper function to set ice_address in builder-pattern way
-	/// so that initilisation can be done in single line
-	pub fn ice_address(mut self, val: IceAddress) -> Self {
-		self.ice_address = val;
-		self
-	}
-}
-
-/// implement default values for snapshotInfo
-impl<T: Config> Default for SnapshotInfo<T> {
-	fn default() -> Self {
-		Self {
-			ice_address: [0u8; 32],
-			amount: 0_u32.into(),
-			defi_user: false,
+	pub fn new(ice_address: AccountIdOf<T>, defi_user: bool, amount: BalanceOf<T>) -> Self {
+		SnapshotInfo::<T> {
+			ice_address,
+			amount,
+			defi_user,
 			done_instant: false,
 			done_vesting: false,
 			vesting_block_number: None,
-			initial_transfer: BalanceOf::<T>::from(0u32),
+			initial_transfer: 0u32.into(),
 		}
 	}
 }
