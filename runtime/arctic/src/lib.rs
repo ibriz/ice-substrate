@@ -576,7 +576,7 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBondMaximum = ();
 }
 
-const VestedAirdropBehaviour: pallet_airdrop::AirdropBehaviour = types::AirdropBehaviour {
+const VestedAirdropBehaviour: pallet_airdrop::AirdropBehaviour = pallet_airdrop::AirdropBehaviour {
 	defi_instant_percentage: 30,
 	non_defi_instant_percentage: 20,
 	vesting_period: 1_57_68_000,
