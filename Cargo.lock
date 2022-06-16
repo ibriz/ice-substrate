@@ -3200,6 +3200,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "log",
+ "pallet-airdrop",
  "pallet-assets 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.19)",
  "pallet-aura",
  "pallet-authorship",

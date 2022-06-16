@@ -539,6 +539,21 @@ impl pallet_simple_inflation::Config for Runtime {
 	type IssuingAmount = IssuingAmount;
 }
 
+const VestedAirdropBehaviour: pallet_airdrop::AirdropBehaviour = types::AirdropBehaviour {
+	defi_instant_percentage: 30,
+	non_defi_instant_percentage: 20,
+	vesting_period: 1_57_68_000,
+};
+impl pallet_airdrop::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
+	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
+	type MerkelProofValidator = pallet_airdrop::merkle::AirdropMerkleValidator<Runtime>;
+	type MaxProofSize = frame_support::traits::ConstU32<10>;
+	const AIRDROP_VARIABLES: pallet_airdrop::AirdropBehaviour = VestedAirdropBehaviour;
+}
+
 frame_support::parameter_types! {
 	pub BoundDivision: U256 = U256::from(1024);
 }
@@ -601,6 +616,7 @@ construct_runtime!(
 		SimpleInflation: pallet_simple_inflation::{Pallet},
 		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
 		Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+		Airdrop: pallet_airdrop::{Pallet, Call, Storage, Event<T>, Config<T>},
 	}
 );
 
