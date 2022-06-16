@@ -1,5 +1,5 @@
 use frost_runtime::{
-	AccountId, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig, GenesisConfig, GrandpaConfig,
+	AccountId, AuraConfig, BalancesConfig,AirdropConfig, CouncilConfig, EVMConfig, EthereumConfig, GenesisConfig, GrandpaConfig,
 	Signature, SudoConfig, SystemConfig, WASM_BINARY, currency::ICY, SessionConfig, opaque::SessionKeys, PalletId
 };
 use sc_service::ChainType;
@@ -80,6 +80,7 @@ pub fn testnet_config() -> Result<FrostChainSpec, String> {
                 ],
 				// Sudo account
 				hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"].into(),
+				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				// Pre-funded accounts
 				vec![
 					TREASURY_PALLET_ID.into_account(),
@@ -124,6 +125,7 @@ pub fn development_config() -> Result<FrostChainSpec, String> {
 				],
 				// Sudo account
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				// Pre-funded accounts
 				vec![
 					TREASURY_PALLET_ID.into_account(),
@@ -173,6 +175,7 @@ pub fn local_testnet_config() -> Result<FrostChainSpec, String> {
                 ],
 				// Sudo account
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				// Pre-funded accounts
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -216,6 +219,7 @@ fn testnet_genesis(
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	council_members: Vec<AccountId>,
 	root_key: AccountId,
+	creditor_account: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	_enable_println: bool,
 ) -> GenesisConfig {
@@ -274,6 +278,10 @@ fn testnet_genesis(
             members: council_members,
             phantom: PhantomData,
         },
-        treasury: Default::default()
+        treasury: Default::default(),
+		airdrop: AirdropConfig {
+			creditor_account: creditor_account,
+			exchange_accounts: vec![],
+		},
 	}
 }
