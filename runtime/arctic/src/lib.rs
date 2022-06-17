@@ -576,11 +576,12 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBondMaximum = ();
 }
 
-const VestedAirdropBehaviour: pallet_airdrop::AirdropBehaviour = pallet_airdrop::AirdropBehaviour {
-	defi_instant_percentage: 30,
-	non_defi_instant_percentage: 20,
-	vesting_period: 1_57_68_000,
-};
+const VESTED_AIRDROP_BEHAVIOUR: pallet_airdrop::AirdropBehaviour =
+	pallet_airdrop::AirdropBehaviour {
+		defi_instant_percentage: 30,
+		non_defi_instant_percentage: 20,
+		vesting_period: 1_57_68_000,
+	};
 impl pallet_airdrop::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
@@ -588,7 +589,7 @@ impl pallet_airdrop::Config for Runtime {
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
 	type MerkelProofValidator = pallet_airdrop::merkle::AirdropMerkleValidator<Runtime>;
 	type MaxProofSize = frame_support::traits::ConstU32<10>;
-	const AIRDROP_VARIABLES: pallet_airdrop::AirdropBehaviour = VestedAirdropBehaviour;
+	const AIRDROP_VARIABLES: pallet_airdrop::AirdropBehaviour = VESTED_AIRDROP_BEHAVIOUR;
 }
 
 frame_support::parameter_types! {
