@@ -576,22 +576,6 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBondMaximum = ();
 }
 
-const VESTED_AIRDROP_BEHAVIOUR: pallet_airdrop::AirdropBehaviour =
-	pallet_airdrop::AirdropBehaviour {
-		defi_instant_percentage: 30,
-		non_defi_instant_percentage: 20,
-		vesting_period: 1_57_68_000,
-	};
-impl pallet_airdrop::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
-	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
-	type MerkelProofValidator = pallet_airdrop::merkle::AirdropMerkleValidator<Runtime>;
-	type MaxProofSize = frame_support::traits::ConstU32<10>;
-	const AIRDROP_VARIABLES: pallet_airdrop::AirdropBehaviour = VESTED_AIRDROP_BEHAVIOUR;
-}
-
 frame_support::parameter_types! {
 	pub BoundDivision: U256 = U256::from(1024);
 }
@@ -668,7 +652,6 @@ construct_runtime!(
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
 
-		Airdrop: pallet_airdrop::{Pallet, Call, Storage, Event<T>, Config<T>},
 		//SimpleInflation: pallet_simple_inflation::{Pallet},
 	}
 );

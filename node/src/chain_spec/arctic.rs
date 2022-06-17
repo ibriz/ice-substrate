@@ -1,7 +1,7 @@
 use cumulus_primitives_core::ParaId;
 use sc_service::ChainType;
 use arctic_runtime::{
-    wasm_binary_unwrap, AccountId,AirdropConfig, AuraConfig, AuraId, Balance, BalancesConfig,
+    wasm_binary_unwrap, AccountId, AuraConfig, AuraId, Balance, BalancesConfig,
     CollatorSelectionConfig, EVMConfig, GenesisConfig, ParachainInfoConfig, CouncilConfig,
     SessionConfig, Signature, SudoConfig, SystemConfig, VestingConfig, SessionKeys
 };
@@ -190,10 +190,6 @@ fn make_genesis(
         treasury: Default::default(),
         polkadot_xcm: Default::default(),
         parachain_system: Default::default(),
-        airdrop: AirdropConfig {
-			creditor_account: creditor_account,
-			exchange_accounts: vec![],
-		},
     }
 }
 
