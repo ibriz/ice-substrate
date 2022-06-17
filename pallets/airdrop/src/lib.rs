@@ -206,7 +206,7 @@ pub mod pallet {
 		#[pallet::weight((
 			T::AirdropWeightInfo::dispatch_user_claim(),
 			DispatchClass::Normal,
-			Pays::No
+			Pays::Yes
 		))]
 		pub fn dispatch_user_claim(
 			origin: OriginFor<T>,
@@ -258,7 +258,7 @@ pub mod pallet {
 		#[pallet::weight((
 			T::AirdropWeightInfo::dispatch_exchange_claim(),
 			DispatchClass::Normal,
-			Pays::No
+			Pays::Yes
 		))]
 		pub fn dispatch_exchange_claim(
 			origin: OriginFor<T>,
