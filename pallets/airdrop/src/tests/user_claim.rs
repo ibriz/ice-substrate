@@ -246,9 +246,11 @@ fn invalid_icon_signature() {
 }
 
 #[test]
+#[cfg(not(feature = "no-vesting"))]
 fn respect_vesting_pallet_min_transfer() {
-	use pallet_airdrop::vested_transfer::DoVestdTransfer;
 	use types::DoTransfer;
+	type MakeTransfer = pallet_airdrop::vested_transfer::DoVestdTransfer;
+
 	minimal_test_ext().execute_with(|| {
 		set_creditor_balance(10_000_000);
 		run_to_block(4);
@@ -257,20 +259,22 @@ fn respect_vesting_pallet_min_transfer() {
 		let icon_address = samples::ICON_ADDRESS[1];
 
 		// We intentionally make it less than crate::tests::mock::MinVestingTransfer
-		let total_amount = 800;
+		let total_amount = 9_555;
 		assert!(total_amount < crate::tests::mock::VestingMinTransfer::get());
 
 		let mut snapshot =
 			types::SnapshotInfo::<Test>::new(ice_address, is_defi_user, total_amount);
 
-		let transfer_res = DoVestdTransfer::do_transfer::<Test>(
+		let transfer_res = MakeTransfer::do_transfer::<Test>(
 			&mut snapshot,
 			&icon_address,
 			total_amount,
 			is_defi_user,
 		);
 
-		assert!(transfer_res.is_ok() && snapshot.done_vesting && snapshot.done_instant);
+		assert_ok!(transfer_res);
+		assert!(snapshot.done_vesting);
+		assert!(snapshot.done_instant);
 		assert_eq!(
 			total_amount,
 			<Test as pallet_airdrop::Config>::Currency::total_balance(&ice_address)
