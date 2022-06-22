@@ -161,6 +161,10 @@ pub fn wrap_bytes(payload: &[u8]) -> Vec<u8> {
 	wrapped_message
 }
 
+pub fn get_current_block_number<T: frame_system::Config>() -> types::BlockNumberOf<T> {
+	<frame_system::Pallet<T>>::block_number()
+}
+
 /// Struct that panics with given message
 /// This is intended to use as ValueQuery's OnEmpty holder
 pub struct PanicOnNoCreditor;

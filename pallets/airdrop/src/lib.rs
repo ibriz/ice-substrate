@@ -381,8 +381,9 @@ pub mod pallet {
 		}
 
 		/// Return block height of Node from which this was called
+		#[deprecated(note = "use utils::get_current_block_number instead")]
 		pub fn get_current_block_number() -> types::BlockNumberOf<T> {
-			<frame_system::Pallet<T>>::block_number()
+			utils::get_current_block_number::<T>()
 		}
 
 		// Insert this address pair if it is new
