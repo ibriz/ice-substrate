@@ -93,8 +93,6 @@ impl types::DoTransfer for DoVestdTransfer {
 				// If vesting is not applicable once then with same total_amount
 				// it will not be applicable ever. So mark it as done.
 				snapshot.done_vesting = true;
-				snapshot.vesting_block_number =
-					Some(AirdropModule::<T>::get_current_block_number());
 
 				log::trace!(
 					"[Airdrop pallet] Primary vesting not applicable for {:?}",

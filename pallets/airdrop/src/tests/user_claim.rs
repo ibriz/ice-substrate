@@ -246,6 +246,45 @@ fn invalid_icon_signature() {
 }
 
 #[test]
+fn respect_vesting_pallet_min_transfer() {
+	use pallet_airdrop::vested_transfer::DoVestdTransfer;
+	use types::DoTransfer;
+	minimal_test_ext().execute_with(|| {
+		set_creditor_balance(10_000_000);
+		run_to_block(4);
+		let is_defi_user = false;
+		let ice_address = samples::ACCOUNT_ID[1];
+		let icon_address = samples::ICON_ADDRESS[1];
+
+		// We intentionally make it less than crate::tests::mock::MinVestingTransfer
+		let total_amount = 800;
+		assert!(total_amount < crate::tests::mock::VestingMinTransfer::get());
+
+		let mut snapshot =
+			types::SnapshotInfo::<Test>::new(ice_address, is_defi_user, total_amount);
+
+		let transfer_res = DoVestdTransfer::do_transfer::<Test>(
+			&mut snapshot,
+			&icon_address,
+			total_amount,
+			is_defi_user,
+		);
+
+		assert!(transfer_res.is_ok() && snapshot.done_vesting && snapshot.done_instant);
+		assert_eq!(
+			total_amount,
+			<Test as pallet_airdrop::Config>::Currency::total_balance(&ice_address)
+		);
+
+		// vesting amount derived from given total_amount will alwayd be less
+		// than pallet_vesting::Config::vestingMinTransfer in this case
+		// that means everything was transferred as instant amount
+		// this means snapshot.vesting_block_number should not have been set
+		assert_eq!(None, snapshot.vesting_block_number);
+	});
+}
+
+#[test]
 fn partail_transfer_can_reclaim() {
 	let get_per = utils::get_instant_percentage::<Test>;
 	minimal_test_ext().execute_with(|| {
