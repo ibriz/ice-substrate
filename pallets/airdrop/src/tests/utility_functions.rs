@@ -201,6 +201,8 @@ fn making_vesting_transfer() {
 				done_instant: false,
 				done_vesting: false,
 				ice_address: claimer.clone().into(),
+				amount,
+				defi_user,
 				..Default::default()
 			};
 
@@ -229,6 +231,8 @@ fn making_vesting_transfer() {
 				done_instant: true,
 				done_vesting: false,
 				ice_address: claimer.clone().into(),
+				amount,
+				defi_user,
 				..Default::default()
 			};
 
@@ -269,6 +273,8 @@ fn making_vesting_transfer() {
 				done_instant: false,
 				done_vesting: true,
 				ice_address: claimer.clone().into(),
+				amount,
+				defi_user,
 				..Default::default()
 			};
 
@@ -307,6 +313,8 @@ fn making_vesting_transfer() {
 				done_instant: true,
 				done_vesting: true,
 				ice_address: claimer.clone().into(),
+				amount,
+				defi_user,
 				..Default::default()
 			};
 

@@ -12,12 +12,13 @@ pub struct AllInstantTransfer;
 impl types::DoTransfer for AllInstantTransfer {
 	fn do_transfer<T: airdrop::Config>(
 		snapshot: &mut types::SnapshotInfo<T>,
-		icon_address: &types::IconAddress,
-		total_balance: types::BalanceOf<T>,
+		_icon_address: &types::IconAddress,
+		_total_balance: types::BalanceOf<T>,
 		_defi_user: bool,
 	) -> Result<(), DispatchError> {
 		let creditor = AirdropModule::<T>::get_creditor_account();
 		let claimer = &snapshot.ice_address;
+		let total_balance = snapshot.amount;
 
 		if !snapshot.done_instant {
 			<T as airdrop::Config>::Currency::transfer(
