@@ -70,10 +70,9 @@ pub enum SignatureValidationError {
 	Sha3Execution,
 }
 
-#[derive(Encode, Decode, Clone, TypeInfo, MaxEncodedLen, Debug)]
+#[derive(Encode, Decode, Eq, PartialEq, Clone, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
-#[derive(Eq, PartialEq)]
 pub struct SnapshotInfo<T: Config> {
 	/// Icon address of this snapshot
 	pub ice_address: AccountIdOf<T>,
@@ -96,6 +95,20 @@ pub struct SnapshotInfo<T: Config> {
 	pub vesting_block_number: Option<BlockNumberOf<T>>,
 
 	pub initial_transfer: BalanceOf<T>,
+}
+
+impl<T: Config> core::fmt::Debug for SnapshotInfo<T> {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.debug_struct("SnapshotInfo")
+			.field("ice_address", &self.ice_address)
+			.field("amount", &self.amount)
+			.field("defi_user", &self.defi_user)
+			.field("done_instant", &self.done_instant)
+			.field("done_vesting", &self.done_vesting)
+			.field("vesting_block_number", &self.vesting_block_number)
+			.field("initial_transfer", &self.initial_transfer)
+			.finish()
+	}
 }
 
 impl<T: Config> SnapshotInfo<T> {
@@ -168,9 +181,7 @@ pub trait MerkelProofValidator<T: Config> {
 /// this trait now can me implmeneted according to
 /// the node behaviour eg: vesting manner and direct manner
 pub trait DoTransfer {
-	fn do_transfer<T: Config>(
-		snapshot: &mut SnapshotInfo<T>,
-	) -> Result<(), DispatchError>;
+	fn do_transfer<T: Config>(snapshot: &mut SnapshotInfo<T>) -> Result<(), DispatchError>;
 }
 
 pub struct AirdropBehaviour {
