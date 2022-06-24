@@ -3,10 +3,6 @@ use airdrop::{types, utils, Pallet as AirdropModule};
 use frame_support::pallet_prelude::*;
 use frame_support::traits::{Currency, ExistenceRequirement};
 
-#[deprecated(
-	note = "Instead of using two different modules to seperate (non-)vesting.
-Configure pallet_airdrop::Config::AirdropVariables::*instant_percentage"
-)]
 pub struct AllInstantTransfer;
 
 impl types::DoTransfer for AllInstantTransfer {
@@ -24,13 +20,9 @@ impl types::DoTransfer for AllInstantTransfer {
 				total_balance,
 				ExistenceRequirement::KeepAlive,
 			)
-			.map_err(|err| {
-				log::error!(
-					"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
-					claimer,
-					err
-				);
-				err
+			.map_err(|e| {
+				log::info!("At: AllInstant::do_transfer. Claimer: {claimer:?}. Reason: {e:?}");
+				e
 			})?;
 
 			// Everything went ok. Update flag
@@ -38,9 +30,8 @@ impl types::DoTransfer for AllInstantTransfer {
 			snapshot.initial_transfer = total_balance;
 		} else {
 			log::trace!(
-				"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
-				claimer,
-				utils::get_current_block_number::<T>()
+				"At: AllInstantTransfer::do_transfer. Skipped for claimer: {claimer:?}.{reason}",
+				reason = "snapshot.done_instant was true already"
 			);
 		}
 
