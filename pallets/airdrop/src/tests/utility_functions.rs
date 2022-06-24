@@ -436,7 +436,7 @@ fn validate_creditor_fund() {
 		{
 			tranfer_to_creditor(&donator, u32::MAX.into());
 			let required_balance = <Test as pallet_airdrop::Config>::Currency::free_balance(
-				&AirdropModule::get_creditor_account(),
+				&force_get_creditor_account::<Test>(),
 			);
 
 			assert_err!(

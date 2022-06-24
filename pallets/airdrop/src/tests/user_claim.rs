@@ -59,7 +59,7 @@ fn insufficient_balance() {
 
 		let mut case = UserClaimTestCase::default();
 		case.amount = 10017332_u64.into();
-		let creditor_account = AirdropModule::get_creditor_account();
+		let creditor_account = force_get_creditor_account::<Test>();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
 			creditor_account,
@@ -103,7 +103,7 @@ fn already_claimed() {
 		snapshot.done_vesting = true;
 
 		pallet_airdrop::IconSnapshotMap::<Test>::insert(&case.icon_address, snapshot);
-		let creditor_account = AirdropModule::get_creditor_account();
+		let creditor_account = force_get_creditor_account::<Test>();
 
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
@@ -142,7 +142,7 @@ fn invalid_payload() {
 		let mut case =UserClaimTestCase::default();
 
 		case.message = *b"icx_sendTransaction.data.{method.transfer.params.{wallet.eee7a79d04e11a2dd43399f677878522523327cae2691b6cd1eb972b5a88eb48}}.dataType.call.from.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxb48f3bd3862d4a489fb3c9b761c4cfb20b34a645.version.0x3";
-		let creditor_account = AirdropModule::get_creditor_account();
+		let creditor_account = force_get_creditor_account::<Test>();
 
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
@@ -181,7 +181,7 @@ fn invalid_ice_signature() {
 		let mut case = UserClaimTestCase::default();
 		case.ice_signature = [0u8; 64];
 
-		let creditor_account = AirdropModule::get_creditor_account();
+		let creditor_account = force_get_creditor_account::<Test>();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
 			creditor_account,
@@ -219,7 +219,7 @@ fn invalid_icon_signature() {
 		let mut case = UserClaimTestCase::default();
 		case.icon_signature = [0u8; 65];
 
-		let creditor_account = AirdropModule::get_creditor_account();
+		let creditor_account = force_get_creditor_account::<Test>();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
 			creditor_account,
@@ -320,7 +320,7 @@ fn partail_transfer_can_reclaim() {
 			let mut amount_consumed = 0;
 			for i in 0..vesting_count_limit {
 				let res = pallet_vesting::Pallet::<Test>::vested_transfer(
-					Origin::signed(AirdropModule::get_creditor_account()),
+					Origin::signed(force_get_creditor_account::<Test>()),
 					ice_account.clone(),
 					types::VestingInfoOf::<Test>::new(10_000, 2000, 5),
 				)

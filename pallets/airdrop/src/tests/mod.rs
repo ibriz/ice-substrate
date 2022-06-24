@@ -7,7 +7,7 @@ mod utility_functions;
 pub mod prelude {
 	pub use super::{
 		get_last_event, minimal_test_ext, mock, run_to_block, samples, set_creditor_balance,
-		tranfer_to_creditor,
+		tranfer_to_creditor, force_get_creditor_account,
 	};
 	pub use crate as pallet_airdrop;
 	pub use crate::tests;
@@ -145,7 +145,7 @@ pub fn get_last_event() -> Option<<Test as frame_system::Config>::Event> {
 }
 
 pub fn set_creditor_balance(balance: u64) {
-	let creditor_account = AirdropModule::get_creditor_account();
+	let creditor_account = force_get_creditor_account::<Test>();
 	let deposit_res = <Test as pallet_airdrop::Config>::Currency::set_balance(
 		mock::Origin::root(),
 		creditor_account,
@@ -181,9 +181,13 @@ pub fn to_test_case(
 pub fn tranfer_to_creditor(sponser: &types::AccountIdOf<Test>, amount: types::BalanceOf<Test>) {
 	assert_ok!(<Test as pallet_airdrop::Config>::Currency::transfer(
 		Origin::signed(sponser.clone()),
-		AirdropModule::get_creditor_account(),
+		force_get_creditor_account::<Test>(),
 		amount,
 	));
+}
+
+pub fn force_get_creditor_account<T: pallet_airdrop::Config>() -> types::AccountIdOf<T> {
+	pallet_airdrop::Pallet::<T>::get_creditor_account().expect("creditor account not set")
 }
 
 impl Default for types::SnapshotInfo<Test> {

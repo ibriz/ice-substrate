@@ -181,7 +181,7 @@ pub trait MerkelProofValidator<T: Config> {
 /// this trait now can me implmeneted according to
 /// the node behaviour eg: vesting manner and direct manner
 pub trait DoTransfer {
-	fn do_transfer<T: Config>(snapshot: &mut SnapshotInfo<T>) -> Result<(), DispatchError>;
+	fn do_transfer<T: Config>(snapshot: &mut SnapshotInfo<T>) -> DispatchResult;
 }
 
 pub struct AirdropBehaviour {

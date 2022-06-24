@@ -59,7 +59,7 @@ fn insufficient_balance() {
 		let ice_address =
 			hex_literal::hex!("da8db20713c087e12abae13f522693299b9de1b70ff0464caa5d392396a8f76c");
 
-		let creditor_account = AirdropModule::get_creditor_account();
+		let creditor_account = force_get_creditor_account::<Test>();
 		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet, amount);
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
@@ -172,7 +172,7 @@ fn only_whitelisted_claim() {
 		let snapshot = types::SnapshotInfo::default();
 
 		pallet_airdrop::IconSnapshotMap::<Test>::insert(&icon_wallet, snapshot);
-		let creditor_account = AirdropModule::get_creditor_account();
+		let creditor_account = force_get_creditor_account::<Test>();
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),
 			creditor_account,
@@ -213,7 +213,7 @@ fn invalid_claim_amount() {
 		snapshot.done_vesting = true;
 
 		pallet_airdrop::IconSnapshotMap::<Test>::insert(&icon_wallet, snapshot);
-		let creditor_account = AirdropModule::get_creditor_account();
+		let creditor_account = force_get_creditor_account::<Test>();
 		pallet_airdrop::ExchangeAccountsMap::<Test>::insert(&icon_wallet, amount);
 		<Test as pallet_airdrop::Config>::Currency::set_balance(
 			mock::Origin::root(),

@@ -131,7 +131,7 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, types::IconAddress, types::BalanceOf<T>, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn get_merkle_root)]
+	#[pallet::getter(fn try_get_merkle_root)]
 	pub type MerkleRoot<T: Config> = StorageValue<_, [u8; 32], OptionQuery>;
 
 	#[pallet::storage]
@@ -189,6 +189,9 @@ pub mod pallet {
 
 		/// Merkle root is not set on chain yet
 		NoMerkleRoot,
+
+		/// Creditor account is not set on chain yet
+		NoCreditorAccount,
 
 		InvalidIceAddress,
 		InvalidIceSignature,
@@ -314,7 +317,7 @@ pub mod pallet {
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs).map_err(
 				|e| {
 					log::trace!(
-						"Exchange for: {icon_address:?}. Failed at: validate_merkle_proof()"
+						"Exchange for: {icon_address:?}. Failed at: validate_merkle_proof(). Reason: {e:?}"
 					);
 					e
 				},
@@ -372,7 +375,7 @@ pub mod pallet {
 		#[pallet::weight(10_000)]
 		pub fn change_merkle_root(origin: OriginFor<T>, new_root: [u8; 32]) -> DispatchResult {
 			ensure_root(origin).map_err(|_| Error::<T>::DeniedOperation)?;
-			let old_root = Self::get_merkle_root();
+			let old_root = Self::try_get_merkle_root();
 
 			MerkleRoot::<T>::put(&new_root);
 
@@ -424,8 +427,12 @@ pub mod pallet {
 			}
 		}
 
-		pub fn get_creditor_account() -> types::AccountIdOf<T> {
-			Self::try_get_creditor_account().expect("Creditor account not set")
+		pub fn get_creditor_account() -> Result<types::AccountIdOf<T>, Error<T>> {
+			Self::try_get_creditor_account().ok_or(Error::<T>::NoCreditorAccount)
+		}
+
+		pub fn get_merkle_root() -> Result<[u8; 32], Error<T>> {
+			Self::try_get_merkle_root().ok_or(Error::<T>::NoMerkleRoot)
 		}
 
 		/// Check weather node is set to block incoming exchange request
@@ -525,7 +532,7 @@ pub mod pallet {
 
 		pub fn validate_creditor_fund(required_amount: types::BalanceOf<T>) -> DispatchResult {
 			let creditor_balance =
-				<T as Config>::Currency::free_balance(&Self::get_creditor_account());
+				<T as Config>::Currency::free_balance(&Self::get_creditor_account()?);
 			let exestensial_deposit = <T as Config>::Currency::minimum_balance();
 
 			if creditor_balance > required_amount + exestensial_deposit {
@@ -609,7 +616,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let amount = types::from_balance::<T>(amount);
 			let leaf_hash = merkle::hash_leaf(icon_address, amount, defi_user);
-			let merkle_root = Self::get_merkle_root().ok_or(Error::<T>::NoMerkleRoot)?;
+			let merkle_root = Self::get_merkle_root()?;
 
 			let is_valid_proof =
 				<T as Config>::MerkelProofValidator::validate(leaf_hash, merkle_root, proof_hashes);
