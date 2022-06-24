@@ -1,5 +1,5 @@
 use crate as airdrop;
-use airdrop::{types, Pallet as AirdropModule};
+use airdrop::{types, utils, Pallet as AirdropModule};
 use frame_support::pallet_prelude::*;
 use frame_support::traits::{Currency, ExistenceRequirement};
 
@@ -40,7 +40,7 @@ impl types::DoTransfer for AllInstantTransfer {
 			log::trace!(
 				"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
 				claimer,
-				AirdropModule::<T>::get_current_block_number()
+				utils::get_current_block_number::<T>()
 			);
 		}
 

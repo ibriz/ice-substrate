@@ -352,7 +352,7 @@ pub mod pallet {
 			log::info!(
 				"[Airdrop pallet] AirdropState updated. (Old, New): {:?} in block number {:?}",
 				(&old_state, &new_state),
-				Self::get_current_block_number(),
+				utils::get_current_block_number::<T>(),
 			);
 
 			Self::deposit_event(Event::AirdropStateUpdated {
@@ -405,12 +405,6 @@ pub mod pallet {
 
 			ensure!(is_root || is_offchain, DispatchError::BadOrigin);
 			Ok(())
-		}
-
-		/// Return block height of Node from which this was called
-		#[deprecated(note = "use utils::get_current_block_number instead")]
-		pub fn get_current_block_number() -> types::BlockNumberOf<T> {
-			utils::get_current_block_number::<T>()
 		}
 
 		// Insert this address pair if it is new

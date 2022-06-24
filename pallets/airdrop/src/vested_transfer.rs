@@ -64,7 +64,7 @@ impl types::DoTransfer for DoVestdTransfer {
 					Ok(()) => {
 						snapshot.done_vesting = true;
 						snapshot.vesting_block_number =
-							Some(AirdropModule::<T>::get_current_block_number());
+							Some(utils::get_current_block_number::<T>());
 						log::info!("[Airdrop pallet] Vesting applied for {:?}", claimer);
 					}
 					// log error
@@ -83,7 +83,7 @@ impl types::DoTransfer for DoVestdTransfer {
 				log::trace!(
 					"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
 					claimer,
-					AirdropModule::<T>::get_current_block_number()
+					utils::get_current_block_number::<T>()
 				);
 			}
 
@@ -132,7 +132,7 @@ impl types::DoTransfer for DoVestdTransfer {
 			log::trace!(
 				"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
 				claimer,
-				AirdropModule::<T>::get_current_block_number()
+				utils::get_current_block_number::<T>()
 			);
 		}
 
