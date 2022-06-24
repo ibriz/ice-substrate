@@ -23,7 +23,10 @@ impl types::DoTransfer for DoVestdTransfer {
 
 		let instant_percentage = utils::get_instant_percentage::<T>(defi_user);
 		let (mut instant_amount, vesting_amount) =
-			utils::get_splitted_amounts::<T>(total_amount, instant_percentage)?;
+			utils::get_splitted_amounts::<T>(total_amount, instant_percentage).map_err(|e |{
+				log::error!("At: get_splitted_amount. amount: {total_amount:?}. Instant percentage: {instant_percentage}. Reason: {e:?}");
+				e
+			})?;
 
 		let (transfer_shcedule, remainding_amount) = utils::new_vesting_with_deadline::<
 			T,
@@ -62,17 +65,16 @@ impl types::DoTransfer for DoVestdTransfer {
 				match vest_res {
 					// Everything went ok. update flag
 					Ok(()) => {
+						let block_number = utils::get_current_block_number::<T>();
 						snapshot.done_vesting = true;
-						snapshot.vesting_block_number =
-							Some(utils::get_current_block_number::<T>());
-						log::info!("[Airdrop pallet] Vesting applied for {:?}", claimer);
+						snapshot.vesting_block_number = Some(block_number);
+
+						log::trace!("Vesting applied for {claimer:?} at height {block_number:?}");
 					}
 					// log error
 					Err(err) => {
 						log::info!(
-							"[Airdrop pallet] Applying vesting for {:?} failed with error: {:?}",
-							claimer,
-							err
+							"Error while aplying vesting. For: {claimer:?}. Reason: {err:?}"
 						);
 					}
 				}
@@ -80,10 +82,9 @@ impl types::DoTransfer for DoVestdTransfer {
 
 			// Vesting was already done as snapshot.done_vesting is true
 			Some(_) => {
-				log::trace!(
-					"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
-					claimer,
-					utils::get_current_block_number::<T>()
+				log::info!(
+					"Skipped vesting for: {claimer:?}. Reason: {reason}",
+					reason = "snapshot.done_vesting was already true"
 				);
 			}
 
@@ -93,9 +94,8 @@ impl types::DoTransfer for DoVestdTransfer {
 				// it will not be applicable ever. So mark it as done.
 				snapshot.done_vesting = true;
 
-				log::trace!(
-					"[Airdrop pallet] Primary vesting not applicable for {:?}",
-					claimer_origin,
+				log::info!(
+					"No schedule was created for: {claimer:?}. All amount transferred instantly"
 				);
 			}
 		}
@@ -110,18 +110,7 @@ impl types::DoTransfer for DoVestdTransfer {
 				ExistenceRequirement::KeepAlive,
 			)
 			.map_err(|err| {
-				// First reason to fail this transfer is due to low balance in creditor. Althogh
-				// there are other reasons why it might fail:
-				// - instant_amount is too low to transfer. This can be prevented by making sure
-				// that we have a certain lower bound for airdropping so that
-				// this instant_amount will never be too low to transfer
-				// - this is the very first operation on `ice-address` and instant_transfer is less than
-				// exestinsial deposit for ice_address to exist.
-				log::error!(
-					"[Airdrop pallet] Cannot instant transfer to {:?}. Reason: {:?}",
-					claimer,
-					err
-				);
+				log::info!("Failed to instant transfer. Claimer: {claimer:?}. Reason: {err:?}");
 				err
 			})?;
 
@@ -130,9 +119,8 @@ impl types::DoTransfer for DoVestdTransfer {
 			snapshot.initial_transfer = instant_amount;
 		} else {
 			log::trace!(
-				"[Airdrop pallet] Doing instant transfer for {:?} skipped in {:?}",
-				claimer,
-				utils::get_current_block_number::<T>()
+				"skipped instant transfer for {claimer:?}. Reason: {reason}",
+				reason = "snapshot.done_instant was set to true already"
 			);
 		}
 
