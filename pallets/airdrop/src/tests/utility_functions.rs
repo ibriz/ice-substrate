@@ -206,12 +206,7 @@ fn making_vesting_transfer() {
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(
-				&mut snapshot,
-				&icon_address,
-				amount,
-				defi_user
-			));
+			assert_ok!(AirdropModule::do_transfer(&mut snapshot, &icon_address));
 
 			// Ensure all amount is being transferred
 			assert_eq!(9775129_u128, Currency::free_balance(&claimer));
@@ -236,12 +231,7 @@ fn making_vesting_transfer() {
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(
-				&mut snapshot,
-				&icon_address,
-				amount,
-				defi_user
-			));
+			assert_ok!(AirdropModule::do_transfer(&mut snapshot, &icon_address));
 
 			// Ensure amount only accounting to vesting is transfererd
 
@@ -278,12 +268,7 @@ fn making_vesting_transfer() {
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(
-				&mut snapshot,
-				&icon_address,
-				amount,
-				defi_user
-			));
+			assert_ok!(AirdropModule::do_transfer(&mut snapshot, &icon_address));
 
 			// Ensure amount only accounting to instant is transferred
 			let expected_transfer = {
@@ -318,12 +303,7 @@ fn making_vesting_transfer() {
 				..Default::default()
 			};
 
-			assert_ok!(AirdropModule::do_transfer(
-				&mut snapshot,
-				&icon_address,
-				amount,
-				defi_user
-			));
+			assert_ok!(AirdropModule::do_transfer(&mut snapshot, &icon_address));
 
 			// Ensure amount only accounting to instant is transfererd
 			assert_eq!(0_u128, Currency::free_balance(&claimer));

@@ -265,12 +265,7 @@ fn respect_vesting_pallet_min_transfer() {
 		let mut snapshot =
 			types::SnapshotInfo::<Test>::new(ice_address, is_defi_user, total_amount);
 
-		let transfer_res = MakeTransfer::do_transfer::<Test>(
-			&mut snapshot,
-			&icon_address,
-			total_amount,
-			is_defi_user,
-		);
+		let transfer_res = MakeTransfer::do_transfer::<Test>(&mut snapshot);
 
 		assert_ok!(transfer_res);
 		assert!(snapshot.done_vesting);

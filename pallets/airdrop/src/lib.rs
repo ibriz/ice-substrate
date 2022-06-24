@@ -249,7 +249,7 @@ pub mod pallet {
 			Self::validate_creditor_fund(total_amount)?;
 
 			// Do the actual transfer if eligible
-			Self::do_transfer(&mut snapshot, &icon_address, total_amount, defi_user)?;
+			Self::do_transfer(&mut snapshot, &icon_address)?;
 
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
 			Ok(Pays::No.into())
@@ -281,7 +281,7 @@ pub mod pallet {
 				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount)?;
 
 			Self::ensure_claimable(&snapshot)?;
-			Self::do_transfer(&mut snapshot, &icon_address, total_amount, defi_user)?;
+			Self::do_transfer(&mut snapshot, &icon_address)?;
 
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
 			Ok(Pays::No.into())
@@ -400,6 +400,7 @@ pub mod pallet {
 					.map_err(|_| Error::<T>::IncompatibleAccountId)?,
 			)
 			.map_err(|_| Error::<T>::IncompatibleAccountId)?;
+
 			let old_snapshot = Self::get_icon_snapshot_map(&icon_address);
 			let old_icon_address = Self::get_ice_to_icon_map(&ice_account);
 
@@ -555,8 +556,6 @@ pub mod pallet {
 		pub fn do_transfer(
 			snapshot: &mut types::SnapshotInfo<T>,
 			icon_address: &types::IconAddress,
-			total_amount: types::BalanceOf<T>,
-			defi_user: bool,
 		) -> Result<(), DispatchError> {
 			use types::DoTransfer;
 
@@ -566,8 +565,7 @@ pub mod pallet {
 			#[cfg(feature = "no-vesting")]
 			type TransferType = super::non_vested_transfer::AllInstantTransfer;
 
-			let transfer_result =
-				TransferType::do_transfer(snapshot, icon_address, total_amount, defi_user);
+			let transfer_result = TransferType::do_transfer(snapshot);
 
 			// No matter the result we will write the updated_snapshot
 			<IconSnapshotMap<T>>::insert(icon_address, snapshot);

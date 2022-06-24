@@ -170,9 +170,6 @@ pub trait MerkelProofValidator<T: Config> {
 pub trait DoTransfer {
 	fn do_transfer<T: Config>(
 		snapshot: &mut SnapshotInfo<T>,
-		icon_address: &IconAddress,
-		total_amount: BalanceOf<T>,
-		defi_user: bool,
 	) -> Result<(), DispatchError>;
 }
 

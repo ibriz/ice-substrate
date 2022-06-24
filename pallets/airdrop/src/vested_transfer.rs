@@ -13,9 +13,6 @@ pub struct DoVestdTransfer;
 impl types::DoTransfer for DoVestdTransfer {
 	fn do_transfer<T: airdrop::Config>(
 		snapshot: &mut types::SnapshotInfo<T>,
-		_icon_address: &types::IconAddress,
-		_total_amount: types::BalanceOf<T>,
-		_defi_user: bool,
 	) -> Result<(), DispatchError> {
 		let vesting_should_end_in = <T as airdrop::Config>::AIRDROP_VARIABLES.vesting_period;
 		let defi_user = snapshot.defi_user;
