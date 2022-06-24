@@ -23,9 +23,6 @@ pub mod vested_transfer;
 #[cfg(feature = "no-vesting")]
 pub mod non_vested_transfer;
 
-pub const MERKLE_ROOT: [u8; 32] =
-	hex_literal::hex!("4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672");
-
 pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
@@ -139,15 +136,6 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn try_get_creditor_account)]
-	// TODO:
-	// Currently, putting this as ValueQuery means,
-	// in case of no creditor account set, this storage will have
-	// default address, 0x0000... in case of current sig type.
-	//
-	// Find a way to panic in such case at the first place.
-	// Doing unwrap at runtime will probably be bad idea
-	// and so will be to get default address
-	// StorageValue<_, types::AccountIdOf<T>, ValueQuery, PanicOnNoCreditor>
 	pub(super) type CreditorAccount<T: Config> =
 		StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
 
@@ -239,30 +227,66 @@ pub mod pallet {
 			Self::ensure_user_claim_switch()?;
 
 			// Verify the integrity of message
-			Self::validate_message_payload(&message, &ice_address)?;
+			Self::validate_message_payload(&message, &ice_address).map_err(|e| {
+				log::trace!(
+					"claim request by: {icon_address:?}. Rejected at: validate_message_paload(). Error: {e:?}"
+				);
+				e
+			})?;
 
 			// We expect a valid proof of this exchange call
-			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs)?;
+			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs).map_err(
+				|e| {
+					log::trace!(
+						"claim request by: {icon_address:?}. Rejected at: validate_merkle_proff()"
+					);
+					e
+				},
+			)?;
 
 			// Validate icon signature
-			Self::validate_icon_address(&icon_address, &icon_signature, &message)?;
+			Self::validate_icon_address(&icon_address, &icon_signature, &message).map_err(|e| {
+				log::trace!(
+					"claim request by: {icon_address:?}. Rejected at:  validate_icon_address()"
+				);
+				e
+			})?;
 
 			// Validate ice signature
-			Self::validate_ice_signature(&ice_signature, &icon_signature, &ice_address)?;
+			Self::validate_ice_signature(&ice_signature, &icon_signature, &ice_address).map_err(
+				|e| {
+					log::trace!(
+						"claim request by: {icon_address:?}. Rejected at: validate_ice_signature()"
+					);
+					e
+				},
+			)?;
 
 			// Now this address pair is verified,
 			// we can insert it to the map if this pair is new
 			let mut snapshot =
-				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount)?;
+				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount).map_err(|e| {
+					log::trace!("claim request by: {icon_address:?}. Rejected at: insert_or_get_snapshot. error: {e:?}");
+					e
+				})?;
 
 			// Make sure this user is eligible for claim.
-			Self::ensure_claimable(&snapshot)?;
+			Self::ensure_claimable(&snapshot).map_err(|e| {
+				log::trace!("claim requet by: {icon_address:?}. Rejected at: ensure_claimable(). Snapshot: {snapshot:?}.");
+				e
+			})?;
 
 			// We also make sure creditor have enough fund to complete this airdrop
-			Self::validate_creditor_fund(total_amount)?;
+			Self::validate_creditor_fund(total_amount).map_err(|e| {
+				log::error!("claim requet by: {icon_address:?}. Rejected at: validate_creditor_fund(). Amount: {total_amount:?}");
+				e
+			})?;
 
 			// Do the actual transfer if eligible
-			Self::do_transfer(&mut snapshot, &icon_address)?;
+			Self::do_transfer(&mut snapshot, &icon_address).map_err(|e| {
+				log::info!("claim request by: {icon_address:?}. Failed at: do_transfer(). Reason: {e:?}. Snapshot: {snapshot:?}");
+				e
+			})?;
 
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
 			Ok(Pays::No.into())
@@ -287,14 +311,36 @@ pub mod pallet {
 			let amount = Self::validate_whitelisted(&icon_address)?;
 			ensure!(total_amount == amount, Error::<T>::InvalidClaimAmount);
 
-			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs)?;
-			Self::validate_creditor_fund(total_amount)?;
+			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs).map_err(
+				|e| {
+					log::trace!(
+						"Exchange for: {icon_address:?}. Failed at: validate_merkle_proof()"
+					);
+					e
+				},
+			)?;
+			Self::validate_creditor_fund(total_amount).map_err(|e| {
+				log::error!("Exchange for: {icon_address:?}. Failed at: validate_creditor_fund. Amount: {total_amount:?}");
+				e
+			})?;
 
 			let mut snapshot =
-				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount)?;
+				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount)
+					.map_err(|e| {
+						log::error!(
+							"Exhange for: {icon_address:?}. Failed at: insert_or_get_snapshot."
+						);
+						e
+					})?;
 
-			Self::ensure_claimable(&snapshot)?;
-			Self::do_transfer(&mut snapshot, &icon_address)?;
+			Self::ensure_claimable(&snapshot).map_err(|e| {
+				log::trace!("Exchange for: {icon_address:?}. Failed at: ensure_claimable. Snapshot: {snapshot:?}");
+				e
+			})?;
+			Self::do_transfer(&mut snapshot, &icon_address).map_err(|e| {
+				log::trace!("Exchange for: {icon_address:?}. Failed at: do_transfer. Snapshot: {snapshot:?}. Reason: {e:?}");
+				e
+			})?;
 
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
 			Ok(Pays::No.into())
@@ -311,9 +357,8 @@ pub mod pallet {
 			<ServerAccount<T>>::set(Some(new_account.clone()));
 
 			log::info!(
-				"[Airdrop pallet] {} {:?}",
-				"Value for ServerAccount was changed in onchain storage. (Old, New): ",
-				(&old_account, &new_account)
+				"Server account changed from {old_account:?} to {new_account:?} at height: {bl_num:?}",
+				bl_num = utils::get_current_block_number::<T>(),
 			);
 
 			Self::deposit_event(Event::ServerAccountChanged {
@@ -331,10 +376,12 @@ pub mod pallet {
 
 			MerkleRoot::<T>::put(&new_root);
 
-			Self::deposit_event(Event::<T>::MerkleRootUpdated {
-				old_root,
-				new_root,
-			});
+			log::info!(
+				"Merkle root changed from {old_root:?} to {new_root:?} at height {bl_num:?}",
+				bl_num = utils::get_current_block_number::<T>()
+			);
+
+			Self::deposit_event(Event::<T>::MerkleRootUpdated { old_root, new_root });
 			Ok(())
 		}
 
@@ -350,9 +397,8 @@ pub mod pallet {
 			<AirdropChainState<T>>::set(new_state.clone());
 
 			log::info!(
-				"[Airdrop pallet] AirdropState updated. (Old, New): {:?} in block number {:?}",
-				(&old_state, &new_state),
-				utils::get_current_block_number::<T>(),
+				"Airdrop state changed from {old_state:?} to {new_state:?} at height: {bl_num:?}",
+				bl_num = utils::get_current_block_number::<T>(),
 			);
 
 			Self::deposit_event(Event::AirdropStateUpdated {
@@ -414,30 +460,36 @@ pub mod pallet {
 			defi_user: bool,
 			amount: types::BalanceOf<T>,
 		) -> Result<types::SnapshotInfo<T>, DispatchError> {
-			let ice_account = Self::to_account_id(
-				ice_address
-					.to_vec()
-					.try_into()
-					.map_err(|_| Error::<T>::IncompatibleAccountId)?,
-			)
-			.map_err(|_| Error::<T>::IncompatibleAccountId)?;
+			let ice_account =
+				Self::to_account_id(ice_address.to_vec().try_into().map_err(|_| {
+					log::error!(
+						"received ice_address: {ice_address:?} cannot be converted into [u8; 32]"
+					);
+					Error::<T>::IncompatibleAccountId
+				})?)
+				.map_err(|_| {
+					log::error!(
+						"ice address bytes: {ice_address:?} cannot be converted into AccountId"
+					);
+					Error::<T>::IncompatibleAccountId
+				})?;
 
 			let old_snapshot = Self::get_icon_snapshot_map(&icon_address);
 			let old_icon_address = Self::get_ice_to_icon_map(&ice_account);
 
 			if let Some(old_icon_address) = old_icon_address {
-				ensure!(
-					&old_icon_address == icon_address,
+				ensure!(&old_icon_address == icon_address, {
+					log::trace!("For ice: {ice_address:?}. new icon address is: {old_icon_address:?}. Rejected, old was: {old_icon_address:?}");
 					Error::<T>::IconAddressInUse
-				);
+				});
 			}
 
 			if let Some(old_snapshot) = &old_snapshot {
 				let old_ice_address = &old_snapshot.ice_address;
-				ensure!(
-					old_ice_address.eq(&ice_account),
+				ensure!(old_ice_address.eq(&ice_account), {
+					log::trace!("For icon: {icon_address:?}. new ice address is: {ice_account:?}. Rejected, old was: {old_ice_address:?}");
 					Error::<T>::IceAddressInUse
-				);
+				});
 			}
 
 			let icon_address = old_icon_address.as_ref().unwrap_or_else(|| {
@@ -554,21 +606,18 @@ pub mod pallet {
 			amount: types::BalanceOf<T>,
 			defi_user: bool,
 			proof_hashes: types::MerkleProofs<T>,
-		) -> Result<bool, Error<T>> {
+		) -> DispatchResult {
 			let amount = types::from_balance::<T>(amount);
 			let leaf_hash = merkle::hash_leaf(icon_address, amount, defi_user);
 			let merkle_root = Self::get_merkle_root().ok_or(Error::<T>::NoMerkleRoot)?;
 
-			let is_valid_proof = <T as Config>::MerkelProofValidator::validate(
-				leaf_hash,
-				merkle_root,
-				proof_hashes,
-			);
+			let is_valid_proof =
+				<T as Config>::MerkelProofValidator::validate(leaf_hash, merkle_root, proof_hashes);
 			if !is_valid_proof {
-				return Err(Error::<T>::InvalidMerkleProof);
+				return Err(Error::<T>::InvalidMerkleProof.into());
 			}
 
-			Ok(true)
+			Ok(())
 		}
 
 		pub fn to_account_id(ice_bytes: [u8; 32]) -> Result<types::AccountIdOf<T>, Error<T>> {
