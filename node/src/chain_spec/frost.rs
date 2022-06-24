@@ -80,7 +80,10 @@ pub fn testnet_config() -> Result<FrostChainSpec, String> {
                 ],
 				// Sudo account
 				hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"].into(),
+				// Creditor account
 				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
+				// Airdrop merkle root
+				[0u8; 32],
 				// Pre-funded accounts
 				vec![
 					TREASURY_PALLET_ID.into_account(),
@@ -125,7 +128,10 @@ pub fn development_config() -> Result<FrostChainSpec, String> {
 				],
 				// Sudo account
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				// Creditor account
 				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
+				// Airdrop merkle root
+				hex!("4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672").into(),
 				// Pre-funded accounts
 				vec![
 					TREASURY_PALLET_ID.into_account(),
@@ -175,7 +181,10 @@ pub fn local_testnet_config() -> Result<FrostChainSpec, String> {
                 ],
 				// Sudo account
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				// Creditor account,
 				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
+				// Airdrop merkle root
+				hex!("4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672").into(),
 				// Pre-funded accounts
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -220,6 +229,7 @@ fn testnet_genesis(
 	council_members: Vec<AccountId>,
 	root_key: AccountId,
 	creditor_account: AccountId,
+	airdrop_merkle_root: [u8; 32],
 	endowed_accounts: Vec<AccountId>,
 	_enable_println: bool,
 ) -> GenesisConfig {
@@ -281,6 +291,7 @@ fn testnet_genesis(
         treasury: Default::default(),
 		airdrop: AirdropConfig {
 			creditor_account: creditor_account,
+			merkle_root: airdrop_merkle_root,
 			exchange_accounts: vec![],
 		},
 	}

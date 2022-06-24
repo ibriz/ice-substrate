@@ -101,6 +101,12 @@ pub mod pallet {
 			new_state: types::AirdropState,
 		},
 
+		/// New merkle root have been set
+		MerkleRootUpdated {
+			old_root: Option<[u8; 32]>,
+			new_root: [u8; 32],
+		},
+
 		CreditorBalanceLow,
 	}
 
@@ -126,6 +132,10 @@ pub mod pallet {
 	#[pallet::getter(fn get_exchange_account)]
 	pub type ExchangeAccountsMap<T: Config> =
 		StorageMap<_, Twox64Concat, types::IconAddress, types::BalanceOf<T>, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_merkle_root)]
+	pub type MerkleRoot<T: Config> = StorageValue<_, [u8; 32], OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn try_get_creditor_account)]
@@ -188,6 +198,9 @@ pub mod pallet {
 		// have been constructed with this assumption
 		/// Unexpected format of AccountId
 		IncompatibleAccountId,
+
+		/// Merkle root is not set on chain yet
+		NoMerkleRoot,
 
 		InvalidIceAddress,
 		InvalidIceSignature,
@@ -309,6 +322,20 @@ pub mod pallet {
 			});
 
 			Ok(Pays::No.into())
+		}
+
+		#[pallet::weight(10_000)]
+		pub fn change_merkle_root(origin: OriginFor<T>, new_root: [u8; 32]) -> DispatchResult {
+			ensure_root(origin).map_err(|_| Error::<T>::DeniedOperation)?;
+			let old_root = Self::get_merkle_root();
+
+			MerkleRoot::<T>::put(&new_root);
+
+			Self::deposit_event(Event::<T>::MerkleRootUpdated {
+				old_root,
+				new_root,
+			});
+			Ok(())
 		}
 
 		#[pallet::weight(10_000)]
@@ -536,9 +563,11 @@ pub mod pallet {
 		) -> Result<bool, Error<T>> {
 			let amount = types::from_balance::<T>(amount);
 			let leaf_hash = merkle::hash_leaf(icon_address, amount, defi_user);
+			let merkle_root = Self::get_merkle_root().ok_or(Error::<T>::NoMerkleRoot)?;
+
 			let is_valid_proof = <T as Config>::MerkelProofValidator::validate(
 				leaf_hash,
-				crate::MERKLE_ROOT,
+				merkle_root,
 				proof_hashes,
 			);
 			if !is_valid_proof {
@@ -594,6 +623,7 @@ pub mod pallet {
 	pub struct GenesisConfig<T: Config> {
 		pub exchange_accounts: Vec<(types::IconAddress, types::BalanceOf<T>)>,
 		pub creditor_account: types::AccountIdOf<T>,
+		pub merkle_root: [u8; 32],
 	}
 
 	#[cfg(feature = "std")]
@@ -603,12 +633,14 @@ pub mod pallet {
 				hex!["d893ef775b5689473b2e9fa32c1f15c72a7c4c86f05f03ee32b8aca6ce61b92c"];
 			let creditor_account =
 				types::AccountIdOf::<T>::decode(&mut &creditor_account_hex[..]).unwrap();
+			let merkle_root = [0u8; 32];
 
 			let exchange_accounts = vec![];
 
 			Self {
 				exchange_accounts,
 				creditor_account,
+				merkle_root,
 			}
 		}
 	}
@@ -621,6 +653,7 @@ pub mod pallet {
 			}
 
 			CreditorAccount::<T>::put(&self.creditor_account);
+			MerkleRoot::<T>::put(&self.merkle_root);
 		}
 	}
 }
