@@ -143,6 +143,15 @@ pub struct AirdropState {
 }
 
 impl Default for AirdropState {
+	#[cfg(not(test))]
+	fn default() -> Self {
+		AirdropState {
+			block_claim_request: true,
+			block_exchange_request: true,
+		}
+	}
+
+	#[cfg(test)]
 	fn default() -> Self {
 		AirdropState {
 			block_claim_request: false,
