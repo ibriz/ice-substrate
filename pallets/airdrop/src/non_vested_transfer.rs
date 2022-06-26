@@ -27,7 +27,7 @@ impl types::DoTransfer for AllInstantTransfer {
 			snapshot.done_instant = true;
 			snapshot.initial_transfer = total_balance;
 		} else {
-			log::trace!(
+			log::info!(
 				"At: AllInstantTransfer::do_transfer. Skipped for claimer: {claimer:?}.{reason}",
 				reason = "snapshot.done_instant was true already"
 			);

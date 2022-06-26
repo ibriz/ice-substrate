@@ -231,7 +231,7 @@ pub mod pallet {
 
 			// Verify the integrity of message
 			Self::validate_message_payload(&message, &ice_address).map_err(|e| {
-				log::trace!(
+				log::info!(
 					"claim request by: {icon_address:?}. Rejected at: validate_message_paload(). Error: {e:?}"
 				);
 				e
@@ -240,7 +240,7 @@ pub mod pallet {
 			// We expect a valid proof of this exchange call
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs).map_err(
 				|e| {
-					log::trace!(
+					log::info!(
 						"claim request by: {icon_address:?}. Rejected at: validate_merkle_proff()"
 					);
 					e
@@ -249,7 +249,7 @@ pub mod pallet {
 
 			// Validate icon signature
 			Self::validate_icon_address(&icon_address, &icon_signature, &message).map_err(|e| {
-				log::trace!(
+				log::info!(
 					"claim request by: {icon_address:?}. Rejected at:  validate_icon_address()"
 				);
 				e
@@ -258,7 +258,7 @@ pub mod pallet {
 			// Validate ice signature
 			Self::validate_ice_signature(&ice_signature, &icon_signature, &ice_address).map_err(
 				|e| {
-					log::trace!(
+					log::info!(
 						"claim request by: {icon_address:?}. Rejected at: validate_ice_signature()"
 					);
 					e
@@ -269,13 +269,13 @@ pub mod pallet {
 			// we can insert it to the map if this pair is new
 			let mut snapshot =
 				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount).map_err(|e| {
-					log::trace!("claim request by: {icon_address:?}. Rejected at: insert_or_get_snapshot. error: {e:?}");
+					log::info!("claim request by: {icon_address:?}. Rejected at: insert_or_get_snapshot. error: {e:?}");
 					e
 				})?;
 
 			// Make sure this user is eligible for claim.
 			Self::ensure_claimable(&snapshot).map_err(|e| {
-				log::trace!("claim requet by: {icon_address:?}. Rejected at: ensure_claimable(). Snapshot: {snapshot:?}.");
+				log::info!("claim requet by: {icon_address:?}. Rejected at: ensure_claimable(). Snapshot: {snapshot:?}.");
 				e
 			})?;
 
@@ -316,7 +316,7 @@ pub mod pallet {
 
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs).map_err(
 				|e| {
-					log::trace!(
+					log::info!(
 						"Exchange for: {icon_address:?}. Failed at: validate_merkle_proof(). Reason: {e:?}"
 					);
 					e
@@ -337,11 +337,11 @@ pub mod pallet {
 					})?;
 
 			Self::ensure_claimable(&snapshot).map_err(|e| {
-				log::trace!("Exchange for: {icon_address:?}. Failed at: ensure_claimable. Snapshot: {snapshot:?}");
+				log::info!("Exchange for: {icon_address:?}. Failed at: ensure_claimable. Snapshot: {snapshot:?}");
 				e
 			})?;
 			Self::do_transfer(&mut snapshot, &icon_address).map_err(|e| {
-				log::trace!("Exchange for: {icon_address:?}. Failed at: do_transfer. Snapshot: {snapshot:?}. Reason: {e:?}");
+				log::info!("Exchange for: {icon_address:?}. Failed at: do_transfer. Snapshot: {snapshot:?}. Reason: {e:?}");
 				e
 			})?;
 
@@ -486,7 +486,7 @@ pub mod pallet {
 
 			if let Some(old_icon_address) = old_icon_address {
 				ensure!(&old_icon_address == icon_address, {
-					log::trace!("For ice: {ice_address:?}. new icon address is: {old_icon_address:?}. Rejected, old was: {old_icon_address:?}");
+					log::info!("For ice: {ice_address:?}. new icon address is: {old_icon_address:?}. Rejected, old was: {old_icon_address:?}");
 					Error::<T>::IconAddressInUse
 				});
 			}
@@ -494,7 +494,7 @@ pub mod pallet {
 			if let Some(old_snapshot) = &old_snapshot {
 				let old_ice_address = &old_snapshot.ice_address;
 				ensure!(old_ice_address.eq(&ice_account), {
-					log::trace!("For icon: {icon_address:?}. new ice address is: {ice_account:?}. Rejected, old was: {old_ice_address:?}");
+					log::info!("For icon: {icon_address:?}. new ice address is: {ice_account:?}. Rejected, old was: {old_ice_address:?}");
 					Error::<T>::IceAddressInUse
 				});
 			}

@@ -67,7 +67,7 @@ impl types::DoTransfer for DoVestdTransfer {
 						snapshot.done_vesting = true;
 						snapshot.vesting_block_number = Some(block_number);
 
-						log::trace!("Vesting applied for {claimer:?} at height {block_number:?}");
+						log::info!("Vesting applied for {claimer:?} at height {block_number:?}");
 					}
 					// log error
 					Err(err) => {
@@ -116,7 +116,7 @@ impl types::DoTransfer for DoVestdTransfer {
 			snapshot.done_instant = true;
 			snapshot.initial_transfer = instant_amount;
 		} else {
-			log::trace!(
+			log::info!(
 				"skipped instant transfer for {claimer:?}. Reason: {reason}",
 				reason = "snapshot.done_instant was set to true already"
 			);
