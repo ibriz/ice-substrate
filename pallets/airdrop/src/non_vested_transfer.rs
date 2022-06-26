@@ -1,4 +1,5 @@
 use crate as airdrop;
+use airdrop::{error, info};
 use airdrop::{types, utils, Pallet as AirdropModule};
 use frame_support::pallet_prelude::*;
 use frame_support::traits::{Currency, ExistenceRequirement};
@@ -19,7 +20,7 @@ impl types::DoTransfer for AllInstantTransfer {
 				ExistenceRequirement::KeepAlive,
 			)
 			.map_err(|e| {
-				log::info!("At: AllInstant::do_transfer. Claimer: {claimer:?}. Reason: {e:?}");
+				info!("At: AllInstant::do_transfer. Claimer: {claimer:?}. Reason: {e:?}");
 				e
 			})?;
 
@@ -27,7 +28,7 @@ impl types::DoTransfer for AllInstantTransfer {
 			snapshot.done_instant = true;
 			snapshot.initial_transfer = total_balance;
 		} else {
-			log::info!(
+			info!(
 				"At: AllInstantTransfer::do_transfer. Skipped for claimer: {claimer:?}.{reason}",
 				reason = "snapshot.done_instant was true already"
 			);

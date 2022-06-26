@@ -23,9 +23,15 @@ pub mod vested_transfer;
 #[cfg(feature = "no-vesting")]
 pub mod non_vested_transfer;
 
+#[cfg(not(test))]
+pub(crate) use log::{error, info};
+#[cfg(test)]
+pub(crate) use {eprintln as error, println as info};
+
 pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
+	use super::{error, info};
 	use super::{types, utils, weights};
 	use hex_literal::hex;
 	use sp_runtime::traits::Convert;
@@ -231,7 +237,7 @@ pub mod pallet {
 
 			// Verify the integrity of message
 			Self::validate_message_payload(&message, &ice_address).map_err(|e| {
-				log::info!(
+				info!(
 					"claim request by: {icon_address:?}. Rejected at: validate_message_paload(). Error: {e:?}"
 				);
 				e
@@ -240,7 +246,7 @@ pub mod pallet {
 			// We expect a valid proof of this exchange call
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs).map_err(
 				|e| {
-					log::info!(
+					info!(
 						"claim request by: {icon_address:?}. Rejected at: validate_merkle_proff()"
 					);
 					e
@@ -249,16 +255,14 @@ pub mod pallet {
 
 			// Validate icon signature
 			Self::validate_icon_address(&icon_address, &icon_signature, &message).map_err(|e| {
-				log::info!(
-					"claim request by: {icon_address:?}. Rejected at:  validate_icon_address()"
-				);
+				info!("claim request by: {icon_address:?}. Rejected at:  validate_icon_address()");
 				e
 			})?;
 
 			// Validate ice signature
 			Self::validate_ice_signature(&ice_signature, &icon_signature, &ice_address).map_err(
 				|e| {
-					log::info!(
+					info!(
 						"claim request by: {icon_address:?}. Rejected at: validate_ice_signature()"
 					);
 					e
@@ -268,26 +272,27 @@ pub mod pallet {
 			// Now this address pair is verified,
 			// we can insert it to the map if this pair is new
 			let mut snapshot =
-				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount).map_err(|e| {
-					log::info!("claim request by: {icon_address:?}. Rejected at: insert_or_get_snapshot. error: {e:?}");
-					e
-				})?;
+				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount)
+					.map_err(|e| {
+						info!("claim request by: {icon_address:?}. Rejected at: insert_or_get_snapshot. error: {e:?}");
+						e
+					})?;
 
 			// Make sure this user is eligible for claim.
 			Self::ensure_claimable(&snapshot).map_err(|e| {
-				log::info!("claim requet by: {icon_address:?}. Rejected at: ensure_claimable(). Snapshot: {snapshot:?}.");
+				info!("claim requet by: {icon_address:?}. Rejected at: ensure_claimable(). Snapshot: {snapshot:?}.");
 				e
 			})?;
 
 			// We also make sure creditor have enough fund to complete this airdrop
 			Self::validate_creditor_fund(total_amount).map_err(|e| {
-				log::error!("claim requet by: {icon_address:?}. Rejected at: validate_creditor_fund(). Amount: {total_amount:?}");
+				error!("claim requet by: {icon_address:?}. Rejected at: validate_creditor_fund(). Amount: {total_amount:?}");
 				e
 			})?;
 
 			// Do the actual transfer if eligible
 			Self::do_transfer(&mut snapshot, &icon_address).map_err(|e| {
-				log::info!("claim request by: {icon_address:?}. Failed at: do_transfer(). Reason: {e:?}. Snapshot: {snapshot:?}");
+				info!("claim request by: {icon_address:?}. Failed at: do_transfer(). Reason: {e:?}. Snapshot: {snapshot:?}");
 				e
 			})?;
 
@@ -316,32 +321,30 @@ pub mod pallet {
 
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs).map_err(
 				|e| {
-					log::info!(
+					info!(
 						"Exchange for: {icon_address:?}. Failed at: validate_merkle_proof(). Reason: {e:?}"
 					);
 					e
 				},
 			)?;
 			Self::validate_creditor_fund(total_amount).map_err(|e| {
-				log::error!("Exchange for: {icon_address:?}. Failed at: validate_creditor_fund. Amount: {total_amount:?}");
+				error!("Exchange for: {icon_address:?}. Failed at: validate_creditor_fund. Amount: {total_amount:?}");
 				e
 			})?;
 
 			let mut snapshot =
 				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount)
 					.map_err(|e| {
-						log::error!(
-							"Exhange for: {icon_address:?}. Failed at: insert_or_get_snapshot."
-						);
+						error!("Exhange for: {icon_address:?}. Failed at: insert_or_get_snapshot.");
 						e
 					})?;
 
 			Self::ensure_claimable(&snapshot).map_err(|e| {
-				log::info!("Exchange for: {icon_address:?}. Failed at: ensure_claimable. Snapshot: {snapshot:?}");
+				info!("Exchange for: {icon_address:?}. Failed at: ensure_claimable. Snapshot: {snapshot:?}");
 				e
 			})?;
 			Self::do_transfer(&mut snapshot, &icon_address).map_err(|e| {
-				log::info!("Exchange for: {icon_address:?}. Failed at: do_transfer. Snapshot: {snapshot:?}. Reason: {e:?}");
+				info!("Exchange for: {icon_address:?}. Failed at: do_transfer. Snapshot: {snapshot:?}. Reason: {e:?}");
 				e
 			})?;
 
@@ -359,7 +362,7 @@ pub mod pallet {
 			let old_account = Self::get_airdrop_server_account();
 			<ServerAccount<T>>::set(Some(new_account.clone()));
 
-			log::info!(
+			info!(
 				"Server account changed from {old_account:?} to {new_account:?} at height: {bl_num:?}",
 				bl_num = utils::get_current_block_number::<T>(),
 			);
@@ -379,7 +382,7 @@ pub mod pallet {
 
 			MerkleRoot::<T>::put(&new_root);
 
-			log::info!(
+			info!(
 				"Merkle root changed from {old_root:?} to {new_root:?} at height {bl_num:?}",
 				bl_num = utils::get_current_block_number::<T>()
 			);
@@ -399,7 +402,7 @@ pub mod pallet {
 			let old_state = Self::get_airdrop_state();
 			<AirdropChainState<T>>::set(new_state.clone());
 
-			log::info!(
+			info!(
 				"Airdrop state changed from {old_state:?} to {new_state:?} at height: {bl_num:?}",
 				bl_num = utils::get_current_block_number::<T>(),
 			);
@@ -469,15 +472,13 @@ pub mod pallet {
 		) -> Result<types::SnapshotInfo<T>, DispatchError> {
 			let ice_account =
 				Self::to_account_id(ice_address.to_vec().try_into().map_err(|_| {
-					log::error!(
+					error!(
 						"received ice_address: {ice_address:?} cannot be converted into [u8; 32]"
 					);
 					Error::<T>::IncompatibleAccountId
 				})?)
 				.map_err(|_| {
-					log::error!(
-						"ice address bytes: {ice_address:?} cannot be converted into AccountId"
-					);
+					error!("ice address bytes: {ice_address:?} cannot be converted into AccountId");
 					Error::<T>::IncompatibleAccountId
 				})?;
 
@@ -486,7 +487,7 @@ pub mod pallet {
 
 			if let Some(old_icon_address) = old_icon_address {
 				ensure!(&old_icon_address == icon_address, {
-					log::info!("For ice: {ice_address:?}. new icon address is: {old_icon_address:?}. Rejected, old was: {old_icon_address:?}");
+					info!("For ice: {ice_address:?}. new icon address is: {old_icon_address:?}. Rejected, old was: {old_icon_address:?}");
 					Error::<T>::IconAddressInUse
 				});
 			}
@@ -494,7 +495,7 @@ pub mod pallet {
 			if let Some(old_snapshot) = &old_snapshot {
 				let old_ice_address = &old_snapshot.ice_address;
 				ensure!(old_ice_address.eq(&ice_account), {
-					log::info!("For icon: {icon_address:?}. new ice address is: {ice_account:?}. Rejected, old was: {old_ice_address:?}");
+					info!("For icon: {icon_address:?}. new ice address is: {ice_account:?}. Rejected, old was: {old_ice_address:?}");
 					Error::<T>::IceAddressInUse
 				});
 			}

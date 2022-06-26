@@ -1,4 +1,5 @@
 use crate as airdrop;
+use airdrop::{error, info};
 use airdrop::{types, utils, Pallet as AirdropModule};
 use frame_support::pallet_prelude::*;
 use frame_support::traits::{Currency, ExistenceRequirement};
@@ -22,7 +23,7 @@ impl types::DoTransfer for DoVestdTransfer {
 		let instant_percentage = utils::get_instant_percentage::<T>(defi_user);
 		let (mut instant_amount, vesting_amount) =
 			utils::get_splitted_amounts::<T>(total_amount, instant_percentage).map_err(|e |{
-				log::error!("At: get_splitted_amount. amount: {total_amount:?}. Instant percentage: {instant_percentage}. Reason: {e:?}");
+				error!("At: get_splitted_amount. amount: {total_amount:?}. Instant percentage: {instant_percentage}. Reason: {e:?}");
 				e
 			})?;
 
@@ -67,20 +68,18 @@ impl types::DoTransfer for DoVestdTransfer {
 						snapshot.done_vesting = true;
 						snapshot.vesting_block_number = Some(block_number);
 
-						log::info!("Vesting applied for {claimer:?} at height {block_number:?}");
+						info!("Vesting applied for {claimer:?} at height {block_number:?}");
 					}
 					// log error
 					Err(err) => {
-						log::info!(
-							"Error while aplying vesting. For: {claimer:?}. Reason: {err:?}"
-						);
+						info!("Error while aplying vesting. For: {claimer:?}. Reason: {err:?}");
 					}
 				}
 			}
 
 			// Vesting was already done as snapshot.done_vesting is true
 			Some(_) => {
-				log::info!(
+				info!(
 					"Skipped vesting for: {claimer:?}. Reason: {reason}",
 					reason = "snapshot.done_vesting was already true"
 				);
@@ -92,9 +91,7 @@ impl types::DoTransfer for DoVestdTransfer {
 				// it will not be applicable ever. So mark it as done.
 				snapshot.done_vesting = true;
 
-				log::info!(
-					"No schedule was created for: {claimer:?}. All amount transferred instantly"
-				);
+				info!("No schedule was created for: {claimer:?}. All amount transferred instantly");
 			}
 		}
 
@@ -108,7 +105,7 @@ impl types::DoTransfer for DoVestdTransfer {
 				ExistenceRequirement::KeepAlive,
 			)
 			.map_err(|err| {
-				log::info!("Failed to instant transfer. Claimer: {claimer:?}. Reason: {err:?}");
+				info!("Failed to instant transfer. Claimer: {claimer:?}. Reason: {err:?}");
 				err
 			})?;
 
@@ -116,7 +113,7 @@ impl types::DoTransfer for DoVestdTransfer {
 			snapshot.done_instant = true;
 			snapshot.initial_transfer = instant_amount;
 		} else {
-			log::info!(
+			info!(
 				"skipped instant transfer for {claimer:?}. Reason: {reason}",
 				reason = "snapshot.done_instant was set to true already"
 			);
