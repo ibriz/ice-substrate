@@ -131,7 +131,7 @@ pub fn development_config() -> Result<FrostChainSpec, String> {
 				// Creditor account
 				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				// Airdrop merkle root
-				hex!("4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672").into(),
+				hex!("82d9f80e26216ac8ec58f01c61b67b62a4f7f753c4018081b0db3c3d0cca3b84").into(),
 				// Pre-funded accounts
 				vec![
 					TREASURY_PALLET_ID.into_account(),
@@ -254,7 +254,7 @@ fn testnet_genesis(
 			balances: endowed_accounts
 				.iter()
 				.cloned()
-				.map(|k| (k, ICY * 40_000))
+				.map(|k| (k, ICY * 100_000_000))
 				.collect()
 		},
 		aura: AuraConfig {
