@@ -222,6 +222,22 @@ benchmarks! {
 		}.into());
 	}
 
+	change_merkle_root {
+		let p in 0u8..50u8;
+
+		let zero_31 = [0u8; 31];
+		let new_root = [p, ..zero_31];
+		let mut last_root = None;
+	}: change_merkle_root(
+		RawOrigin::Root,
+		new_root
+	) verify {
+		assert_last_event::<T>(Event::MerkleRootUpdated{
+			old_root: last_root,
+			new_root,
+		});
+	}
+
 	dispatch_user_claim {
 		let x in 0 .. 3;
 		let caller: types::AccountIdOf<T> = frame_benchmarking::whitelisted_caller();

@@ -391,7 +391,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(10_000)]
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::update_airdrop_state())]
 		pub fn update_airdrop_state(
 			origin: OriginFor<T>,
 			new_state: types::AirdropState,

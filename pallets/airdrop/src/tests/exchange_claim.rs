@@ -41,8 +41,13 @@ fn claim_success() {
 
 		// Ensure transfer flag are updated
 		assert!(snapshot.done_instant);
+		assert_eq!(Some(0), snapshot.instant_block_number);
+
 		#[cfg(not(feature = "no-vesting"))]
-		assert!(snapshot.done_vesting);
+		{
+			assert!(snapshot.done_vesting);
+			assert_eq!(Some(0), snapshot.vesting_block_number);
+		}
 	});
 }
 

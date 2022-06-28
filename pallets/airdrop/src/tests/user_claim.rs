@@ -392,6 +392,8 @@ fn partail_transfer_can_reclaim() {
 				<Test as pallet_airdrop::Config>::Currency::total_balance(&ice_account);
 			assert_eq!(true, snapshot.done_instant);
 			assert_eq!(true, snapshot.done_vesting);
+			assert_eq!(Some(1), snapshot.instant_block_number);
+			assert_eq!(Some(12), snapshot.vesting_block_number);
 			assert_eq!(mapped_icon_wallet.as_ref(), Some(&case.icon_address));
 			assert_eq!(new_balance, user_balance + vesting_amount);
 		}
