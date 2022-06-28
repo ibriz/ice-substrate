@@ -94,6 +94,9 @@ pub struct SnapshotInfo<T: Config> {
 	// blocknumber that started vesting
 	pub vesting_block_number: Option<BlockNumberOf<T>>,
 
+	// block number when instant amount was given
+	pub instant_block_number: Option<BlockNumberOf<T>>,
+
 	pub initial_transfer: BalanceOf<T>,
 }
 
@@ -107,6 +110,7 @@ impl<T: Config> core::fmt::Debug for SnapshotInfo<T> {
 			.field("done_vesting", &self.done_vesting)
 			.field("vesting_block_number", &self.vesting_block_number)
 			.field("initial_transfer", &self.initial_transfer)
+			.field("instant_block_number", &self.instant_block_number)
 			.finish()
 	}
 }
@@ -120,6 +124,7 @@ impl<T: Config> SnapshotInfo<T> {
 			done_instant: false,
 			done_vesting: false,
 			vesting_block_number: None,
+			instant_block_number: None,
 			initial_transfer: 0u32.into(),
 		}
 	}

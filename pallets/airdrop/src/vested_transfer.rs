@@ -112,6 +112,7 @@ impl types::DoTransfer for DoVestdTransfer {
 			// Everything went ok. Update flag
 			snapshot.done_instant = true;
 			snapshot.initial_transfer = instant_amount;
+			snapshot.instant_block_number = Some(utils::get_current_block_number::<T>());
 		} else {
 			info!(
 				"skipped instant transfer for {claimer:?}. Reason: {reason}",
