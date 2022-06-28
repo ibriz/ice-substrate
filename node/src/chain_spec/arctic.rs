@@ -58,8 +58,6 @@ pub fn get_chain_spec(para_id: u32) -> ArcticChainSpec {
 				],
 				// Sudo account
 				hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"].into(),
-				// Creditor Account
-				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				para_id.into(),
 			)
 		},
