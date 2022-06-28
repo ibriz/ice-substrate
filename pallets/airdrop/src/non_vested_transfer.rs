@@ -27,7 +27,7 @@ impl types::DoTransfer for AllInstantTransfer {
 			// Everything went ok. Update flag
 			snapshot.done_instant = true;
 			snapshot.initial_transfer = total_balance;
-			snapshot.instant_block_number = Some(utils::get_current_block_number<T>());
+			snapshot.instant_block_number = Some(utils::get_current_block_number::<T>());
 		} else {
 			info!(
 				"At: AllInstantTransfer::do_transfer. Skipped for claimer: {claimer:?}.{reason}",
