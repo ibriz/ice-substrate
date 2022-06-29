@@ -74,6 +74,8 @@ const AIRDROP_EXCHANGE_ACCOUNTS: &[([u8; 20], u128)] = &[
 	),
 ];
 
+const AIRDROP_CREDITOR_ACCOUNT:[u8; 32] = hex_literal::hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872");
+
 /// Initialize frost testnet configuration
 pub fn testnet_config() -> Result<FrostChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
@@ -111,7 +113,7 @@ pub fn testnet_config() -> Result<FrostChainSpec, String> {
 				// Sudo account
 				hex!["62687296bffd79f12178c4278b9439d5eeb8ed7cc0b1f2ae29307e806a019659"].into(),
 				// Creditor account
-				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
+				AIRDROP_CREDITOR_ACCOUNT.clone().into(),
 				// Airdrop merkle root
 				AIRDROP_MERKLE_ROOT.clone(),
 				// Airdrop exchange account
@@ -159,7 +161,7 @@ pub fn development_config() -> Result<FrostChainSpec, String> {
 				// Sudo account
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				// Creditor account
-				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
+				AIRDROP_CREDITOR_ACCOUNT.clone().into(),
 				// Airdrop merkle root
 				AIRDROP_MERKLE_ROOT.clone(),
 				// Airdrop exchange accounts pair
@@ -212,7 +214,7 @@ pub fn local_testnet_config() -> Result<FrostChainSpec, String> {
 				// Sudo account
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				// Creditor account,
-				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
+				AIRDROP_CREDITOR_ACCOUNT.clone().into(),
 				// Airdrop merkle root
 				AIRDROP_MERKLE_ROOT.clone(),
 				// Exhcnage accounts for Airdrop
