@@ -611,6 +611,22 @@ impl pallet_base_fee::Config for Runtime {
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
+const VESTED_AIRDROP_BEHAVIOUR: pallet_airdrop::AirdropBehaviour =
+	pallet_airdrop::AirdropBehaviour {
+		defi_instant_percentage: 30,
+		non_defi_instant_percentage: 20,
+		vesting_period: 1_57_68_000,
+	};
+impl pallet_airdrop::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
+	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
+	type MerkelProofValidator = pallet_airdrop::merkle::AirdropMerkleValidator<Runtime>;
+	type MaxProofSize = frame_support::traits::ConstU32<10>;
+	const AIRDROP_VARIABLES: pallet_airdrop::AirdropBehaviour = VESTED_AIRDROP_BEHAVIOUR;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -651,6 +667,7 @@ construct_runtime!(
 		Assets: pallet_assets::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>, Config},
+		Airdrop: pallet_airdrop::{Pallet, Call, Storage, Event<T>, Config<T>},
 
 		//SimpleInflation: pallet_simple_inflation::{Pallet},
 	}
@@ -1033,6 +1050,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, pallet_evm, EVM);
 			add_benchmark!(params, batches, pallet_vesting, Vesting);
+			add_benchmark!(params, batches, pallet_airdrop, Airdrop);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
@@ -1052,6 +1070,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_timestamp, Timestamp);
 			list_benchmark!(list, extra, pallet_evm, EVM);
 			list_benchmark!(list, extra, pallet_vesting, Vesting);
+			list_benchmark!(list, extra, pallet_airdrop, Airdrop);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
