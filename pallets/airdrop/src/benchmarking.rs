@@ -50,7 +50,7 @@ where
 	fn from(sample: BenchmarkSample<'a>) -> Self {
 		let proff_size = B::get();
 
-		assert_eq!(sample.merkle_proofs.len(), proff_size as usize);
+		// assert_eq!(sample.merkle_proofs.len(), proff_size as usize);
 		let amount = sample.amount;
 		let defi_user = sample.defi_user;
 		let ice_address = hex::decode(sample.ice_address).unwrap().try_into().unwrap();
