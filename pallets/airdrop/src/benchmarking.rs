@@ -95,95 +95,92 @@ where
 
 pub const benchmark_samples: [BenchmarkSample; 4] = [
 	   BenchmarkSample{
-		   amount: 8800000000,
-		   defi_user: false,
-		   ice_address: "14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f",
-		   ice_signature: "dc969151b35aa41da2382ec1f1c6fc413b309db4c476fde6ed84b339aad68a48099add8ca23a52c10961568679f49db98d43d95901594d44a04cfdfdc3723685",
-		   icon_address: "1abd441b0b42422387a5ff7c5705a529b3cce196",
-		   icon_signature: "e37ce5be477ebfe930cf40becc502c76b1e096f262df231ca7a78408d8b8f4e672bf0bbdd8c37df152f4a1c3de23ce2c568c711a3223e8cf3ab20fc1dd37800500",
-		   merkle_proofs: &[
-			"ab5d9740c85676bda7230cec714ab54a3e667e2fa115b271d5eba07f70044549",
-            "eccb38ee0e0e51792917b7b2952664eb490137e111013692f8226adf27bb474d",
-            "0846539a1e8bad70f80201eeda1bfe70071e013e7e10d1d624ce9fc9a055d0e8",
-            "47eea037694f9d7d7537844686405d4e6e0fe4df7a3eb77f376d4b148108f7bb",
-            "ef91c39b6d4d06139492fe994f20540aaaace51a94ebbe39bb4ab6ede3431bcb",
-            "419c9d60d9a49d7a40cdf2ab4e86a61d7a691a0695989351e002004d1f44ac4c",
-            "510073a91f8ea91babf4fc48c52bd2bb9b996e8e9118d9bed07cb531d712f602",
-            "a24c8ed15b8f15c7c74de3419bb84a0af12ab842bd444c08db884da13a49839f",
-            "9d114c5f584d3f2db8c7fcd8f73047ef8764a38a5f786e86cae18a419d54900e",
-            "0276f3bcf0b3b041ed3fc8d6f2da65d5c7d44b986cef45712455c414e081f127"
-		   ],
-		   merkle_root: "4e066eee09e3daed2566830b4f422efc6202745f2d643f171e7b582988cfe380",
-		   message: "icx_sendTransaction.data.{method.transfer.params.{wallet.14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f}}.dataType.call.from.hx1abd441b0b42422387a5ff7c5705a529b3cce196.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hx1abd441b0b42422387a5ff7c5705a529b3cce196.version.0x3"
+		icon_address : "3d16047c23cc3e27e807f6cfc55fb8d950555690",
+		icon_signature : "a9b435d7720228efd12327a3551ffab56e737be8071673cfdad59f25a9d20f425b99874ac4c17b29063160d247c95cc0a71b3647e58b5dfb67c1839943920b9700",
+		message : "icx_sendTransaction.data.{method.transfer.params.{wallet.9e1d877d67c30235bc90e0ff469d0f8c2b4d7df3d8efed7873715cd9da073f2f}}.dataType.call.from.3d16047c23cc3e27e807f6cfc55fb8d950555690.nid.1.nonce.1.stepLimit.0.timestamp.0.to.3d16047c23cc3e27e807f6cfc55fb8d950555690.version.3",
+		ice_address : "9e1d877d67c30235bc90e0ff469d0f8c2b4d7df3d8efed7873715cd9da073f2f",
+		ice_signature : "2425488fc058d9e2810ebda2e6a1466ac1f159f0db8b807037132759257131602378cba5d65859be2e3a44e5d6da91bad14dd0ead745ea159551fa748e8f1285",
+		amount : 1000000000000000000,
+		defi_user : true,
+		merkle_proofs : &[
+			"e0d3b76446424001e3ed793dce6e3768d23330c44108dc1af0b6618c291bd9ea",
+			"31a8941be7278d42e60bb911e7d1ec34c20e22c97e5de8d4523b0b156552de32",
+			"09eaef8a1f8fb9a3709a155eb40abb05164b33c20089a99ac9018e8fb372e708",
+			"b7e0d8418a2aba80ce033ca7fa6ceb446b2b3a0ab4f13b89559a24938f7006e1",
+			"8313ec772d670751b1d5325513953347874381c068edfb2fce6aca1556754be5",
+			"1ab85582900d947bb1fd40fac26fc85968f0106269d2bcd94937a7c32ee98c33",
+			"dd6d9efff5004b007dcb2d5992cfdc5bc74428820ef40c66db1454a13826451b",
+			"f5df84a6499660de837b5e5bd4734cc32077a56b68c1759d9ab3de10cc532bc6"
+		],
+		  
+		merkle_root: "990e01e3959627d2ddd94927e1c605a422b62dc3b8c8b98d713ae6833c3ef122",
 
 	   },
 	   BenchmarkSample {
-		amount:4800000000,
-		defi_user:true,
-		ice_address:"14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f",
-		ice_signature:"0e95a955b252791cde8ad123fdbd1d9083e2422b320455c1ba0d102d49f93845d7b9e7d7a9b3d88172990cd04160c4f3152ed9fc935b63dfe20838c4530da78c",
-		icon_address:"686d9a7dd2daae5ff9fb7d75d9e246d7fc757f7a",
-		icon_signature:"6fa8c1e2465b4df352fac6ff5e8f991e40ffdaa735a0b1712ff5dc430410a9be199dc7dbe26f9495143dc2e457d6f3b1461ef863d0c0457077362a21e5e4ef9201",
-		merkle_proofs:&[
-			"28573640059d895cebff023ffe9bd1d6bc7cd78bf0cba3c6c2bb5407c05f946c",
-            "c8abfcb3e2f3068b0ceb2f7da95b0400cbd203d93f463bc541757a550cd50990",
-            "68a64b952f27e6d97096c8d9aee45f43c5c0621160a739ca4d64c406bd90e3b6",
-            "b276afe29023a35a9c7974b6f077562c3f873ec2cd8e67790bbaf76a06bbdecd",
-            "4709274d8bc787f4dadf7b68868bcb48577cb9718478900fdaac24317e95ee44",
-            "09af9ca4963ca11c108e42206bc1c5330eaab6861b9f95b3f7541b05c7497028",
-            "7896cf14bd6dba1cf0bb455cc078173b727a7a580221fb3abc7f4e496c9b85b6",
-            "99b0bfb7fefb2f7ebcb86f32152f686f644b551372d55fbc403610feec2106ae",
-            "2b458e4a9fe78597c463e408a615fe745a8849bbf010c8cec39ddde44df55099",
-            "3b43a9ace231d9879e9627c59a02ff6d71e0263dfded179d69f5f648174409c2"
+		icon_address : "2ddfa6d1cdf98944a90319bbe57c10d6a3527195",
+		icon_signature : "dd0fc37634a650ee0d13f848ea3a2f62b9d80520ae5ec8faaaee662aa6170bfb4e34a735557447dd226ef4e9793a8519ee2f04fdbe6024fb29bcd4c95edcab6900",
+		message : "icx_sendTransaction.data.{method.transfer.params.{wallet.1280a5490ab78c44127424fa8f846b1e1459caf5405e17f66cc7ca642e651370}}.dataType.call.from.2ddfa6d1cdf98944a90319bbe57c10d6a3527195.nid.1.nonce.1.stepLimit.0.timestamp.0.to.2ddfa6d1cdf98944a90319bbe57c10d6a3527195.version.3",
+		ice_address : "1280a5490ab78c44127424fa8f846b1e1459caf5405e17f66cc7ca642e651370",
+		ice_signature : "ce9100b0ffaa9277de4898fbe5a31f64a5e43d5319674585838dd6804ac3d555560b68e10ab501ceb1f1247fb199b21e293d9f21f72f972ec70eaa6351a4df84",
+		amount : 2000000000000000000,
+		defi_user : true,
+		merkle_proofs : &[
+			"f0581f454bb54b31bb8cb7ee3b8196d438a8588835f9f15328d09b30e35aba44",
+			"76165bcd9d4384607dec75039fda663be627ad42eb722bb8681a800244241d64",
+			"46e617f4ee231a73f2bf6963eb4f044b77c956b95b20201e89fd495c600270c4",
+			"2b003ed0aa2100689bc76a0940745c7aa244f89a3cfa7a80872d6169e092067b",
+			"6045f8c48195fb8ca809b197e3605dc4767f34df0b30094645fd6f92e9063076",
+			"7ac43c63fb6b2d1576f99004881ec01dc6edc2015e972d837ab85f482f2ea318",
+			"dd6d9efff5004b007dcb2d5992cfdc5bc74428820ef40c66db1454a13826451b",
+			"f5df84a6499660de837b5e5bd4734cc32077a56b68c1759d9ab3de10cc532bc6"
 		],
-		merkle_root:"4e066eee09e3daed2566830b4f422efc6202745f2d643f171e7b582988cfe380",
-		message:"icx_sendTransaction.data.{method.transfer.params.{wallet.14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f}}.dataType.call.from.hx686d9a7dd2daae5ff9fb7d75d9e246d7fc757f7a.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hx686d9a7dd2daae5ff9fb7d75d9e246d7fc757f7a.version.0x3"
+		merkle_root:"990e01e3959627d2ddd94927e1c605a422b62dc3b8c8b98d713ae6833c3ef122",
 
 	},
 	BenchmarkSample{
-		amount:5600000000,
-		defi_user:false,
-		ice_address:"14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f",
-		ice_signature:"52d2bd42c62a34e091e52f0d371862098c345dac2bf17d7f5cf128721037261921864d82c61025337a4305556365f5d53b64f991aeac5632eb5f80bac1f1ae8b",
-		icon_address:"4906b6524a5fce5427c12eeaf32a79e714f65aa4",
-		icon_signature:"065d3725813fca25d18aa537f23c5504682a67b7545fd23529866867cf337eb01ff1696da5f90cf447709c6edcdf7db89578ebabecf5f0c180e90efeb0c03a4d00",
-		merkle_proofs:&[
-			"cfe59aa71f774d0109f3d9d00cfb1307edecdd14a7db28dfd6fee06815c78217",
-            "7e71fdf8905c49bda1a2faabaf69e8c48ca1d01fb4690af0da51ecef1f459871",
-            "9cc9625dd9057526a704a56e7dc39b5670d601e16dace5c368d5a1b553933683",
-            "f2d89692aeb9f2772aeb4430f46969d9701002a0527192b1cfacb2f42a06bba4",
-            "f9b0620deac81f373ae5764c5d39097c76c3c44c4a2a0c652450c716c76cfff4",
-            "86440e8fb040e6f4c2c6075667a5609f869f461e552dd57a4ba995db0948ef0e",
-            "79dab9eb072fccfd645c30ad417711019ccbbe9da5d61e3e9f29048a933317de",
-            "37db6f65c555876ee1f4201c85737bffc0ca221d896e2456b2c7cf2d08d883e6",
-            "5ba24d44b6ce748ecf4930f447c107461b729fc08d4053b36aed17c63f5f72bd",
-            "0276f3bcf0b3b041ed3fc8d6f2da65d5c7d44b986cef45712455c414e081f127"
+		icon_address: "bf721af547f9b594b00fd675d66f267fead26078",
+		icon_signature: "6f72df8c2137f5a72cb6b7f72536c58da0fbe355c34f4eb7ea4d361e44c2846e2c29c10dd30b92d097c50f223373e4d9dc346b290d6e27077cdf9a5c84e0e01901",
+		message: "icx_sendTransaction.data.{method.transfer.params.{wallet.a2e3b45a628e579fba6398bd61b25e237ab0cdd18190127e1b75929bb190e303}}.dataType.call.from.bf721af547f9b594b00fd675d66f267fead26078.nid.1.nonce.1.stepLimit.0.timestamp.0.to.bf721af547f9b594b00fd675d66f267fead26078.version.3",
+		ice_address: "a2e3b45a628e579fba6398bd61b25e237ab0cdd18190127e1b75929bb190e303",
+		ice_signature: "ecf730df0b51b12257d2c2d86945b5df2ca7076ffd448d050d9819786b63dd29276a2ba4757b611bdbf5e9f51dcba6122f57a3cd95cffd1b42197a8295e2ad82",
+		amount: 3000000000000000000,
+		defi_user: true,
+		merkle_proofs: &[
+			"798f62d51e94cb89df6260d60aa48baeef1c5a99988608e9e8cd8dbd5a8cf895",
+			"e93d3837fcc639d1f9abc176e0d92237c5b0b0e500738d6e5b35e4006272c366",
+			"97d8d7ec83be95c41e4f80c27c29fe851613af01c49eb0d19b216839ffc1fd63",
+			"f81ee4d3397af15073ba83cbf5a640f98ea7fd48596876795731ce6aac6b09d0",
+			"57a0ac7ad8d609c2ffa4fc0755b4001a8d9902c8237d8912b5645aeae18f00b5",
+			"1fe97a9f0936a47663102bc1e7f462be70166ec7865ee52abb8b0f8e96ac2532",
+			"c42ffc995410faf61588017be9c7d96716dfe8d5758cc0c47faaae84131cd152",
+			"9a76bf1c50b1699066273fd5637ef2d80d507bbf19d7b41684768e92e6b0faac",
+			"16007529c0508b834034a7ec9a27026a596cc3dbbdbc817c23cdcab944f706c2",
+			"c8c790ef89aec760e0087d79668d5f25bfcfbba74865bc2f514e259f1607015b"
 		],
-		merkle_root:"4e066eee09e3daed2566830b4f422efc6202745f2d643f171e7b582988cfe380",
-		message:"icx_sendTransaction.data.{method.transfer.params.{wallet.14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f}}.dataType.call.from.hx4906b6524a5fce5427c12eeaf32a79e714f65aa4.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hx4906b6524a5fce5427c12eeaf32a79e714f65aa4.version.0x3"
+		merkle_root:"990e01e3959627d2ddd94927e1c605a422b62dc3b8c8b98d713ae6833c3ef122",
 
 	},
 	BenchmarkSample{
-		amount:3000000000,
-		defi_user:true,
-		ice_address:"14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f",
-		ice_signature:"64dbc6a8c772f5e470dd38ada6ed563bf1d119fa7268328310dd4157f086120366b6d175444446316aa8cf9d2f12120d86c5feb82bfe8ea5eb70ed76e3be2a8b",
-		icon_address:"83094355827de1c80773361edd06957f06915acc",
-		icon_signature:"ff97a8229ea65c253f99e67607a28a52e0fe5ef5e0781669981329035d96e3ff1e5c5dead6f484592429be87356985d6f3f4e5a0a80361a811661cc738498cf600",
-		merkle_proofs:&[
-			"6d0a0a2de2072733d0710ed5583b701bde4b3c304d64aeddb07aa5f76bff7fca",
-            "0f7253b4150927707a49c3f48b65f620acc2744988ec420e74151d92e1493ca2",
-            "c8dbe2f0bf3080ab8b8a711d068a1ab204b3336c010e8cce07cd4f244e9619ca",
-            "fdbaaa3532e23c637e37929bcd6c5ca42c4c46c68f3a3532b441deed70aa4d04",
-            "8c7232a8d7f5d694afb732a0c7530a2282f1099e83702f8cd2a07c15004e419b",
-            "fc8009fdecf635e2b051de5bfb2d84c9ed6daf0d890f7c62894be308d6941db3",
-            "4f489320b17a0bc4e3568cd1b6aba042ff8afdee9ca30f339ed7435565890c0b",
-            "ec17ed1368b31e0bd7fda745d60bac9d9f0c0172c9bab6421e938b75b1fa105e",
-            "a43ab42be71c641ca14b8b42e392cffa5bdb1591e1378c6a38c2745b7ae1f3fb",
-            "3b43a9ace231d9879e9627c59a02ff6d71e0263dfded179d69f5f648174409c2"
+		icon_address : "669fe1b8d281899304a10bcc43c008b80c2a832d",
+		icon_signature : "49e476b6c8d9ea10a318a3a92b3cb2d69636c5f2717f9b7300838c9cf530f21a3436d31c96db65b7a10599c3b149df6a6759574b23b12718e7ce481c0963a61400",
+		message : "icx_sendTransaction.data.{method.transfer.params.{wallet.6ca3c5c62fe77c4c46cf9658891cf13bd4cf46ab6615273f6321701edba96c51}}.dataType.call.from.669fe1b8d281899304a10bcc43c008b80c2a832d.nid.1.nonce.1.stepLimit.0.timestamp.0.to.669fe1b8d281899304a10bcc43c008b80c2a832d.version.3",
+		ice_address : "6ca3c5c62fe77c4c46cf9658891cf13bd4cf46ab6615273f6321701edba96c51",
+		ice_signature : "aa1bf82922fcf897249ec77ef46b43b82f126947baebea2b20653f9b62910915d581e5ac2c134b12b515cac2e85dd1bb96573ba67311b0f711d6ca18e2e3d68a",
+		amount : 4000000000000000000,
+		defi_user : true,
+		merkle_proofs : &[
+			"4cb4baa6637f5d39eae5d3998b35a15d8ff245e006e0c3c354e1cf641bf89894",
+			"44912681ae011b28768811e9ab063f4a9988580c82f2a71122cd719f922ef3ee",
+			"bc3957fa95f3ccba5a7f626b65cd4b9f8c6512ec67dd281feea1738bb1202dc3",
+			"0c5721659c64f2c1da34d4f8cdcaa7d770860e6ad774cd9d5c9f4e4fd9d16d06",
+			"e784711156cde55af3f71429d64e31062233e3dc2f98712425e0854f3b261ccd",
+			"89ff5572284e1c8f4fdc43c9499d75addcedd53a79d4dcf79dcc3f0b48263d5c",
+			"5cd8cb26c4b08ade5da89fe0e3dce3d7a5c5d039364ebc5ae4ccf628aa7d7973",
+			"852ccbd392aef04c99b16c1441c8fa690183c635e9cd1534c21c13f4ce3d505b",
+			"348af565a5d5b2a4750c6c6fb9b272f0331eb001a70abb4d414bbd90eff2aa56",
+			"c8c790ef89aec760e0087d79668d5f25bfcfbba74865bc2f514e259f1607015b"
 		],
-		merkle_root:"4e066eee09e3daed2566830b4f422efc6202745f2d643f171e7b582988cfe380",
-		message:"icx_sendTransaction.data.{method.transfer.params.{wallet.14524435eb22c05c20e773cb6298886961d632f3ec29f4e4245b02710da2a22f}}.dataType.call.from.hx83094355827de1c80773361edd06957f06915acc.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hx83094355827de1c80773361edd06957f06915acc.version.0x3"
+		merkle_root:"990e01e3959627d2ddd94927e1c605a422b62dc3b8c8b98d713ae6833c3ef122",
 
 	}
    ];
@@ -222,28 +219,13 @@ benchmarks! {
 		}.into());
 	}
 
-	change_merkle_root {
-		let p in 0u8..50u8;
-
-		let zero_31 = [0u8; 31];
-		let new_root = [p, ..zero_31];
-		let mut last_root = None;
-	}: change_merkle_root(
-		RawOrigin::Root,
-		new_root
-	) verify {
-		assert_last_event::<T>(Event::MerkleRootUpdated{
-			old_root: last_root,
-			new_root,
-		});
-	}
-
-	dispatch_user_claim {
+	
+    dispatch_user_claim {
 		let x in 0 .. 3;
 		let caller: types::AccountIdOf<T> = frame_benchmarking::whitelisted_caller();
 		// let ofw_account = sr25519::Public([1; 32]).into_account();
 		Pallet::<T>::set_creditor_account(creditor_key);
-		let system_account_id = Pallet::<T>::get_creditor_account();
+		let system_account_id = Pallet::<T>::get_creditor_account().unwrap();
 		Pallet::<T>::init_balance(&system_account_id,10_000_000_000);
 		let case= UserClaimTestCase::<<T as pallet::Config>::MaxProofSize>::try_from(benchmark_samples[x as usize].clone()).unwrap();
 		let amount = <T::BalanceTypeConversion as Convert<_, _>>::convert(case.amount);
@@ -267,7 +249,7 @@ benchmarks! {
 		let x in 0 .. 3;
 
 		Pallet::<T>::set_creditor_account(creditor_key);
-		let system_account_id = Pallet::<T>::get_creditor_account();
+		let system_account_id = Pallet::<T>::get_creditor_account().unwrap();
 		Pallet::<T>::init_balance(&system_account_id,10_000_000_000);
 		let case= UserClaimTestCase::<<T as pallet::Config>::MaxProofSize>::try_from(benchmark_samples[x as usize].clone()).unwrap();
 		let amount = <T::BalanceTypeConversion as Convert<_, _>>::convert(case.amount);
@@ -284,6 +266,20 @@ benchmarks! {
 		case.merkle_proofs)
 	verify {
 		assert_last_event::<T>(Event::ClaimSuccess(icon_address.clone()).into());
+	}
+
+	change_merkle_root {
+		let p in 0..10;
+		let new_root = [p as u8;32];
+		let mut last_root = None;
+	}: change_merkle_root(
+		RawOrigin::Root,
+		new_root
+	) verify {
+		assert_last_event::<T>(Event::MerkleRootUpdated{
+			old_root: last_root,
+			new_root,
+		}.into());
 	}
 
 	impl_benchmark_test_suite!(Pallet, crate::mock::new_test_ext(), crate::mock::Test);

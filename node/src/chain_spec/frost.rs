@@ -49,6 +49,8 @@ pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
 // Treasury Pallet ID
 const TREASURY_PALLET_ID: PalletId = PalletId(*b"py/trsry");
 
+const AIRDROP_MERKLE_ROOT:[u8; 32] =hex_literal::hex!("990e01e3959627d2ddd94927e1c605a422b62dc3b8c8b98d713ae6833c3ef122");
+
 const AIRDROP_EXCHANGE_ACCOUNTS: &[([u8; 20], u128)] = &[
 	(
 		hex_literal::hex!("562dc1e2c7897432c298115bc7fbcc3b9d5df294"),
@@ -111,7 +113,7 @@ pub fn testnet_config() -> Result<FrostChainSpec, String> {
 				// Creditor account
 				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				// Airdrop merkle root
-				[0u8; 32],
+				AIRDROP_MERKLE_ROOT.clone(),
 				// Airdrop exchange account
 				AIRDROP_EXCHANGE_ACCOUNTS.to_vec(),
 				// Pre-funded accounts
@@ -159,7 +161,7 @@ pub fn development_config() -> Result<FrostChainSpec, String> {
 				// Creditor account
 				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				// Airdrop merkle root
-				hex!("4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672").into(),
+				AIRDROP_MERKLE_ROOT.clone(),
 				// Airdrop exchange accounts pair
 				AIRDROP_EXCHANGE_ACCOUNTS.to_vec(),
 				// Pre-funded accounts
@@ -212,7 +214,7 @@ pub fn local_testnet_config() -> Result<FrostChainSpec, String> {
 				// Creditor account,
 				hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872").into(),
 				// Airdrop merkle root
-				hex!("4c59b428da385567a6d42ee1881ecbe43cf30bf8c4499887b7c6f689d23d4672").into(),
+				AIRDROP_MERKLE_ROOT.clone(),
 				// Exhcnage accounts for Airdrop
 				AIRDROP_EXCHANGE_ACCOUNTS.to_vec(),
 				// Pre-funded accounts
