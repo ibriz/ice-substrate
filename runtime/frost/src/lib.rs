@@ -549,7 +549,7 @@ impl pallet_airdrop::Config for Runtime {
 	type BalanceTypeConversion = sp_runtime::traits::ConvertInto;
 	type AirdropWeightInfo = pallet_airdrop::weights::AirDropWeightInfo<Runtime>;
 	type MerkelProofValidator = pallet_airdrop::merkle::AirdropMerkleValidator<Runtime>;
-	type MaxProofSize = frame_support::traits::ConstU32<10>;
+	type MaxProofSize = frame_support::traits::ConstU32<21>;
 	const AIRDROP_VARIABLES: pallet_airdrop::AirdropBehaviour = VESTED_AIRDROP_BEHAVIOUR;
 }
 

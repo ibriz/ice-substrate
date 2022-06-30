@@ -28,15 +28,9 @@ pub fn hash_leaf(
 	defi_user: bool,
 ) -> [u8; 32] {
 	let defi_str = if defi_user { "1" } else { "0" };
-
 	let mut byte_vec = icon_address.to_vec();
-	// TODO:
-	// Using string here is probably a bad idea?
-	// instead of using bytes of string,
-	// use big/little endian bytes instead 
 	byte_vec.extend_from_slice(amount.to_string().as_bytes());
 	byte_vec.extend_from_slice(&defi_str.as_bytes());
-
 	hashing::blake2_256(&byte_vec)
 }
 

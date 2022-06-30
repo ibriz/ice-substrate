@@ -97,7 +97,7 @@ pub const benchmark_samples: [BenchmarkSample; 4] = [
 	   BenchmarkSample{
 		icon_address : "3d16047c23cc3e27e807f6cfc55fb8d950555690",
 		icon_signature : "a9b435d7720228efd12327a3551ffab56e737be8071673cfdad59f25a9d20f425b99874ac4c17b29063160d247c95cc0a71b3647e58b5dfb67c1839943920b9700",
-		message : "icx_sendTransaction.data.{method.transfer.params.{wallet.9e1d877d67c30235bc90e0ff469d0f8c2b4d7df3d8efed7873715cd9da073f2f}}.dataType.call.from.3d16047c23cc3e27e807f6cfc55fb8d950555690.nid.1.nonce.1.stepLimit.0.timestamp.0.to.3d16047c23cc3e27e807f6cfc55fb8d950555690.version.3",
+		message : "icx_sendTransaction.data.{method.transfer.params.{wallet.9e1d877d67c30235bc90e0ff469d0f8c2b4d7df3d8efed7873715cd9da073f2f}}.dataType.call.from.hx3d16047c23cc3e27e807f6cfc55fb8d950555690.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hx3d16047c23cc3e27e807f6cfc55fb8d950555690.version.0x3",
 		ice_address : "9e1d877d67c30235bc90e0ff469d0f8c2b4d7df3d8efed7873715cd9da073f2f",
 		ice_signature : "2425488fc058d9e2810ebda2e6a1466ac1f159f0db8b807037132759257131602378cba5d65859be2e3a44e5d6da91bad14dd0ead745ea159551fa748e8f1285",
 		amount : 1000000000000000000,
@@ -119,7 +119,7 @@ pub const benchmark_samples: [BenchmarkSample; 4] = [
 	   BenchmarkSample {
 		icon_address : "2ddfa6d1cdf98944a90319bbe57c10d6a3527195",
 		icon_signature : "dd0fc37634a650ee0d13f848ea3a2f62b9d80520ae5ec8faaaee662aa6170bfb4e34a735557447dd226ef4e9793a8519ee2f04fdbe6024fb29bcd4c95edcab6900",
-		message : "icx_sendTransaction.data.{method.transfer.params.{wallet.1280a5490ab78c44127424fa8f846b1e1459caf5405e17f66cc7ca642e651370}}.dataType.call.from.2ddfa6d1cdf98944a90319bbe57c10d6a3527195.nid.1.nonce.1.stepLimit.0.timestamp.0.to.2ddfa6d1cdf98944a90319bbe57c10d6a3527195.version.3",
+		message : "icx_sendTransaction.data.{method.transfer.params.{wallet.1280a5490ab78c44127424fa8f846b1e1459caf5405e17f66cc7ca642e651370}}.dataType.call.from.hx2ddfa6d1cdf98944a90319bbe57c10d6a3527195.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hx2ddfa6d1cdf98944a90319bbe57c10d6a3527195.version.0x3",
 		ice_address : "1280a5490ab78c44127424fa8f846b1e1459caf5405e17f66cc7ca642e651370",
 		ice_signature : "ce9100b0ffaa9277de4898fbe5a31f64a5e43d5319674585838dd6804ac3d555560b68e10ab501ceb1f1247fb199b21e293d9f21f72f972ec70eaa6351a4df84",
 		amount : 2000000000000000000,
@@ -140,7 +140,7 @@ pub const benchmark_samples: [BenchmarkSample; 4] = [
 	BenchmarkSample{
 		icon_address: "bf721af547f9b594b00fd675d66f267fead26078",
 		icon_signature: "6f72df8c2137f5a72cb6b7f72536c58da0fbe355c34f4eb7ea4d361e44c2846e2c29c10dd30b92d097c50f223373e4d9dc346b290d6e27077cdf9a5c84e0e01901",
-		message: "icx_sendTransaction.data.{method.transfer.params.{wallet.a2e3b45a628e579fba6398bd61b25e237ab0cdd18190127e1b75929bb190e303}}.dataType.call.from.bf721af547f9b594b00fd675d66f267fead26078.nid.1.nonce.1.stepLimit.0.timestamp.0.to.bf721af547f9b594b00fd675d66f267fead26078.version.3",
+		message: "icx_sendTransaction.data.{method.transfer.params.{wallet.a2e3b45a628e579fba6398bd61b25e237ab0cdd18190127e1b75929bb190e303}}.dataType.call.from.hxbf721af547f9b594b00fd675d66f267fead26078.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hxbf721af547f9b594b00fd675d66f267fead26078.version.0x3",
 		ice_address: "a2e3b45a628e579fba6398bd61b25e237ab0cdd18190127e1b75929bb190e303",
 		ice_signature: "ecf730df0b51b12257d2c2d86945b5df2ca7076ffd448d050d9819786b63dd29276a2ba4757b611bdbf5e9f51dcba6122f57a3cd95cffd1b42197a8295e2ad82",
 		amount: 3000000000000000000,
@@ -163,7 +163,7 @@ pub const benchmark_samples: [BenchmarkSample; 4] = [
 	BenchmarkSample{
 		icon_address : "669fe1b8d281899304a10bcc43c008b80c2a832d",
 		icon_signature : "49e476b6c8d9ea10a318a3a92b3cb2d69636c5f2717f9b7300838c9cf530f21a3436d31c96db65b7a10599c3b149df6a6759574b23b12718e7ce481c0963a61400",
-		message : "icx_sendTransaction.data.{method.transfer.params.{wallet.6ca3c5c62fe77c4c46cf9658891cf13bd4cf46ab6615273f6321701edba96c51}}.dataType.call.from.669fe1b8d281899304a10bcc43c008b80c2a832d.nid.1.nonce.1.stepLimit.0.timestamp.0.to.669fe1b8d281899304a10bcc43c008b80c2a832d.version.3",
+		message : "icx_sendTransaction.data.{method.transfer.params.{wallet.6ca3c5c62fe77c4c46cf9658891cf13bd4cf46ab6615273f6321701edba96c51}}.dataType.call.from.hx669fe1b8d281899304a10bcc43c008b80c2a832d.nid.0x1.nonce.0x1.stepLimit.0x0.timestamp.0x0.to.hx669fe1b8d281899304a10bcc43c008b80c2a832d.version.0x3",
 		ice_address : "6ca3c5c62fe77c4c46cf9658891cf13bd4cf46ab6615273f6321701edba96c51",
 		ice_signature : "aa1bf82922fcf897249ec77ef46b43b82f126947baebea2b20653f9b62910915d581e5ac2c134b12b515cac2e85dd1bb96573ba67311b0f711d6ca18e2e3d68a",
 		amount : 4000000000000000000,
