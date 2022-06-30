@@ -385,7 +385,7 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-		#[pallet::weight(10_000)]
+		#[pallet::weight(<T as Config>::AirdropWeightInfo::change_merkle_root())]
 		pub fn change_merkle_root(origin: OriginFor<T>, new_root: [u8; 32]) -> DispatchResult {
 			ensure_root(origin).map_err(|_| Error::<T>::DeniedOperation)?;
 			let old_root = Self::try_get_merkle_root();
