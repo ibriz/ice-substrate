@@ -112,7 +112,6 @@ pub const benchmark_samples: [BenchmarkSample; 4] = [
 			"dd6d9efff5004b007dcb2d5992cfdc5bc74428820ef40c66db1454a13826451b",
 			"f5df84a6499660de837b5e5bd4734cc32077a56b68c1759d9ab3de10cc532bc6"
 		],
-		  
 		merkle_root: "990e01e3959627d2ddd94927e1c605a422b62dc3b8c8b98d713ae6833c3ef122",
 
 	   },
@@ -219,8 +218,8 @@ benchmarks! {
 		}.into());
 	}
 
-	
-    dispatch_user_claim {
+
+	dispatch_user_claim {
 		let x in 0 .. 3;
 		let caller: types::AccountIdOf<T> = frame_benchmarking::whitelisted_caller();
 		// let ofw_account = sr25519::Public([1; 32]).into_account();
@@ -280,6 +279,7 @@ benchmarks! {
 		let p in 0..10;
 		let new_root = [p as u8;32];
 		let mut last_root = None;
+		MerkleRoot::<T>::put(None);
 	}: change_merkle_root(
 		RawOrigin::Root,
 		new_root

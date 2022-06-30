@@ -6,8 +6,8 @@ mod user_claim;
 mod utility_functions;
 pub mod prelude {
 	pub use super::{
-		get_last_event, minimal_test_ext, mock, run_to_block, samples, set_creditor_balance,
-		tranfer_to_creditor, force_get_creditor_account,
+		force_get_creditor_account, get_last_event, minimal_test_ext, mock, run_to_block, samples,
+		set_creditor_balance, tranfer_to_creditor,
 	};
 	pub use crate as pallet_airdrop;
 	pub use crate::tests;

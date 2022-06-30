@@ -49,7 +49,8 @@ pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
 // Treasury Pallet ID
 const TREASURY_PALLET_ID: PalletId = PalletId(*b"py/trsry");
 
-const AIRDROP_MERKLE_ROOT:[u8; 32] =hex_literal::hex!("990e01e3959627d2ddd94927e1c605a422b62dc3b8c8b98d713ae6833c3ef122");
+const AIRDROP_MERKLE_ROOT: [u8; 32] =
+	hex_literal::hex!("990e01e3959627d2ddd94927e1c605a422b62dc3b8c8b98d713ae6833c3ef122");
 
 const AIRDROP_EXCHANGE_ACCOUNTS: &[([u8; 20], u128)] = &[
 	(
@@ -74,7 +75,8 @@ const AIRDROP_EXCHANGE_ACCOUNTS: &[([u8; 20], u128)] = &[
 	),
 ];
 
-const AIRDROP_CREDITOR_ACCOUNT:[u8; 32] = hex_literal::hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872");
+const AIRDROP_CREDITOR_ACCOUNT: [u8; 32] =
+	hex_literal::hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872");
 
 /// Initialize frost testnet configuration
 pub fn testnet_config() -> Result<FrostChainSpec, String> {

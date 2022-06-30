@@ -1,7 +1,7 @@
 use super::{get_from_seed, Extensions};
 use arctic_runtime::currency::ICY;
 use arctic_runtime::{
-	wasm_binary_unwrap, AccountId, AuraConfig, AuraId,AirdropConfig, Balance, BalancesConfig,
+	wasm_binary_unwrap, AccountId, AirdropConfig, AuraConfig, AuraId, Balance, BalancesConfig,
 	CollatorSelectionConfig, CouncilConfig, EVMConfig, GenesisConfig, ParachainInfoConfig,
 	SessionConfig, SessionKeys, Signature, SudoConfig, SystemConfig, VestingConfig,
 };
@@ -16,7 +16,8 @@ use std::marker::PhantomData;
 /// Publicly expose ArcticChainSpec for sc service
 pub type ArcticChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
-const AIRDROP_MERKLE_ROOT:[u8; 32] =hex_literal::hex!("990e01e3959627d2ddd94927e1c605a422b62dc3b8c8b98d713ae6833c3ef122");
+const AIRDROP_MERKLE_ROOT: [u8; 32] =
+	hex_literal::hex!("990e01e3959627d2ddd94927e1c605a422b62dc3b8c8b98d713ae6833c3ef122");
 
 const AIRDROP_EXCHANGE_ACCOUNTS: &[([u8; 20], u128)] = &[
 	(
@@ -41,8 +42,8 @@ const AIRDROP_EXCHANGE_ACCOUNTS: &[([u8; 20], u128)] = &[
 	),
 ];
 
-const AIRDROP_CREDITOR_ACCOUNT:[u8; 32] = hex_literal::hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872");
-
+const AIRDROP_CREDITOR_ACCOUNT: [u8; 32] =
+	hex_literal::hex!("10b3ae7ebb7d722c8e8d0d6bf421f6d5dbde8d329f7c905a201539c635d61872");
 
 const ARCTIC_PROPERTIES: &str = r#"
         {
