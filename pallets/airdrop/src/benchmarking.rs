@@ -278,7 +278,7 @@ benchmarks! {
 	change_merkle_root {
 		let p in 0..10;
 		let new_root = [p as u8;32];
-		let last_root = [0u8;32]
+		let last_root = [0u8;32];
 		MerkleRoot::<T>::put(last_root.clone());
 	}: change_merkle_root(
 		RawOrigin::Root,
