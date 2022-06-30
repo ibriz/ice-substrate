@@ -285,7 +285,7 @@ benchmarks! {
 		new_root
 	) verify {
 		assert_last_event::<T>(Event::MerkleRootUpdated{
-			old_root: last_root,
+			old_root: Some(last_root),
 			new_root,
 		}.into());
 	}
