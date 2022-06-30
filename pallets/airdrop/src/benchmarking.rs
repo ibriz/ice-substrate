@@ -226,7 +226,7 @@ benchmarks! {
 		// let ofw_account = sr25519::Public([1; 32]).into_account();
 		Pallet::<T>::set_creditor_account(creditor_key);
 		let system_account_id = Pallet::<T>::get_creditor_account().unwrap();
-		Pallet::<T>::init_balance(&system_account_id,10_000_000_000);
+		Pallet::<T>::init_balance(&system_account_id,10_000_000_000_000_000_000_000_000);
 		let case= UserClaimTestCase::<<T as pallet::Config>::MaxProofSize>::try_from(benchmark_samples[x as usize].clone()).unwrap();
 		let amount = <T::BalanceTypeConversion as Convert<_, _>>::convert(case.amount);
 		 let icon_address=case.icon_address.clone();
@@ -254,7 +254,7 @@ benchmarks! {
 
 		Pallet::<T>::set_creditor_account(creditor_key);
 		let system_account_id = Pallet::<T>::get_creditor_account().unwrap();
-		Pallet::<T>::init_balance(&system_account_id,10_000_000_000);
+		Pallet::<T>::init_balance(&system_account_id,10_000_000_000_000_000_000_000_000);
 		let case= UserClaimTestCase::<<T as pallet::Config>::MaxProofSize>::try_from(benchmark_samples[x as usize].clone()).unwrap();
 		let amount = <T::BalanceTypeConversion as Convert<_, _>>::convert(case.amount);
 		let icon_address=case.icon_address.clone();
