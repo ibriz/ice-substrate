@@ -230,6 +230,8 @@ benchmarks! {
 		let case= UserClaimTestCase::<<T as pallet::Config>::MaxProofSize>::try_from(benchmark_samples[x as usize].clone()).unwrap();
 		let amount = <T::BalanceTypeConversion as Convert<_, _>>::convert(case.amount);
 		 let icon_address=case.icon_address.clone();
+		 let new_state = types::AirdropState::default();
+		<AirdropChainState<T>>::set(new_state.clone());
 
 	}: dispatch_user_claim(
 		RawOrigin::Root,
@@ -255,6 +257,8 @@ benchmarks! {
 		let amount = <T::BalanceTypeConversion as Convert<_, _>>::convert(case.amount);
 		let icon_address=case.icon_address.clone();
 		<ExchangeAccountsMap<T>>::insert(icon_address.clone(),amount);
+		let new_state = types::AirdropState::default();
+		<AirdropChainState<T>>::set(new_state.clone());
 
 
 	}: dispatch_exchange_claim(
