@@ -541,7 +541,7 @@ const VESTED_AIRDROP_BEHAVIOUR: pallet_airdrop::AirdropBehaviour =
 	pallet_airdrop::AirdropBehaviour {
 		defi_instant_percentage: 30,
 		non_defi_instant_percentage: 20,
-		vesting_period: 1_57_68_000,
+		vesting_period: 7776000,
 	};
 impl pallet_airdrop::Config for Runtime {
 	type Event = Event;
