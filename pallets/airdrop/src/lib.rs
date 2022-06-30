@@ -85,14 +85,14 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Emit when an claim request was successful and fund have been transferred
+		/// ClaimRequest have been ok for given icon address
 		ClaimSuccess(types::IconAddress),
 
-		/// Emit when an claim request was partially successful
+		/// PartialClaimRequest have been ok for given icon address
 		ClaimPartialSuccess(types::IconAddress),
 
 		/// Value of ServerAccount sotrage have been changed
-		/// Return old value and new one
+		// Return old value and new one
 		ServerAccountChanged {
 			old_account: Option<types::AccountIdOf<T>>,
 			new_account: types::AccountIdOf<T>,
@@ -110,6 +110,7 @@ pub mod pallet {
 			new_root: [u8; 32],
 		},
 
+		/// Creditor balance is runnning low
 		CreditorBalanceLow,
 	}
 
@@ -199,10 +200,19 @@ pub mod pallet {
 		/// Creditor account is not set on chain yet
 		NoCreditorAccount,
 
+		/// Provided ice address is not in expected format
 		InvalidIceAddress,
+
+		/// Invalid signature provided
 		InvalidIceSignature,
+
+		/// Couldnot get embedded ice address from message
 		FailedExtractingIceAddress,
+
+		/// Given message payload is invalid or is in unexpected format
 		InvalidMessagePayload,
+
+		/// Internal arithmetic error
 		ArithmeticError,
 
 		/// Claim amount was not expected in this exchanged airdrop
