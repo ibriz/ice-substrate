@@ -69,41 +69,75 @@ fn get_vesting_amounts_splitted() {
 		let defi_instant = utils::get_instant_percentage::<Test>(true);
 		let non_defi_instant = utils::get_instant_percentage::<Test>(false);
 
+        #[cfg(feature = "no-vesting")]
+        assert_eq!((100, 100), (non_defi_instant, defi_instant));
+        #[cfg(not(feature = "no-vesting"))]
+        assert_eq!((30, 40), (non_defi_instant, defi_instant));
+
 		assert_err!(
 			get_splitted_amounts(types::ServerBalance::max_value(), defi_instant),
 			ArithmeticError::Overflow
 		);
 		assert_eq!(
-			Ok((0_u32.into(), 0_u32.into())),
-			get_splitted_amounts(0_u32.into(), defi_instant)
+			Ok((10_u32.into(), 0u32.into())),
+			get_splitted_amounts(10, 100)
 		);
+        assert_eq!(
+            Ok((0u32.into(), 10u32.into())),
+            get_splitted_amounts(10, 0)
+        );
+        assert_eq!(
+            Ok((0u32.into(), 0u32.into())),
+            get_splitted_amounts(0, 50)
+        );
+        assert_eq!(
+            Ok((0u32.into(), 0u32.into())),
+            get_splitted_amounts(0, 0)
+        );
 
+        #[cfg(not(feature = "no-vesting"))]
 		assert_eq!(
 			Ok((900_u32.into(), 2100_u32.into())),
 			get_splitted_amounts(3_000_u32.into(), non_defi_instant)
 		);
+        #[cfg(feature = "no-vesting")]
+        assert_eq!(
+            Ok((3000u32.into(), 0u32.into())),
+            get_splitted_amounts(3000, non_defi_instant)
+        );
+
+        #[cfg(not(feature = "no-vesting"))]
 		assert_eq!(
 			Ok((1200_u32.into(), 1800_u32.into())),
 			get_splitted_amounts(3_000_u32.into(), defi_instant)
 		);
+        #[cfg(feature = "no-vesting")]
+        assert_eq!(
+            Ok((3000u32.into(), 0u32.into())),
+            get_splitted_amounts(3000, defi_instant)
+        );
 
-		assert_eq!(
-			Ok((0_u32.into(), 1_u32.into())),
-			get_splitted_amounts(1_u32.into(), non_defi_instant)
-		);
-		assert_eq!(
-			Ok((0_u32.into(), 1_u32.into())),
-			get_splitted_amounts(1_u32.into(), defi_instant)
-		);
-
+        #[cfg(not(feature = "no-vesting"))]
 		assert_eq!(
 			Ok((2932538_u32.into(), 6842591_u32.into())),
 			get_splitted_amounts(9775129_u32.into(), non_defi_instant)
 		);
+        #[cfg(feature = "no-vesting")]
+        assert_eq!(
+            Ok((9775129_u32.into(), 0u32.into())),
+            get_splitted_amounts(9775129, non_defi_instant)
+        );
+
+        #[cfg(not(feature = "no-vesting"))]
 		assert_eq!(
 			Ok((3910051_u32.into(), 5865078_u32.into())),
 			get_splitted_amounts(9775129_u32.into(), defi_instant)
 		);
+        #[cfg(feature = "no-vesting")]
+        assert_eq!(
+            Ok((9775129_u32.into(), 0u32.into())),
+            get_splitted_amounts(9775129, defi_instant)
+        );
 	});
 }
 
