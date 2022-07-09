@@ -63,17 +63,25 @@ fn ensure_root_or_server() {
 
 #[test]
 fn get_vesting_amounts_splitted() {
-	minimal_test_ext().execute_with(|| {
-		use sp_runtime::ArithmeticError;
+	use sp_runtime::ArithmeticError;
+	let expected_defi_instant_per;
+    let expected_non_defi_instant_per;
+    if cfg!(feature = "no-vesting") {
+        expected_defi_instant_per = 100;
+        expected_non_defi_instant_per = 100;
+    } else {
+        expected_defi_instant_per = 40;
+        expected_non_defi_instant_per = 30;
+    };
+    minimal_test_ext().execute_with(|| {
 		let get_splitted_amounts: _ = utils::get_splitted_amounts::<Test>;
 		let defi_instant = utils::get_instant_percentage::<Test>(true);
 		let non_defi_instant = utils::get_instant_percentage::<Test>(false);
 
-        #[cfg(feature = "no-vesting")]
-        assert_eq!((100, 100), (non_defi_instant, defi_instant));
-        #[cfg(not(feature = "no-vesting"))]
-        assert_eq!((30, 40), (non_defi_instant, defi_instant));
-
+        assert_eq!(
+            (expected_defi_instant_per, expected_non_defi_instant_per),
+            (defi_instant, non_defi_instant),
+        );
 		assert_err!(
 			get_splitted_amounts(types::ServerBalance::max_value(), defi_instant),
 			ArithmeticError::Overflow
@@ -250,7 +258,8 @@ fn making_vesting_transfer() {
 			assert!(Currency::usable_balance(&claimer) >= 2932538_u32.into());
 
 			// Make sure flags are updated
-			assert!(snapshot.done_instant && snapshot.done_vesting);
+			assert!(snapshot.done_instant);
+            assert!(snapshot.done_vesting);
 		}
 
 		// When instant transfer is true but not vesting
@@ -488,57 +497,36 @@ fn validate_creditor_fund() {
 
 #[test]
 fn ensure_claimable_snapshot() {
+    type SnapshotInfo = types::SnapshotInfo<Test>;
 	minimal_test_ext().execute_with(|| {
-		// Fail when both are claimed
-		{
-			let snapshot = types::SnapshotInfo::<Test> {
-				done_instant: true,
-				done_vesting: true,
-				..Default::default()
-			};
-			assert_err!(
-				AirdropModule::ensure_claimable(&snapshot),
-				PalletError::ClaimAlreadyMade
-			);
-		}
+        let both_true = SnapshotInfo {
+            done_instant: true,
+            done_vesting: true,
+            ..Default::default()
+        };
+        let both_false = SnapshotInfo {
+            done_vesting: false,
+            done_instant: false,
+            ..Default::default()
+        };
+        let instant_true_vesting_false = SnapshotInfo {
+            done_instant: true,
+            done_vesting: false,
+            ..Default::default()
+        };
+        let instant_false_vesting_true = SnapshotInfo {
+            done_instant: false,
+            done_vesting: true,
+            ..Default::default()
+        };
 
-		// Pass when both are not done
-		{
-			let snapshot = types::SnapshotInfo::<Test> {
-				done_instant: false,
-				done_vesting: false,
-				..Default::default()
-			};
-			assert_ok!(AirdropModule::ensure_claimable(&snapshot));
-		}
-
-		// Pass when vesting is not claimed
-		{
-			let snapshot = types::SnapshotInfo::<Test> {
-				done_instant: false,
-				done_vesting: true,
-				..Default::default()
-			};
-			assert_ok!(AirdropModule::ensure_claimable(&snapshot));
-		}
-
-		// Pass when instant is not claimed
-		{
-			let snapshot = types::SnapshotInfo::<Test> {
-				done_instant: true,
-				done_vesting: false,
-				..Default::default()
-			};
-
-			#[cfg(not(feature = "no-vesting"))]
-			assert_ok!(AirdropModule::ensure_claimable(&snapshot));
-
-			#[cfg(feature = "no-vesting")]
-			assert_err!(
-				AirdropModule::ensure_claimable(&snapshot),
-				PalletError::ClaimAlreadyMade
-			);
-		}
+        assert_ok!(AirdropModule::ensure_claimable(&both_false));
+        assert_ok!(AirdropModule::ensure_claimable(&instant_true_vesting_false));
+        assert_ok!(AirdropModule::ensure_claimable(&instant_false_vesting_true));
+        assert_err!(
+            AirdropModule::ensure_claimable(&both_true),
+            PalletError::ClaimAlreadyMade,
+        );
 	});
 }
 

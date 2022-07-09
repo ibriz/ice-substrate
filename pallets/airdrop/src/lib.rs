@@ -22,7 +22,7 @@ pub mod merkle;
 
 mod exchange_accounts;
 
-pub mod vested_transfer;
+pub mod transfer;
 
 #[cfg(not(test))]
 pub(crate) use log::{error, info};
@@ -33,7 +33,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::{error, info};
-	use super::{types, utils, weights, exchange_accounts};
+	use super::{types, utils, transfer, weights, exchange_accounts};
 	use hex_literal::hex;
 	use sp_runtime::traits::Convert;
 
@@ -644,10 +644,8 @@ pub mod pallet {
 			snapshot: &mut types::SnapshotInfo<T>,
 			icon_address: &types::IconAddress,
 		) -> Result<(), DispatchError> {
-			use types::DoTransfer;
-			type TransferType = super::vested_transfer::DoVestdTransfer;
 
-			let transfer_result = TransferType::do_transfer(snapshot);
+			let transfer_result = transfer::do_transfer(snapshot);
 
 			// No matter the result we will write the updated_snapshot
 			<IconSnapshotMap<T>>::insert(icon_address, snapshot);
