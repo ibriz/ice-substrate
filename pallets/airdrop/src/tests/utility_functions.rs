@@ -641,3 +641,12 @@ fn insert_or_get_snapshot() {
 		);
 	});
 }
+
+#[test]
+fn storage_version() {
+	minimal_test_ext().execute_with(|| {
+		let version = AirdropModule::get_storage_version();
+		assert_eq!(1_u32,version);
+		
+	});
+}

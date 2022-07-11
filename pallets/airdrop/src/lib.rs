@@ -147,6 +147,14 @@ pub mod pallet {
 	pub(super) type CreditorAccount<T: Config> =
 		StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
 
+	#[pallet::type_value]
+	pub(super) fn DefaultStorageVersion<T: Config>() -> u32 { 1_u32.into()}
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_storage_version)]
+	pub(super) type StorageVersion<T: Config> =
+	StorageValue<Value = u32, QueryKind = ValueQuery, OnEmpty = DefaultStorageVersion<T>>;
+
 	#[pallet::error]
 	pub enum Error<T> {
 		/// This error will occur when signature validation failed.
