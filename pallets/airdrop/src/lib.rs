@@ -22,11 +22,7 @@ pub mod merkle;
 
 mod exchange_accounts;
 
-#[cfg(not(feature = "no-vesting"))]
-pub mod vested_transfer;
-
-#[cfg(feature = "no-vesting")]
-pub mod non_vested_transfer;
+pub mod transfer;
 
 #[cfg(not(test))]
 pub(crate) use log::{error, info};
@@ -37,7 +33,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::{error, info};
-	use super::{types, utils, weights, exchange_accounts};
+	use super::{types, utils, transfer, weights, exchange_accounts};
 	use hex_literal::hex;
 	use sp_runtime::traits::Convert;
 
@@ -150,6 +146,14 @@ pub mod pallet {
 	#[pallet::getter(fn try_get_creditor_account)]
 	pub(super) type CreditorAccount<T: Config> =
 		StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
+
+	#[pallet::type_value]
+	pub(super) fn DefaultStorageVersion<T: Config>() -> u32 { 1_u32.into()}
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_storage_version)]
+	pub(super) type StorageVersion<T: Config> =
+	StorageValue<Value = u32, QueryKind = ValueQuery, OnEmpty = DefaultStorageVersion<T>>;
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -533,13 +537,9 @@ pub mod pallet {
 		}
 
 		pub fn ensure_claimable(snapshot: &types::SnapshotInfo<T>) -> DispatchResult {
-			#[cfg(not(feature = "no-vesting"))]
 			let already_claimed = snapshot.done_instant && snapshot.done_vesting;
 
-			#[cfg(feature = "no-vesting")]
-			let already_claimed = snapshot.done_instant;
-
-			if already_claimed {
+            if already_claimed {
 				Err(Error::<T>::ClaimAlreadyMade.into())
 			} else {
 				Ok(())
@@ -652,15 +652,8 @@ pub mod pallet {
 			snapshot: &mut types::SnapshotInfo<T>,
 			icon_address: &types::IconAddress,
 		) -> Result<(), DispatchError> {
-			use types::DoTransfer;
 
-			#[cfg(not(feature = "no-vesting"))]
-			type TransferType = super::vested_transfer::DoVestdTransfer;
-
-			#[cfg(feature = "no-vesting")]
-			type TransferType = super::non_vested_transfer::AllInstantTransfer;
-
-			let transfer_result = TransferType::do_transfer(snapshot);
+			let transfer_result = transfer::do_transfer(snapshot);
 
 			// No matter the result we will write the updated_snapshot
 			<IconSnapshotMap<T>>::insert(icon_address, snapshot);
