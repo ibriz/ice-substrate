@@ -88,14 +88,9 @@ impl pallet_airdrop::Config for Test {
 	type MaxProofSize = ConstU32<10>;
 
 	const AIRDROP_VARIABLES: types::AirdropBehaviour = {
-        const INSTANT_PERCENTAGE: (u8, u8) = if cfg!(feature = "no-vesting") {
-            (100, 100)
-        } else {
-            (40, 30)
-        };
         types::AirdropBehaviour {
-		    defi_instant_percentage: INSTANT_PERCENTAGE.0,
-		    non_defi_instant_percentage: INSTANT_PERCENTAGE.1,
+		    defi_instant_percentage: 40,
+		    non_defi_instant_percentage: 30,
 		    vesting_period: 5_256_000,
 	    }
     };

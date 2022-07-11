@@ -64,15 +64,8 @@ fn ensure_root_or_server() {
 #[test]
 fn get_vesting_amounts_splitted() {
 	use sp_runtime::ArithmeticError;
-	let expected_defi_instant_per;
-    let expected_non_defi_instant_per;
-    if cfg!(feature = "no-vesting") {
-        expected_defi_instant_per = 100;
-        expected_non_defi_instant_per = 100;
-    } else {
-        expected_defi_instant_per = 40;
-        expected_non_defi_instant_per = 30;
-    };
+	let expected_defi_instant_per=40;
+    let expected_non_defi_instant_per=30;
     minimal_test_ext().execute_with(|| {
 		let get_splitted_amounts: _ = utils::get_splitted_amounts::<Test>;
 		let defi_instant = utils::get_instant_percentage::<Test>(true);
@@ -103,45 +96,63 @@ fn get_vesting_amounts_splitted() {
             get_splitted_amounts(0, 0)
         );
 
-        #[cfg(not(feature = "no-vesting"))]
 		assert_eq!(
 			Ok((900_u32.into(), 2100_u32.into())),
 			get_splitted_amounts(3_000_u32.into(), non_defi_instant)
 		);
-        #[cfg(feature = "no-vesting")]
-        assert_eq!(
-            Ok((3000u32.into(), 0u32.into())),
-            get_splitted_amounts(3000, non_defi_instant)
-        );
-
-        #[cfg(not(feature = "no-vesting"))]
+        
 		assert_eq!(
 			Ok((1200_u32.into(), 1800_u32.into())),
 			get_splitted_amounts(3_000_u32.into(), defi_instant)
 		);
-        #[cfg(feature = "no-vesting")]
-        assert_eq!(
-            Ok((3000u32.into(), 0u32.into())),
-            get_splitted_amounts(3000, defi_instant)
-        );
-
-        #[cfg(not(feature = "no-vesting"))]
 		assert_eq!(
 			Ok((2932538_u32.into(), 6842591_u32.into())),
 			get_splitted_amounts(9775129_u32.into(), non_defi_instant)
 		);
-        #[cfg(feature = "no-vesting")]
-        assert_eq!(
-            Ok((9775129_u32.into(), 0u32.into())),
-            get_splitted_amounts(9775129, non_defi_instant)
-        );
-
-        #[cfg(not(feature = "no-vesting"))]
 		assert_eq!(
 			Ok((3910051_u32.into(), 5865078_u32.into())),
 			get_splitted_amounts(9775129_u32.into(), defi_instant)
 		);
-        #[cfg(feature = "no-vesting")]
+       
+	});
+}
+
+#[test]
+fn get_vesting_amounts_splitted_no_vesting() {
+	use sp_runtime::ArithmeticError;
+   
+    minimal_test_ext().execute_with(|| {
+		let get_splitted_amounts: _ = utils::get_splitted_amounts::<Test>;
+		let defi_instant = 100;
+		let non_defi_instant = 100;
+		assert_eq!(
+			Ok((10_u32.into(), 0u32.into())),
+			get_splitted_amounts(10, 100)
+		);
+        assert_eq!(
+            Ok((0u32.into(), 10u32.into())),
+            get_splitted_amounts(10, 0)
+        );
+        assert_eq!(
+            Ok((0u32.into(), 0u32.into())),
+            get_splitted_amounts(0, 50)
+        );
+        assert_eq!(
+            Ok((0u32.into(), 0u32.into())),
+            get_splitted_amounts(0, 0)
+        );
+        assert_eq!(
+            Ok((3000u32.into(), 0u32.into())),
+            get_splitted_amounts(3000, non_defi_instant)
+        );
+        assert_eq!(
+            Ok((3000u32.into(), 0u32.into())),
+            get_splitted_amounts(3000, defi_instant)
+        );
+        assert_eq!(
+            Ok((9775129_u32.into(), 0u32.into())),
+            get_splitted_amounts(9775129, non_defi_instant)
+        );
         assert_eq!(
             Ok((9775129_u32.into(), 0u32.into())),
             get_splitted_amounts(9775129, defi_instant)
@@ -224,7 +235,6 @@ fn cook_vesting_schedule() {
 }
 
 #[test]
-#[cfg(not(feature = "no-vesting"))]
 fn making_vesting_transfer() {
 	let get_per: _ = utils::get_instant_percentage::<Test>;
 

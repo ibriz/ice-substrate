@@ -549,7 +549,7 @@ impl pallet_assets::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MinVestedTransfer: Balance = 10 * currency::DOLLARS;
+	pub const MinVestedTransfer: Balance = 0.5 * currency::DOLLARS;
 }
 
 impl pallet_vesting::Config for Runtime {
@@ -1068,8 +1068,8 @@ impl pallet_randomness_collective_flip::Config for Runtime {}
 
 const VESTED_AIRDROP_BEHAVIOUR: pallet_airdrop::AirdropBehaviour =
 	pallet_airdrop::AirdropBehaviour {
-		defi_instant_percentage: 30,
-		non_defi_instant_percentage: 20,
+		defi_instant_percentage: 100,
+		non_defi_instant_percentage: 100,
 		vesting_period: 7776000,
 	};
 impl pallet_airdrop::Config for Runtime {
