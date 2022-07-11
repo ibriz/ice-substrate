@@ -549,7 +549,7 @@ impl pallet_assets::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MinVestedTransfer: Balance = 0.5 * currency::DOLLARS;
+	pub const MinVestedTransfer: Balance = currency::DOLLARS/2;
 }
 
 impl pallet_vesting::Config for Runtime {
