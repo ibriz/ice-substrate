@@ -62,12 +62,19 @@ fn ensure_root_or_server() {
 }
 
 #[test]
+<<<<<<< HEAD
 fn get_vesting_amounts_splitted() {
 	use sp_runtime::ArithmeticError;
 	let expected_defi_instant_per=40;
     let expected_non_defi_instant_per=30;
     minimal_test_ext().execute_with(|| {
 		let get_splitted_amounts: _ = utils::get_splitted_amounts::<Test>;
+=======
+fn get_vesting_amounts_split() {
+	minimal_test_ext().execute_with(|| {
+		use sp_runtime::ArithmeticError;
+		let get_split_amounts: _ = utils::get_split_amounts::<Test>;
+>>>>>>> upstream-main
 		let defi_instant = utils::get_instant_percentage::<Test>(true);
 		let non_defi_instant = utils::get_instant_percentage::<Test>(false);
 
@@ -76,12 +83,17 @@ fn get_vesting_amounts_splitted() {
             (defi_instant, non_defi_instant),
         );
 		assert_err!(
-			get_splitted_amounts(types::ServerBalance::max_value(), defi_instant),
+			get_split_amounts(types::ServerBalance::max_value(), defi_instant),
 			ArithmeticError::Overflow
 		);
 		assert_eq!(
+<<<<<<< HEAD
 			Ok((10_u32.into(), 0u32.into())),
 			get_splitted_amounts(10, 100)
+=======
+			Ok((0_u32.into(), 0_u32.into())),
+			get_split_amounts(0_u32.into(), defi_instant)
+>>>>>>> upstream-main
 		);
         assert_eq!(
             Ok((0u32.into(), 10u32.into())),
@@ -98,20 +110,33 @@ fn get_vesting_amounts_splitted() {
 
 		assert_eq!(
 			Ok((900_u32.into(), 2100_u32.into())),
-			get_splitted_amounts(3_000_u32.into(), non_defi_instant)
+			get_split_amounts(3_000_u32.into(), non_defi_instant)
 		);
         
 		assert_eq!(
 			Ok((1200_u32.into(), 1800_u32.into())),
-			get_splitted_amounts(3_000_u32.into(), defi_instant)
+			get_split_amounts(3_000_u32.into(), defi_instant)
+		);
+<<<<<<< HEAD
+=======
+
+		assert_eq!(
+			Ok((0_u32.into(), 1_u32.into())),
+			get_split_amounts(1_u32.into(), non_defi_instant)
 		);
 		assert_eq!(
+			Ok((0_u32.into(), 1_u32.into())),
+			get_split_amounts(1_u32.into(), defi_instant)
+		);
+
+>>>>>>> upstream-main
+		assert_eq!(
 			Ok((2932538_u32.into(), 6842591_u32.into())),
-			get_splitted_amounts(9775129_u32.into(), non_defi_instant)
+			get_split_amounts(9775129_u32.into(), non_defi_instant)
 		);
 		assert_eq!(
 			Ok((3910051_u32.into(), 5865078_u32.into())),
-			get_splitted_amounts(9775129_u32.into(), defi_instant)
+			get_split_amounts(9775129_u32.into(), defi_instant)
 		);
        
 	});
@@ -188,11 +213,11 @@ fn cook_vesting_schedule() {
 		}
 
 		{
-			let (schedule, remainer) =
+			let (schedule, remained) =
 				utils::new_vesting_with_deadline::<Test, 5u32>(12u32.into(), 10u32.into());
 
 			let primary = schedule.unwrap();
-			assert_eq!(remainer, 2u32.into());
+			assert_eq!(remained, 2u32.into());
 
 			assert_eq!(primary.locked(), 10u32.into());
 			assert_eq!(primary.per_block(), 2u32.into());
@@ -203,11 +228,11 @@ fn cook_vesting_schedule() {
 		}
 
 		{
-			let (schedule, remainer) =
+			let (schedule, remained) =
 				utils::new_vesting_with_deadline::<Test, 0u32>(16u32.into(), 10u32.into());
 
 			let schedule = schedule.unwrap();
-			assert_eq!(remainer, 6u32.into());
+			assert_eq!(remained, 6u32.into());
 
 			assert_eq!(schedule.locked(), 10u32.into());
 			assert_eq!(schedule.per_block(), 1u32.into());
@@ -218,11 +243,11 @@ fn cook_vesting_schedule() {
 		}
 
 		{
-			let (schedule, remainer) =
+			let (schedule, remained) =
 				utils::new_vesting_with_deadline::<Test, 0u32>(3336553u32.into(), 10_000u32.into());
 
 			let schedule = schedule.unwrap();
-			assert_eq!(remainer, 6553u32.into());
+			assert_eq!(remained, 6553u32.into());
 
 			assert_eq!(schedule.locked(), 3330000u32.into());
 			assert_eq!(schedule.per_block(), 333u32.into());
@@ -263,7 +288,7 @@ fn making_vesting_transfer() {
 			// Ensure all amount is being transferred
 			assert_eq!(9775129_u128, Currency::free_balance(&claimer));
 
-			// Make sure user is getting atleast of instant amount
+			// Make sure user is getting at least of instant amount
 			// might get more due to vesting remainder
 			assert!(Currency::usable_balance(&claimer) >= 2932538_u32.into());
 
@@ -286,11 +311,11 @@ fn making_vesting_transfer() {
 
 			assert_ok!(AirdropModule::do_transfer(&mut snapshot, &icon_address));
 
-			// Ensure amount only accounting to vesting is transfererd
+			// Ensure amount only accounting to vesting is transferred
 
 			let expected_transfer = {
 				let vesting_amount: types::VestingBalanceOf<Test> =
-					utils::get_splitted_amounts::<Test>(amount, get_per(defi_user))
+					utils::get_split_amounts::<Test>(amount, get_per(defi_user))
 						.unwrap()
 						.1;
 				let schedule = utils::new_vesting_with_deadline::<Test, 1u32>(
@@ -326,7 +351,7 @@ fn making_vesting_transfer() {
 			// Ensure amount only accounting to instant is transferred
 			let expected_transfer = {
 				let (instant_amount, vesting_amount) =
-					utils::get_splitted_amounts::<Test>(amount, get_per(defi_user)).unwrap();
+					utils::get_split_amounts::<Test>(amount, get_per(defi_user)).unwrap();
 				let remainder = utils::new_vesting_with_deadline::<Test, 1u32>(
 					vesting_amount,
 					5256000u32.into(),
@@ -358,7 +383,7 @@ fn making_vesting_transfer() {
 
 			assert_ok!(AirdropModule::do_transfer(&mut snapshot, &icon_address));
 
-			// Ensure amount only accounting to instant is transfererd
+			// Ensure amount only accounting to instant is transferred
 			assert_eq!(0_u128, Currency::free_balance(&claimer));
 
 			// Ensure flag is updates
@@ -378,7 +403,7 @@ fn test_extract_address() {
 
 #[test]
 fn respect_airdrop_state() {
-	// First verify thet initially everything is allowed
+	// First verify that initially everything is allowed
 	assert_eq!(
 		types::AirdropState::default(),
 		types::AirdropState {
@@ -464,9 +489,10 @@ fn validate_creditor_fund() {
 	use frame_support::traits::Currency;
 
 	minimal_test_ext().execute_with(|| {
-		let exestinsial_balance = <Test as pallet_airdrop::Config>::Currency::minimum_balance();
-		let donator = samples::ACCOUNT_ID[1];
-		let _put_fund = <Test as pallet_airdrop::Config>::Currency::deposit_creating(&donator, u64::MAX.into());
+		let existential_balance = <Test as pallet_airdrop::Config>::Currency::minimum_balance();
+		let donor = samples::ACCOUNT_ID[1];
+		let _put_fund =
+			<Test as pallet_airdrop::Config>::Currency::deposit_creating(&donor, u64::MAX.into());
 
 		// When creditor balance is empty.
 		{
@@ -478,16 +504,16 @@ fn validate_creditor_fund() {
 
 		// When creditor balance is exactly same as exestinsial balance
 		{
-			tranfer_to_creditor(&donator, exestinsial_balance);
+			transfer_to_creditor(&donor, existential_balance);
 			assert_err!(
-				AirdropModule::validate_creditor_fund(exestinsial_balance.try_into().unwrap()),
+				AirdropModule::validate_creditor_fund(existential_balance.try_into().unwrap()),
 				PalletError::InsufficientCreditorBalance,
 			);
 		}
 
 		// When all of creditor balance is required
 		{
-			tranfer_to_creditor(&donator, u32::MAX.into());
+			transfer_to_creditor(&donor, u32::MAX.into());
 			let required_balance = <Test as pallet_airdrop::Config>::Currency::free_balance(
 				&force_get_creditor_account::<Test>(),
 			);

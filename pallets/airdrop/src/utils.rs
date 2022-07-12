@@ -9,9 +9,9 @@ use sp_runtime::{
 };
 use sp_std::vec::Vec;
 
-/// Reuturns an optional vesting schedule which when applied release given amount
+/// Returns an optional vesting schedule which when applied release given amount
 /// which will be complete in given block. If
-/// Also return amount which is remaineder if amount can't be perfectly divided
+/// Also return amount which is remainder if amount can't be perfectly divided
 /// in per block basis
 pub fn new_vesting_with_deadline<T, const VESTING_APPLICABLE_FROM: u32>(
 	amount: types::VestingBalanceOf<T>,
@@ -30,8 +30,8 @@ where
 
 	let idol_transfer_multiple = transfer_over * MIN_AMOUNT_PER_BLOCK.into();
 
-	let remainding_amount = amount % idol_transfer_multiple;
-	let primary_transfer_amount = amount.saturating_sub(remainding_amount);
+	let remaining_amount = amount % idol_transfer_multiple;
+	let primary_transfer_amount = amount.saturating_sub(remaining_amount);
 
 	let per_block = primary_transfer_amount
 		.checked_div(&idol_transfer_multiple)
@@ -45,7 +45,7 @@ where
 		));
 	}
 
-	(vesting, remainding_amount)
+	(vesting, remaining_amount)
 }
 
 pub fn get_instant_percentage<T: airdrop::Config>(is_defi_user: bool) -> u8 {
@@ -109,7 +109,7 @@ pub fn recover_address(
 			.chain(sig_r)
 			.chain(sig_s)
 			.cloned()
-			.collect::<sp_std::vec::Vec<u8>>()
+			.collect::<Vec<u8>>()
 	};
 
 	let (_exit_status, recovered_pub_key) = ECRecoverPublicKey::execute(&formatted_signature, COST)

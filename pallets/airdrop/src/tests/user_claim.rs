@@ -299,6 +299,7 @@ fn partail_transfer_can_reclaim() {
 			<Test as pallet_airdrop::Config>::Currency::total_balance(&ice_account);
 		assert_eq!(user_balance, 0u32.into());
 
+<<<<<<< HEAD
 		let (init_instant_amount, init_vesting_amount) = utils::get_splitted_amounts::<Test>(
 			case.amount,
 			utils::get_instant_percentage::<Test>(case.defi_user),
@@ -310,6 +311,22 @@ fn partail_transfer_can_reclaim() {
 		>(init_vesting_amount, vesting_period.into());
 		let vesting_amount = vesting_schedule.map(|s| s.locked()).unwrap_or(0u32.into());
 		let instant_amount = init_instant_amount + reminding_amount;
+=======
+		#[cfg(feature = "no-vesting")]
+		let (instant_amount, vesting_amount) = (case.amount, 0u128);
+
+		#[cfg(not(feature = "no-vesting"))]
+		let (instant_amount, vesting_amount) = {
+			let (raw_instant, raw_vesting) =
+				utils::get_split_amounts::<Test>(case.amount, get_per(case.defi_user)).unwrap();
+			let (schedule, rem) = utils::new_vesting_with_deadline::<
+				Test,
+				{ crate::vested_transfer::VESTING_APPLICABLE_FROM },
+			>(raw_vesting, crate::vested_transfer::BLOCKS_IN_YEAR.into());
+
+			(raw_instant + rem, schedule.unwrap().locked())
+		};
+>>>>>>> upstream-main
 
 		// Eat all vesting slots so next vesting will fail
 		{
