@@ -112,51 +112,13 @@ pub mod pallet {
 
 		/// Creditor balance is running low
 		CreditorBalanceLow,
+
+		/// A mechanism to throw error as event
+		ErrorAsEvent(Error<T>),
 	}
-
-	#[pallet::storage]
-	#[pallet::getter(fn get_airdrop_state)]
-	pub(super) type AirdropChainState<T: Config> = StorageValue<_, types::AirdropState, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn get_icon_snapshot_map)]
-	pub(super) type IconSnapshotMap<T: Config> =
-		StorageMap<_, Blake2_128, types::IconAddress, types::SnapshotInfo<T>, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn get_ice_to_icon_map)]
-	pub(super) type IceIconMap<T: Config> =
-		StorageMap<_, Twox64Concat, types::AccountIdOf<T>, types::IconAddress, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn get_airdrop_server_account)]
-	pub(super) type ServerAccount<T: Config> = StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn get_exchange_account)]
-	pub type ExchangeAccountsMap<T: Config> =
-		StorageMap<_, Twox64Concat, types::IconAddress, types::BalanceOf<T>, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn try_get_merkle_root)]
-	pub type MerkleRoot<T: Config> = StorageValue<_, [u8; 32], OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn try_get_creditor_account)]
-	pub(super) type CreditorAccount<T: Config> =
-		StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
-
-	#[pallet::type_value]
-	pub(super) fn DefaultStorageVersion<T: Config>() -> u32 {
-		1_u32.into()
-	}
-
-	#[pallet::storage]
-	#[pallet::getter(fn get_storage_version)]
-	pub(super) type StorageVersion<T: Config> =
-		StorageValue<Value = u32, QueryKind = ValueQuery, OnEmpty = DefaultStorageVersion<T>>;
 
 	#[pallet::error]
+	#[derive(Clone, Eq, PartialEq)]
 	pub enum Error<T> {
 		/// This error will occur when signature validation failed.
 		InvalidSignature,
@@ -228,6 +190,48 @@ pub mod pallet {
 		/// Claim amount was not expected in this exchanged airdrop
 		InvalidClaimAmount,
 	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_airdrop_state)]
+	pub(super) type AirdropChainState<T: Config> = StorageValue<_, types::AirdropState, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_icon_snapshot_map)]
+	pub(super) type IconSnapshotMap<T: Config> =
+		StorageMap<_, Blake2_128, types::IconAddress, types::SnapshotInfo<T>, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_ice_to_icon_map)]
+	pub(super) type IceIconMap<T: Config> =
+		StorageMap<_, Twox64Concat, types::AccountIdOf<T>, types::IconAddress, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_airdrop_server_account)]
+	pub(super) type ServerAccount<T: Config> = StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_exchange_account)]
+	pub type ExchangeAccountsMap<T: Config> =
+		StorageMap<_, Twox64Concat, types::IconAddress, types::BalanceOf<T>, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn try_get_merkle_root)]
+	pub type MerkleRoot<T: Config> = StorageValue<_, [u8; 32], OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn try_get_creditor_account)]
+	pub(super) type CreditorAccount<T: Config> =
+		StorageValue<_, types::AccountIdOf<T>, OptionQuery>;
+
+	#[pallet::type_value]
+	pub(super) fn DefaultStorageVersion<T: Config>() -> u32 {
+		1_u32.into()
+	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_storage_version)]
+	pub(super) type StorageVersion<T: Config> =
+		StorageValue<Value = u32, QueryKind = ValueQuery, OnEmpty = DefaultStorageVersion<T>>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
