@@ -669,6 +669,11 @@ pub mod pallet {
 			// Now snapshot have been written, return result
 			transfer_result
 		}
+
+		pub fn error_and_event(error: Error<T>) -> Error<T> {
+			Self::deposit_event(Event::<T>::ErrorAsEvent(error.clone()));
+			error
+		}
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]

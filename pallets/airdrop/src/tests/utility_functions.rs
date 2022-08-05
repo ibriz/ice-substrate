@@ -634,3 +634,21 @@ fn storage_version() {
 		assert_eq!(1_u32, version);
 	});
 }
+
+
+#[test]
+fn error_as_event() {
+	minimal_test_ext().execute_with(|| {
+		run_to_block(3);
+		
+		let error = PalletError::InvalidClaimAmount;
+		assert_eq!(
+			AirdropModule::error_and_event(error.clone()),
+			error.clone().into()
+		);
+
+		let just_emitted_event = get_last_event();
+		let expected_event = PalletEvent::ErrorAsEvent(error.clone());
+		assert_eq!(just_emitted_event, Some(expected_event.into()));
+	});
+}

@@ -137,9 +137,8 @@ pub fn run_to_block(n: types::BlockNumberOf<Test>) {
 }
 
 pub fn get_last_event() -> Option<<Test as frame_system::Config>::Event> {
-	<frame_system::Pallet<Test>>::events()
-		.pop()
-		.map(|v| v.event)
+	let all_events = <frame_system::Pallet<Test>>::events();
+	all_events.last().map(|a| a.event.clone())
 }
 
 pub fn set_creditor_balance(balance: u64) {
