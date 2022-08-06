@@ -43,7 +43,7 @@ fn claim_success() {
 
 		assert_eq!(total_balance, case.amount);
 		assert_eq!(usable_balance, expected_usable_amount);
-		assert_eq!(mapped_icon_wallet, expected_icon_address);
+		assert_eq!(mapped_icon_wallet.clone(), expected_icon_address);
 		assert_eq!(snapshot.vesting_block_number, expected_vesting_block_number);
 		assert_eq!(snapshot.initial_transfer, usable_balance);
 		assert_eq!(snapshot.instant_block_number, Some(0));

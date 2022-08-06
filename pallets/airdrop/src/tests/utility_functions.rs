@@ -106,8 +106,6 @@ fn get_vesting_amounts_split() {
 
 #[test]
 fn get_vesting_amounts_split_no_vesting() {
-	use sp_runtime::ArithmeticError;
-
 	minimal_test_ext().execute_with(|| {
 		let get_split_amounts: _ = utils::get_split_amounts::<Test>;
 		let defi_instant = 100;
@@ -641,7 +639,7 @@ fn error_as_event() {
 	minimal_test_ext().execute_with(|| {
 		run_to_block(3);
 		
-		let error = PalletError::InvalidClaimAmount;
+		let error: sp_runtime::DispatchError = PalletError::InvalidClaimAmount.into();
 		assert_eq!(
 			AirdropModule::error_and_event(error.clone()),
 			error.clone().into()

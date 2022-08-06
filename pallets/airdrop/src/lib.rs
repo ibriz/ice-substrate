@@ -114,7 +114,7 @@ pub mod pallet {
 		CreditorBalanceLow,
 
 		/// A mechanism to throw error as event
-		ErrorAsEvent(Error<T>),
+		ErrorAsEvent(DispatchError),
 	}
 
 	#[pallet::error]
@@ -264,7 +264,7 @@ pub mod pallet {
 				info!(
 					"claim request by: {icon_address:?}. Rejected at: validate_message_payload(). Error: {e:?}"
 				);
-				e
+				Self::error_and_event(e)
 			})?;
 
 			// We expect a valid proof of this exchange call
@@ -273,14 +273,14 @@ pub mod pallet {
 					info!(
 						"claim request by: {icon_address:?}. Rejected at: validate_merkle_proof()"
 					);
-					e
+					Self::error_and_event(e)
 				},
 			)?;
 
 			// Validate icon signature
 			Self::validate_icon_address(&icon_address, &icon_signature, &message).map_err(|e| {
 				info!("claim request by: {icon_address:?}. Rejected at:  validate_icon_address()");
-				e
+				Self::error_and_event(e)
 			})?;
 
 			// Validate ice signature
@@ -289,7 +289,7 @@ pub mod pallet {
 					info!(
 						"claim request by: {icon_address:?}. Rejected at: validate_ice_signature()"
 					);
-					e
+					Self::error_and_event(e)
 				},
 			)?;
 
@@ -299,25 +299,25 @@ pub mod pallet {
 				Self::insert_or_get_snapshot(&icon_address, &ice_address, defi_user, total_amount)
 					.map_err(|e| {
 						info!("claim request by: {icon_address:?}. Rejected at: insert_or_get_snapshot. error: {e:?}");
-						e
+						Self::error_and_event(e)
 					})?;
 
 			// Make sure this user is eligible for claim.
 			Self::ensure_claimable(&snapshot).map_err(|e| {
 				info!("claim request by: {icon_address:?}. Rejected at: ensure_claimable(). Snapshot: {snapshot:?}.");
-				e
+				Self::error_and_event(e)
 			})?;
 
 			// We also make sure creditor have enough fund to complete this airdrop
 			Self::validate_creditor_fund(total_amount).map_err(|e| {
 				error!("claim request by: {icon_address:?}. Rejected at: validate_creditor_fund(). Amount: {total_amount:?}");
-				e
+				Self::error_and_event(e)
 			})?;
 
 			// Do the actual transfer if eligible
 			Self::do_transfer(&mut snapshot, &icon_address).map_err(|e| {
 				error!("claim request by: {icon_address:?}. Failed at: do_transfer(). Reason: {e:?}. Snapshot: {snapshot:?}");
-				e
+				Self::error_and_event(e)
 			})?;
 
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
@@ -338,17 +338,19 @@ pub mod pallet {
 			proofs: types::MerkleProofs<T>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin).map_err(|_| Error::<T>::DeniedOperation)?;
-			Self::ensure_exchange_claim_switch()?;
+			Self::ensure_exchange_claim_switch().map_err(|e| Self::error_and_event(e))?;
 
 			let amount = Self::validate_whitelisted(&icon_address)?;
-			ensure!(total_amount == amount, Error::<T>::InvalidClaimAmount);
+			if total_amount != amount {
+				Err(Self::error_and_event(Error::<T>::InvalidClaimAmount))?
+			}
 
 			Self::validate_merkle_proof(&icon_address, total_amount, defi_user, proofs).map_err(
 				|e| {
 					info!(
 						"Exchange for: {icon_address:?}. Failed at: validate_merkle_proof(). Reason: {e:?}"
 					);
-					e
+					Self::error_and_event(e)
 				},
 			)?;
 			Self::validate_creditor_fund(total_amount).map_err(|e| {
@@ -362,16 +364,16 @@ pub mod pallet {
 						error!(
 							"Exchange for: {icon_address:?}. Failed at: insert_or_get_snapshot."
 						);
-						e
+						Self::error_and_event(e)
 					})?;
 
 			Self::ensure_claimable(&snapshot).map_err(|e| {
 				info!("Exchange for: {icon_address:?}. Failed at: ensure_claimable. Snapshot: {snapshot:?}");
-				e
+				Self::error_and_event(e)
 			})?;
 			Self::do_transfer(&mut snapshot, &icon_address).map_err(|e| {
 				error!("Exchange for: {icon_address:?}. Failed at: do_transfer. Snapshot: {snapshot:?}. Reason: {e:?}");
-				e
+				Self::error_and_event(e)
 			})?;
 
 			Self::deposit_event(Event::ClaimSuccess(icon_address));
@@ -466,11 +468,11 @@ pub mod pallet {
 
 		/// Check weather node is set to block incoming exchange request
 		/// Return error in that case else return Ok
-		pub fn ensure_exchange_claim_switch() -> DispatchResult {
+		pub fn ensure_exchange_claim_switch() -> Result<(), Error<T>> {
 			let is_disabled = Self::get_airdrop_state().block_exchange_request;
 
 			if is_disabled {
-				Err(Error::<T>::NewExchangeRequestBlocked.into())
+				Err(Error::<T>::NewExchangeRequestBlocked)
 			} else {
 				Ok(())
 			}
@@ -495,7 +497,7 @@ pub mod pallet {
 			ice_address: &types::IceAddress,
 			defi_user: bool,
 			amount: types::BalanceOf<T>,
-		) -> Result<types::SnapshotInfo<T>, DispatchError> {
+		) -> Result<types::SnapshotInfo<T>, Error<T>> {
 			let ice_account =
 				Self::convert_to_account_id(ice_address.to_vec().try_into().map_err(|_| {
 					error!(
@@ -543,17 +545,19 @@ pub mod pallet {
 			Ok(snapshot)
 		}
 
-		pub fn ensure_claimable(snapshot: &types::SnapshotInfo<T>) -> DispatchResult {
+		pub fn ensure_claimable(snapshot: &types::SnapshotInfo<T>) -> Result<(), Error<T>> {
 			let already_claimed = snapshot.done_instant && snapshot.done_vesting;
 
 			if already_claimed {
-				Err(Error::<T>::ClaimAlreadyMade.into())
+				Err(Error::<T>::ClaimAlreadyMade)
 			} else {
 				Ok(())
 			}
 		}
 
-		pub fn validate_creditor_fund(required_amount: types::BalanceOf<T>) -> DispatchResult {
+		pub fn validate_creditor_fund(
+			required_amount: types::BalanceOf<T>,
+		) -> Result<(), Error<T>> {
 			let creditor_balance =
 				<T as Config>::Currency::free_balance(&Self::get_creditor_account()?);
 			let existential_deposit = <T as Config>::Currency::minimum_balance();
@@ -562,7 +566,7 @@ pub mod pallet {
 				Ok(())
 			} else {
 				Self::deposit_event(Event::<T>::CreditorBalanceLow);
-				Err(Error::<T>::InsufficientCreditorBalance.into())
+				Err(Error::<T>::InsufficientCreditorBalance)
 			}
 		}
 
@@ -636,7 +640,7 @@ pub mod pallet {
 			amount: types::BalanceOf<T>,
 			defi_user: bool,
 			proof_hashes: types::MerkleProofs<T>,
-		) -> DispatchResult {
+		) -> Result<(), Error<T>> {
 			let amount = types::from_balance::<T>(amount);
 			let leaf_hash = merkle::hash_leaf(icon_address, amount, defi_user);
 			let merkle_root = Self::get_merkle_root()?;
@@ -644,7 +648,7 @@ pub mod pallet {
 			let is_valid_proof =
 				<T as Config>::MerkelProofValidator::validate(leaf_hash, merkle_root, proof_hashes);
 			if !is_valid_proof {
-				return Err(Error::<T>::InvalidMerkleProof.into());
+				return Err(Error::<T>::InvalidMerkleProof);
 			}
 
 			Ok(())
@@ -670,9 +674,10 @@ pub mod pallet {
 			transfer_result
 		}
 
-		pub fn error_and_event(error: Error<T>) -> Error<T> {
-			Self::deposit_event(Event::<T>::ErrorAsEvent(error.clone()));
-			error
+		pub fn error_and_event<E: Into<DispatchError> + Clone>(error: E) -> DispatchError {
+			let e = error.into();
+			Self::deposit_event(Event::<T>::ErrorAsEvent(e.clone()));
+			e
 		}
 	}
 
