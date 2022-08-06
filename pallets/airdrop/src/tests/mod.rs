@@ -6,8 +6,8 @@ mod user_claim;
 mod utility_functions;
 pub mod prelude {
 	pub use super::{
-		force_get_creditor_account, get_last_event, minimal_test_ext, mock, run_to_block, samples,
-		set_creditor_balance, transfer_to_creditor,
+		force_get_creditor_account, get_all_events, get_last_event, minimal_test_ext, mock,
+		run_to_block, samples, set_creditor_balance, transfer_to_creditor,
 	};
 	pub use crate as pallet_airdrop;
 	pub use codec::Encode;
@@ -136,10 +136,16 @@ pub fn run_to_block(n: types::BlockNumberOf<Test>) {
 	}
 }
 
-pub fn get_last_event() -> Option<<Test as frame_system::Config>::Event> {
+pub fn get_all_events() -> Vec<<Test as frame_system::Config>::Event> {
 	<frame_system::Pallet<Test>>::events()
-		.pop()
-		.map(|v| v.event)
+		.iter()
+		.map(|a| a.event.clone())
+		.collect::<Vec<_>>()
+}
+
+pub fn get_last_event() -> Option<<Test as frame_system::Config>::Event> {
+	let all_events = <frame_system::Pallet<Test>>::events();
+	all_events.last().map(|a| a.event.clone())
 }
 
 pub fn set_creditor_balance(balance: u64) {
