@@ -82,6 +82,7 @@ pallet-dynamic-fee = { default-features = false, git = "https://github.com/web3l
 pallet-evm-precompile-modexp   = {  default-features = false, git = "https://github.com/web3labs/frontier",  branch = "polkadot-v0.9.24" }
 pallet-evm-precompile-sha3fips = {  default-features = false, git = "https://github.com/web3labs/frontier",  branch = "polkadot-v0.9.24" }
 pallet-evm-precompile-simple   = {  default-features = false,  git = "https://github.com/web3labs/frontier",  branch = "polkadot-v0.9.24" }
+pallet-evm-precompile-dispatch   = {  default-features = false,  git = "https://github.com/web3labs/frontier",  branch = "polkadot-v0.9.24" }
 
 # fp dependencies from frontier 
 fp-rpc  = { default-features = false, git = "https://github.com/web3labs/frontier", branch = "polkadot-v0.9.24"}
