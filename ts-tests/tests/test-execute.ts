@@ -6,7 +6,6 @@ import { describeWithIce, customRequest } from "./util";
 
 import Test from "../build/contracts/Test.json";
 
-const EXTRINSIC_GAS_LIMIT = 64995685;
 const TEST_CONTRACT_BYTECODE = Test.bytecode;
 const TEST_CONTRACT_DEPLOYED_BYTECODE = Test.deployedBytecode;
 
