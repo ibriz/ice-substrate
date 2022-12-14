@@ -103,7 +103,7 @@ pub use frame_support::{
 };
 
 pub use pallet_balances::Call as BalancesCall;
-use pallet_contracts::weights::WeightInfo;
+use pallet_contracts::{weights::WeightInfo, Migration};
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
 use pallet_evm::{Account as EVMAccount, EnsureAddressTruncated, HashedAddressMapping, Runner};
 pub use pallet_timestamp::Call as TimestampCall;
@@ -411,7 +411,7 @@ impl pallet_contracts::Config for Runtime {
 	type DepositPerItem = DepositPerItem;
 	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 	type MaxCodeLen = ConstU32<{ 128 * 1024 }>;
-	type MaxStorageKeyLen = ();
+	type MaxStorageKeyLen = ConstU32<128>;
 }
 
 parameter_types! {
@@ -501,12 +501,12 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
 }
 
 pub const GAS_PER_SECOND: u64 = 40_000_000;
-pub const WEIGHT_PER_GAS: u64 = WEIGHT_PER_SECOND.ref_time() / GAS_PER_SECOND;
+pub const WEIGHT_PER_GAS: Weight = WEIGHT_PER_SECOND.saturating_div(GAS_PER_SECOND);
 
 parameter_types! {
 	pub const ChainId: u64 = 553;
-	pub WeightPerGas: Weight = Weight::from_ref_time(WEIGHT_PER_GAS);
-	pub BlockGasLimit: U256 = U256::from(NORMAL_DISPATCH_RATIO * WEIGHT_PER_SECOND.mul(2).ref_time() / WEIGHT_PER_GAS);
+	pub BlockGasLimit: U256 = U256::from(NORMAL_DISPATCH_RATIO * WEIGHT_PER_SECOND.mul(2).ref_time() / WEIGHT_PER_GAS.ref_time());
+	pub WeightPerGas: Weight = WEIGHT_PER_GAS;
 	pub PrecompilesValue: FrontierPrecompiles<Runtime> = FrontierPrecompiles::<_>::new();
 }
 
@@ -927,6 +927,8 @@ parameter_types! {
 	pub const DesiredMembers: u32 = 7;
 	pub const DesiredRunnersUp: u32 = 7;
 	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
+	pub const MaxCandidatesElection: u32 = 1000;
+	pub const MaxVotersElection: u32 = 10000;
 }
 
 // Make sure that there are no more than MaxMembers members elected via phragmen.
@@ -948,8 +950,8 @@ impl pallet_elections_phragmen::Config for Runtime {
 	type DesiredRunnersUp = DesiredRunnersUp;
 	type TermDuration = TermDuration;
 	type WeightInfo = ();
-	type MaxCandidates = ();
-	type MaxVoters = ();
+	type MaxCandidates = MaxCandidatesElection;
+	type MaxVoters = MaxVotersElection;
 }
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
@@ -967,11 +969,11 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 
 impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type AddOrigin = MoreThanHalfCouncil;
+	type AddOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type RemoveOrigin = MoreThanHalfCouncil;
 	type SwapOrigin = MoreThanHalfCouncil;
 	type ResetOrigin = MoreThanHalfCouncil;
-	type PrimeOrigin = MoreThanHalfCouncil;
+	type PrimeOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MembershipInitialized = TechnicalCommittee;
 	type MembershipChanged = TechnicalCommittee;
 	type MaxMembers = TechnicalMaxMembers;
@@ -1080,11 +1082,16 @@ impl pallet_base_fee::BaseFeeThreshold for BaseFeeThreshold {
 	}
 }
 
+parameter_types! {
+	// At the moment, we don't use dynamic fee calculation for arctic chain by default
+	pub DefaultElasticity: Permill = Permill::zero();
+}
+
 impl pallet_base_fee::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Threshold = BaseFeeThreshold;
 	type DefaultBaseFeePerGas = DefaultBaseFeePerGas;
-	type DefaultElasticity = ();
+	type DefaultElasticity = DefaultElasticity;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -1488,6 +1495,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
+	Migration<Runtime>,
 >;
 
 impl fp_self_contained::SelfContainedCall for RuntimeCall {
@@ -1858,8 +1866,10 @@ impl_runtime_apis! {
 			(weight, RuntimeBlockWeights::get().max_block)
 		}
 
-		fn execute_block_no_check(block: Block) -> Weight {
-			Executive::execute_block_no_check(block)
+		fn execute_block(block: Block,
+			state_root_check: bool,
+			select: frame_try_runtime::TryStateSelect) -> Weight {
+			Executive::try_execute_block(block, state_root_check, select).expect("execute-block failed")
 		}
 	}
 
