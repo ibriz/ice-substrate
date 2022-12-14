@@ -14,7 +14,7 @@ describeWithIce("Ice RPC (Precompile)", (context) => {
 	let contractAddress = "";
 
 	before(async function () {
-		this.timeout(30000);
+		this.timeout(80000);
 		web3 = context.web3;
 
 		const genesisAccount = new Wallet(GENESIS_ACCOUNT_PRIVATE_KEY, context.ethersjs);
