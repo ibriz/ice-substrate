@@ -49,6 +49,7 @@ use frame_support::inherent::Vec;
 use sp_std::boxed::Box;
 
 pub mod constants;
+pub mod prime_precompile; 
 pub mod impls;
 pub use constants::{currency, time::*};
 pub use impls::DealWithFees;

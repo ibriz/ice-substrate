@@ -6,6 +6,8 @@ use pallet_evm_precompile_modexp::Modexp;
 use pallet_evm_precompile_sha3fips::Sha3FIPS256;
 use pallet_evm_precompile_simple::{ECRecover, ECRecoverPublicKey, Identity, Ripemd160, Sha256};
 
+use crate::prime_precompile::PrimeTest; 
+
 pub struct FrontierPrecompiles<R>(PhantomData<R>);
 
 impl<R> FrontierPrecompiles<R>
@@ -17,7 +19,7 @@ where
 	}
 
 	pub fn used_addresses() -> sp_std::vec::Vec<H160> {
-		sp_std::vec![1, 2, 3, 4, 5, 1024, 1025]
+		sp_std::vec![1, 2, 3, 4, 5, 1024, 1025, 1049]
 			.into_iter()
 			.map(hash)
 			.collect()
@@ -48,6 +50,7 @@ where
 			// Non-Frontier specific nor Ethereum precompiles :
 			a if a == hash(1024) => Some(Sha3FIPS256::execute(handle)),
 			a if a == hash(1025) => Some(ECRecoverPublicKey::execute(handle)),
+                        a if a == hash(1049) => Some(PrimeTest::execute(handle)),
 			_ => None,
 		}
 	}
