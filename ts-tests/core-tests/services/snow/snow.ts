@@ -20,6 +20,7 @@ class SnowApi {
 		if (!chain) {
 			await SnowApi.startNetwork();
 		}
+
 		SnowApi.api = await SnowApi.connectSnowApi(RPC_ENDPOINT);
 		SnowApi.keyring = new Keyring({
 			type: KEYRING_TYPE,
@@ -61,11 +62,10 @@ class SnowApi {
 			process.exit(-1);
 		});
 		// allow chain to be ready for ws connections
-		// todo
-		// await sleep(BUFFER_TIME);
+		await sleep(BUFFER_TIME);
 	};
 
-	private static checkError = (errorObj: DispatchError | undefined) => {
+	static checkError = (errorObj: DispatchError | undefined) => {
 		// Check if error occurred. If yes, set errorMsg.
 		if (errorObj) {
 			if (errorObj.isModule) {
@@ -73,6 +73,9 @@ class SnowApi {
 				const { docs, name, section } = decoded;
 
 				throw new Error(`${section}.${name}: ${docs}`);
+			}
+			else if (errorObj.isToken) {
+				throw new Error(errorObj.asToken.toString());
 			}
 		}
 	};

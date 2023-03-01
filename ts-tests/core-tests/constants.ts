@@ -12,9 +12,10 @@ export const WALLET_SEED = {
 	ALICE_STASH: "//Alice//stash",
 	BOB: "//Bob",
 	BOB_STASH: "//Bob//stash",
-	WALLET_1: "frown toast shoe aunt slender chicken dirt oyster royal wish must mistake",
-	WALLET_2: "prison athlete claw suggest van come buzz avoid kangaroo scrub east elegant",
-	WALLET_3: "organ sudden guitar prepare sword tuition prosper barrel grant misery ladder simple",
+	CHARLIE: "//Charlie",
+	DAVE: "//Dave",
+	EVE: "//Eve",
+	FERDIE: "//Ferdie",
 };
 
 export const CHAINS = {

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "ensure core pallets and features on ICE/SNOW funtion as expected",
   "scripts": {
-    "test": "nyc mocha -r ts-node/register tests/*.ts",
+    "test": "nyc mocha -r ts-node/register tests/**/*.ts",
     "start": "node -r ts-node/register index.ts",
     "lint": "eslint ./ --ext .ts --config .eslintrc.json",
     "lint:fix": "eslint ./ --ext .ts --config .eslintrc.json --fix"
